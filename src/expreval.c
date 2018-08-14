@@ -1970,8 +1970,9 @@ static ret_code dot_op( struct expr *opnd1, struct expr *opnd2 )
 {
     /* this code needs cleanup! some stuff is obsolete. */
 
-    DebugMsg1(("dot_op: op1-op2 kind=%d/%d sym=%s-%s type=%s-%s mbr=%s-%s\n",
+    DebugMsg1(("dot_op: op1-op2 kind=%d/%d value=%u/%u sym=%s-%s type=%s-%s mbr=%s-%s\n",
                opnd1->kind, opnd2->kind,
+               opnd1->value, opnd2->value,
                opnd1->sym  ? opnd1->sym->name  : "NULL",
                opnd2->sym  ? opnd2->sym->name  : "NULL",
                opnd1->type ? opnd1->type->name : "NULL",
@@ -2092,7 +2093,10 @@ static ret_code dot_op( struct expr *opnd1, struct expr *opnd2 )
         /* v2.08 added (copied from branch EXPR_ADDR-EXPR_REG )*/
         if ( opnd2->is_type && opnd2->type ) {
             opnd1->assumecheck = FALSE;
-            opnd2->llvalue = 0;  /* v2.08: this was previously done in get_operand() */
+            /* v2.12: problem: see dotop6.asm */
+            //opnd2->llvalue = 0;  /* v2.08: this was previously done in get_operand() */
+            opnd2->llvalue -= opnd2->type->total_size;  /* v2.12: adjust for type's size only */
+            DebugMsg1(("dot_op, ADDR - CONST, t2.type.total_size=%u, new t2->value=%u\n", opnd2->type->total_size, opnd2->value ));
         }
         /* for [var].TYPE | STRUCT_FIELD, use offset instead of size */
         if ( opnd2->mbr && opnd2->mbr->state == SYM_TYPE )

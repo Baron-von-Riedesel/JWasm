@@ -742,23 +742,25 @@ static uint_32 coff_write_symbols( struct module_info *modinfo, struct coffmod *
     return( cntSymbols );
 }
 
-static int GetStartLabel( char *buffer, bool msg )
-/************************************************/
+static int GetStartLabel( struct module_info *modinfo, char *buffer, bool msg )
+/*****************************************************************************/
 {
     int size = 0;
     char temp[ MAX_ID_LEN + MANGLE_BYTES + 1 ];
 
-    if ( ModuleInfo.g.start_label ) {
-        Mangle( ModuleInfo.g.start_label, temp );
+    if ( modinfo->g.start_label ) {
+        Mangle( modinfo->g.start_label, temp );
         if ( Options.entry_decorated )
             strcpy( buffer, temp );
         else {
-            if ( ModuleInfo.g.start_label->langtype != LANG_C &&
-                ModuleInfo.g.start_label->langtype != LANG_STDCALL &&
-                ModuleInfo.g.start_label->langtype != LANG_SYSCALL ) {
-                if ( *ModuleInfo.g.start_label->name != '_' ) {
-                    if ( msg && ( ModuleInfo.fctype != FCT_WIN64 ) )
-                        EmitWarn( 2, LEADING_UNDERSCORE_REQUIRED_FOR_START_LABEL, ModuleInfo.g.start_label->name );
+            if ( modinfo->g.start_label->langtype != LANG_C &&
+                modinfo->g.start_label->langtype != LANG_STDCALL &&
+                modinfo->g.start_label->langtype != LANG_SYSCALL ) {
+                if ( *modinfo->g.start_label->name != '_' ) {
+                    /* v2.12: leading underscore not required if module is 64-bit */
+                    /*if ( msg && ( modinfo->fctype != FCT_WIN64 ) ) */
+                    if ( msg && ( modinfo->defOfssize != USE64 ) )
+                        EmitWarn( 2, LEADING_UNDERSCORE_REQUIRED_FOR_START_LABEL, modinfo->g.start_label->name );
                     strcpy( buffer, temp );
                 } else {
                     strcpy( buffer, temp+1 );
@@ -1277,7 +1279,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
                     size += 2;
             }
             /* 3. start label */
-            size += GetStartLabel( buffer, TRUE );
+            size += GetStartLabel( modinfo, buffer, TRUE );
 #if DLLIMPORT
             /* 4. impdefs */
             for( tmp = imp; tmp ; tmp = tmp->next ) {
@@ -1323,7 +1325,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             }
             /* 3. entry */
             if ( modinfo->g.start_label ) {
-                GetStartLabel( buffer, FALSE );
+                GetStartLabel( modinfo, buffer, FALSE );
                 p += sprintf( (char *)p, "-entry:%s ", buffer );
             }
 #if DLLIMPORT

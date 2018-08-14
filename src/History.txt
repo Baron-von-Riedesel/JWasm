@@ -1,7 +1,7 @@
 
    Changelog
 
-   __/__/2018, v2.12:
+   08/12/2018, v2.12:
 
    Bugfixes:
    -  COMM directive: there was no check that numeric arguments 'size' or 
@@ -25,6 +25,15 @@
       order.
    -  operator HIGHWORD didn't work correctly with negative constants.
       See SF bug #298.
+   -  regression in v2.09-2.11: '!' disappeared in macro arguments if the
+      argument was enclosed in angle brackets (see expans41.asm).
+   -  regression in v2.05-2.11: 'push lowword offset label32' did push a
+      dword instead of a word only (see lowword.asm and also the comment in
+      offset10.asn).
+   -  warning 'for -coff leading underscore required for start label' is no
+      longer emitted if coff format is 64-bit.
+   -  [] operator didn't work correctly if located between a struct name and
+      a member name; see dotop6.asm.
 
    Other changes:
    -  OPTION WIN64:4 added.
