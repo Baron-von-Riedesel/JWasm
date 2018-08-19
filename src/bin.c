@@ -238,13 +238,23 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
             offset = cp->rva;
         else
 #endif
+            /* grp->sym.total_size is 0 for the first segment of the group; it is
+             * modified below.
+             */
             if ( grp->sym.total_size == 0 ) {
                 grp->sym.offset = cp->fileoffset - cp->sizehdr;
                 offset = 0;
-            } else
-                offset = grp->sym.total_size + alignbytes;
-        DebugMsg(("CalcOffset(%s): fileofs=%" I32_SPEC "Xh, alignbytes=%" I32_SPEC "u, ofs=%" I32_SPEC "Xh, group=%s, grp.ofs=%" I32_SPEC "Xh\n",
-                  curr->sym.name, cp->fileoffset, alignbytes, offset, grp->sym.name, grp->sym.offset ));
+            } else {
+                /* v2.12: the old way wasn't correct. if there's a segment between the
+                 * segments of a group, it affects the offset as well ( if it
+                 * occupies space in the file )! the value stored in grp->sym.total_size
+                 * is no longer used (or, more exactly, used as a flag only).
+                 */
+                //offset = grp->sym.total_size + alignbytes;
+                offset = ( cp->fileoffset - cp->sizehdr ) - grp->sym.offset;
+            }
+        DebugMsg(("CalcOffset(%s): fileofs=%" I32_SPEC "Xh, alignbytes=%" I32_SPEC "u, ofs=%" I32_SPEC "Xh, group=%s, grp.ofs=%" I32_SPEC "Xh grp.total=%" I32_SPEC "Xh\n",
+                  curr->sym.name, cp->fileoffset, alignbytes, offset, grp->sym.name, grp->sym.offset, grp->sym.total_size ));
     }
 
     /* v2.04: added */

@@ -1,7 +1,7 @@
 
    Changelog
 
-   08/12/2018, v2.12:
+   08/19/2018, v2.12:
 
    Bugfixes:
    -  COMM directive: there was no check that numeric arguments 'size' or 
@@ -34,6 +34,9 @@
       longer emitted if coff format is 64-bit.
    -  [] operator didn't work correctly if located between a struct name and
       a member name; see dotop6.asm.
+   -  option -mz: if a "nongroup"-segment was located between 2 segments of
+      a group, the offsets of the second "group"-segment were calculated 
+      wrong. See group2.asn.
 
    Other changes:
    -  OPTION WIN64:4 added.
