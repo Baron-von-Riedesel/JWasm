@@ -73,6 +73,7 @@ struct calc_param {
     uint_8 alignment;      /* current aligment */
     uint_32 fileoffset;    /* current file offset */
     uint_32 sizehdr;       /* -mz: size of MZ header, else 0 */
+    uint_32 sizebss;       /* v2.12: -mz: size of BSS segments */
     uint_32 entryoffset;   /* -bin only: offset of first segment */
     struct asym *entryseg; /* -bin only: segment of first segment */
     uint_32 imagestart;    /* -bin: start offset (of first segment), else 0 */
@@ -244,6 +245,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
             if ( grp->sym.total_size == 0 ) {
                 grp->sym.offset = cp->fileoffset - cp->sizehdr;
                 offset = 0;
+                cp->sizebss = 0;
             } else {
                 /* v2.12: the old way wasn't correct. if there's a segment between the
                  * segments of a group, it affects the offset as well ( if it
@@ -251,7 +253,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
                  * is no longer used (or, more exactly, used as a flag only).
                  */
                 //offset = grp->sym.total_size + alignbytes;
-                offset = ( cp->fileoffset - cp->sizehdr ) - grp->sym.offset;
+                offset = ( cp->fileoffset - cp->sizehdr + cp->sizebss ) - grp->sym.offset;
             }
         DebugMsg(("CalcOffset(%s): fileofs=%" I32_SPEC "Xh, alignbytes=%" I32_SPEC "u, ofs=%" I32_SPEC "Xh, group=%s, grp.ofs=%" I32_SPEC "Xh grp.total=%" I32_SPEC "Xh\n",
                   curr->sym.name, cp->fileoffset, alignbytes, offset, grp->sym.name, grp->sym.offset, grp->sym.total_size ));
@@ -294,7 +296,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
 #if PE_SUPPORT
         cp->rva += curr->sym.max_offset - curr->e.seginfo->start_loc;
         if ( curr->e.seginfo->segtype == SEGTYPE_BSS )
-            ;
+            cp->sizebss += curr->sym.max_offset;
         else
 #endif
         cp->fileoffset += curr->sym.max_offset - curr->e.seginfo->start_loc;

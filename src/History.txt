@@ -36,7 +36,10 @@
       a member name; see dotop6.asm.
    -  option -mz: if a "nongroup"-segment was located between 2 segments of
       a group, the offsets of the second "group"-segment were calculated 
-      wrong. See group2.asn.
+      wrong. See group2.asn & group3.asn.
+   -  if direct addressing without symbol was used ( ds:[0] ) in a mixed
+      32-/64-bit module, error 'magnitude of offset exceeds 16 bit' may have
+      been generated. See mixed2.asm & mixed3.asm.
 
    Other changes:
    -  OPTION WIN64:4 added.
