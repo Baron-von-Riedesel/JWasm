@@ -428,17 +428,27 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
         } else if ( direct ) {
             /* no label attached (DS:[0]). No fixup is to be created! */
             if ( assume ) {
-                DebugMsg1(("seg_override, direct addressing: prefix.adrsiz will be set, assume=%s CI->ofssize=%u\n", assume->name, CodeInfo->Ofssize ));
-                CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, GetSymOfssize( assume ) );
+                DebugMsg1(("seg_override, direct addressing: prefix.adrsiz will be set, assume=%s(%u) CI->Ofssize=%u\n", assume->name, GetSymOfssize( assume ), CodeInfo->Ofssize ));
+                /* v2.12: args for ADDRSIZE must be USE16 and "> USE16". The old way
+                 * caused error 'magnitude of offset exceeds 16 bit' to be displayed if
+                 * module contained USE32 & USE64 segments. Todo: Most likely to be adjusted
+                 * in the other ADDRSIZE() locations as well!
+                 */
+                //CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, GetSymOfssize( assume ) );
+                CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize > USE16, GetSymOfssize( assume ) > USE16 );
                 //DebugMsg1(("seg_override: CI->prefix.adrsiz=%u\n", CodeInfo->prefix.adrsiz ));
             } else {
                 /* v2.01: if -Zm, then use current CS offset size.
                  * This isn't how Masm v6 does it, but it matches Masm v5.
                  */
+                DebugMsg1(("seg_override, direct addressing: prefix.adrsiz will be set, no assume, CI->Ofssize=%u, MI.defOfssize=%u (MI.Ofssize=%u)\n", CodeInfo->Ofssize, ModuleInfo.defOfssize, ModuleInfo.Ofssize ));
                 if ( ModuleInfo.m510 )
                     CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, ModuleInfo.Ofssize );
-                else
-                    CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, ModuleInfo.defOfssize );
+                else {
+                    /* v2.12: see comment above */
+                    CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize > USE16, ModuleInfo.defOfssize > USE16 );
+                    //CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, ModuleInfo.defOfssize );
+                }
             }
         }
     } else {
@@ -1021,6 +1031,10 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
                     case T_LOW:
                     case T_HIGH:
                         opndx->mem_type = MT_BYTE;
+                        break;
+                    case T_LOWWORD: /*v2.12: added */
+                    case T_HIGHWORD: /*v2.12: added */
+                        opndx->mem_type = MT_WORD;
                         break;
                     case T_LOW32: /* v2.10: added - low32_op() doesn't set mem_type anymore. */
 #if IMAGERELSUPP
