@@ -46,10 +46,6 @@
 #define _ltoa   ltoa
 #define _strupr strupr
 
-#if defined(__UNIX__) /* v2.12: added */
-char *strupr( char * ); /* defined in apiemu.c */
-#endif
-
 #elif defined(__POCC__)
 
 #pragma warn(disable:2030) /* disable '=' used in a conditional expression */
@@ -187,8 +183,8 @@ char *strupr( char * ); /* defined in apiemu.c */
 #include "queue.h"
 
 /* JWasm version info */
-#define _JWASM_VERSION_STR_ "2.12"
-#define _JWASM_VERSION_INT_ 212
+#define _JWASM_VERSION_STR_ "2.13"
+#define _JWASM_VERSION_INT_ 213
 #define _JWASM_VERSION_SUFFIX_ "pre"
 #define _JWASM_VERSION_ _JWASM_VERSION_STR_ _JWASM_VERSION_SUFFIX_
 
