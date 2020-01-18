@@ -1,6 +1,11 @@
 
    Changelog
 
+   01/17/2020, v2.13:
+
+   -  regression in v2.12: option -bin didn't work if binary started with
+      ORG != 0 ( i.e. DOS COM file format ): see bintest2.asm.
+   
    08/19/2018, v2.12:
 
    Bugfixes:
@@ -40,11 +45,17 @@
    -  if direct addressing without symbol was used ( ds:[0] ) in a mixed
       32-/64-bit module, error 'magnitude of offset exceeds 16 bit' may have
       been generated. See mixed2.asm & mixed3.asm.
+   -  option -mz: size of a bss segment was not taken into account for further
+      segment calculations if the bss segment was not part of a group. See
+      mz1.asm.
+   -  option -mz: no warning was displayed when start label was not located
+      in a 16-bit segment. See text32.aso.
 
    Other changes:
    -  OPTION WIN64:4 added.
    -  cleaned the source code a bit so CLang v5 can compile it without 
       warning. Added CLUnix.mak, CLang.mak renamed to CLWin.mak.
+   -  option -pe: 16-bit code sections are now separated from 32-bit sections.
 
    11/16/2013, v2.11a:
 

@@ -107,7 +107,8 @@ static const enum seg_type dosseg_order[] = {
 #if PE_SUPPORT
 
 static const enum seg_type flat_order[] = {
-    SEGTYPE_HDR, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
+    //SEGTYPE_HDR, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
+    SEGTYPE_HDR, SEGTYPE_UNDEF, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
 };
 #define SIZE_PEFLAT ( sizeof( flat_order ) / sizeof( flat_order[0] ) )
 
@@ -230,22 +231,23 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     alignbytes = ((cp->fileoffset + (align - 1)) & (-align)) - cp->fileoffset;
     cp->fileoffset += alignbytes;
 
-    if ( grp == NULL ) {
-        offset = cp->fileoffset - cp->sizehdr;  // + alignbytes;
-        DebugMsg(("CalcOffset(%s): fileofs=%" I32_SPEC "Xh, ofs=%" I32_SPEC "Xh\n", curr->sym.name, cp->fileoffset, offset ));
-    } else {
 #if PE_SUPPORT
-        if ( ModuleInfo.sub_format == SFORMAT_PE )
-            offset = cp->rva;
-        else
+    /* v2.12: never check group for PE format */
+    if ( ModuleInfo.sub_format == SFORMAT_PE ) {
+        offset = cp->rva;
+        DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh\n", curr->sym.name, offset ));
+    } else {
 #endif
+        if ( grp == NULL ) {
+            offset = cp->fileoffset + cp->sizebss - cp->sizehdr;  // + alignbytes;
+            DebugMsg(("CalcOffset(%s): fileofs=%" I32_SPEC "Xh, ofs=%" I32_SPEC "Xh\n", curr->sym.name, cp->fileoffset, offset ));
+        } else {
             /* grp->sym.total_size is 0 for the first segment of the group; it is
              * modified below.
              */
             if ( grp->sym.total_size == 0 ) {
-                grp->sym.offset = cp->fileoffset - cp->sizehdr;
+                grp->sym.offset = cp->fileoffset + cp->sizebss - cp->sizehdr;
                 offset = 0;
-                cp->sizebss = 0;
             } else {
                 /* v2.12: the old way wasn't correct. if there's a segment between the
                  * segments of a group, it affects the offset as well ( if it
@@ -253,11 +255,22 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
                  * is no longer used (or, more exactly, used as a flag only).
                  */
                 //offset = grp->sym.total_size + alignbytes;
-                offset = ( cp->fileoffset - cp->sizehdr + cp->sizebss ) - grp->sym.offset;
+                /* v2.12: 17.1.2020; cp->imagestart wasn't added */
+                //offset = ( cp->fileoffset + cp->sizebss - cp->sizehdr ) - grp->sym.offset;
+                offset = ( cp->fileoffset + cp->sizebss + cp->imagestart - cp->sizehdr ) - grp->sym.offset;
             }
-        DebugMsg(("CalcOffset(%s): fileofs=%" I32_SPEC "Xh, alignbytes=%" I32_SPEC "u, ofs=%" I32_SPEC "Xh, group=%s, grp.ofs=%" I32_SPEC "Xh grp.total=%" I32_SPEC "Xh\n",
-                  curr->sym.name, cp->fileoffset, alignbytes, offset, grp->sym.name, grp->sym.offset, grp->sym.total_size ));
+            DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh, sizebss=%" I32_SPEC "Xh, sizehdr=%" I32_SPEC "Xh, grp=%s, grp.ofs=%" I32_SPEC "Xh\n",
+                      curr->sym.name,
+                      offset,
+                      cp->fileoffset,
+                      cp->sizebss,
+                      cp->sizehdr,
+                      grp->sym.name,
+                      grp->sym.offset ));
+        }
+#if PE_SUPPORT
     }
+#endif
 
     /* v2.04: added */
     /* v2.05: this addition did mess sample Win32_5.asm, because the
@@ -311,10 +324,18 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
         if ( grp->sym.total_size > 0x10000 && grp->sym.Ofssize == USE16 ) {
             EmitWarn( 2, GROUP_EXCEEDS_64K, grp->sym.name );
         }
+        DebugMsg(("CalcOffset(%s): grp %s, grp.total_size=%" I32_SPEC "Xh\n",
+                  grp->sym.name,
+                  grp->sym.total_size));
     }
 #if PE_SUPPORT
-    DebugMsg(("CalcOffset(%s) exit: seg.fileofs=%" I32_SPEC "Xh, seg.start_offset=%" I32_SPEC "Xh, endofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh rva=%" I32_SPEC "Xh\n",
-              curr->sym.name, curr->e.seginfo->fileoffset, curr->e.seginfo->start_offset, offset, cp->fileoffset, cp->rva ));
+    DebugMsg(("CalcOffset(%s) exit: seg.fileofs=%" I32_SPEC "Xh, seg.start_ofs=%" I32_SPEC "Xh, endofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh rva=%" I32_SPEC "Xh\n",
+              curr->sym.name,
+              curr->e.seginfo->fileoffset,
+              curr->e.seginfo->start_offset,
+              offset,
+              cp->fileoffset,
+              cp->rva ));
 #else
     DebugMsg(("CalcOffset(%s) exit: seg.fileofs=%" I32_SPEC "Xh, seg.start_offset=%" I32_SPEC "Xh, endofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh\n",
               curr->sym.name, curr->e.seginfo->fileoffset, curr->e.seginfo->start_offset, offset, cp->fileoffset ));
@@ -861,8 +882,14 @@ static void pe_create_section_table( void )
             DebugMsg(("pe_create_section_table: searching type %u\n", flat_order[i] ));
             for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
                 DebugMsg(("pe_create_section_table: section %s, type=%u, size=%X\n", curr->sym.name, curr->e.seginfo->segtype, curr->sym.max_offset ));
-                if ( curr->e.seginfo->segtype != flat_order[i] )
-                    continue;
+                /* v2.12: don't mix 32-bit and 16-bit code segments */
+                if ( flat_order[i] == SEGTYPE_UNDEF &&
+                    curr->e.seginfo->segtype == SEGTYPE_CODE &&
+                    curr->e.seginfo->Ofssize != ModuleInfo.defOfssize )
+                    ;
+                else
+                    if ( curr->e.seginfo->segtype != flat_order[i] )
+                        continue;
                 if ( curr->sym.max_offset ) {
                     DebugMsg(("pe_create_section_table: %s, type=%u is object %u\n", curr->sym.name, curr->e.seginfo->segtype, objs ));
                     objs++;
@@ -1307,6 +1334,14 @@ static void pe_set_values( struct calc_param *cp )
         DebugMsg(("pe_set_values: searching segment types %Xh\n", flat_order[i] ));
         for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
             if ( curr->e.seginfo->segtype == flat_order[i] ) {
+#if 1
+                /* v2.12: added to avoid mixing 16-/32-bit code segments */
+                if (  curr->e.seginfo->segtype == SEGTYPE_CODE && curr->e.seginfo->Ofssize != ModuleInfo.defOfssize ) {
+                    DebugMsg(("pe_set_values: segment %s set to index 1, MI.defOfssize=%u\n", curr->sym.name, ModuleInfo.defOfssize ));
+                    curr->e.seginfo->lname_idx = 1;
+                    continue;
+                }
+#endif
                 curr->e.seginfo->lname_idx = i;
             }
         }
@@ -1347,6 +1382,7 @@ static void pe_set_values( struct calc_param *cp )
     /* set number of sections in PE file header (doesn't matter if it's 32- or 64-bit) */
     fh = &((struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer)->FileHeader;
     fh->NumberOfSections = objtab->sym.max_offset / sizeof( struct IMAGE_SECTION_HEADER );
+    DebugMsg(("pe_set_values: no of sections=%u (objtab.sym.max_offset=%u)\n", fh->NumberOfSections, objtab->sym.max_offset ));
 
 #if RAWSIZE_ROUND
     cp->rawpagesize = ( ModuleInfo.defOfssize == USE64 ? ph64->OptionalHeader.FileAlignment : ph32->OptionalHeader.FileAlignment );
@@ -1379,6 +1415,10 @@ static void pe_set_values( struct calc_param *cp )
         //section->Misc.VirtualSize += curr->sym.max_offset;
         section->Misc.VirtualSize = curr->sym.max_offset + ( curr->e.seginfo->start_offset - section->VirtualAddress );
 
+        /* v2.12: todo: describe what is done here
+         * 1. checks for a segment type change
+         * 2. may adjust variables codebase/codesize, database/datasize (fields in optionalheader)
+         */
         if ( curr->next == NULL || curr->next->e.seginfo->lname_idx != i ) {
 #if RAWSIZE_ROUND /* AntiVir TR/Crypt.XPACK Gen */
             section->SizeOfRawData += cp->rawpagesize - 1;
@@ -1394,6 +1434,7 @@ static void pe_set_values( struct calc_param *cp )
                     database = section->VirtualAddress;
                 datasize += section->SizeOfRawData;
             }
+            DebugMsg(("pe_set_values(%s): %.8s.SizeOfRawData set to %" I32_SPEC "X\n", curr->sym.name, section->Name, section->SizeOfRawData ));
         }
         if ( curr->next && curr->next->e.seginfo->lname_idx != i ) {
             DebugMsg(("pe_set_values: object %.8s, VA=%" I32_SPEC "X size=%" I32_SPEC "X phys ofs/size=%" I32_SPEC "Xh/%" I32_SPEC "Xh\n",
@@ -1563,6 +1604,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
         cp.sizehdr = 0;
     }
     cp.fileoffset = cp.sizehdr;
+    cp.sizebss = 0;
 
     if ( cp.sizehdr ) {
         hdrbuf = LclAlloc( cp.sizehdr );
@@ -1690,6 +1732,9 @@ static ret_code bin_write_module( struct module_info *modinfo )
                 pMZ->e_ip = (addr & 0xF ) + modinfo->g.start_label->offset; /* IP */
                 pMZ->e_cs = addr >> 4; /* CS */
             }
+            /* v2.12: warn if entry point is in a 32-/64-bit segment */
+            if ( curr->e.seginfo->Ofssize > USE16 )
+                EmitWarn( 2, START_LABEL_NOT_16BIT );
         } else {
             DebugMsg(("bin_write_module, ModuleInfo->start_label=%p\n", modinfo->g.start_label ));
             EmitWarn( 2, NO_START_LABEL );
@@ -1729,11 +1774,12 @@ static ret_code bin_write_module( struct module_info *modinfo )
 
 #ifdef DEBUG_OUT
     for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
-        DebugMsg(("bin_write_module(%s): type=%u written=%" I32_SPEC "X max=%" I32_SPEC "X start=%" I32_SPEC "X fileofs=%" I32_SPEC "X\n",
+        DebugMsg(("bin_write_module(%s): type=%u written=%" I32_SPEC "X max_ofs=%" I32_SPEC "X start_loc=%" I32_SPEC "X start_ofs=%" I32_SPEC "X fileofs=%" I32_SPEC "X\n",
                 curr->sym.name, curr->e.seginfo->segtype,
                 curr->e.seginfo->bytes_written,
                 curr->sym.max_offset,
                 curr->e.seginfo->start_loc,
+                curr->e.seginfo->start_offset,
                 curr->e.seginfo->fileoffset ));
     }
 #endif
@@ -1776,8 +1822,13 @@ static ret_code bin_write_module( struct module_info *modinfo )
         LstNL();
 #endif
         if ( size != 0 && curr->e.seginfo->CodeBuffer ) {
-            DebugMsg(("bin_write_module(%s): write %" I32_SPEC "Xh bytes at offset %" I32_SPEC "Xh, initialized bytes=%" I32_SPEC "u, buffer=%p\n",
-                      curr->sym.name, size, curr->e.seginfo->fileoffset, curr->e.seginfo->bytes_written, curr->e.seginfo->CodeBuffer ));
+            DebugMsg(("bin_write_module(%s): write %" I32_SPEC "Xh bytes at offset %" I32_SPEC "Xh, initialized bytes=%" I32_SPEC "u, RVA=%" I32_SPEC "Xh, buffer=%p\n",
+                      curr->sym.name,
+                      size,
+                      curr->e.seginfo->fileoffset,
+                      curr->e.seginfo->bytes_written,
+                      first ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
+                      curr->e.seginfo->CodeBuffer ));
             fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
 #ifdef __I86__
             if ( hfwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
