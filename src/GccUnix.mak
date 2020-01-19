@@ -54,7 +54,7 @@ $(OUTD)/reswords.o: reswords.c H/instruct.h H/special.h H/directve.h H/opndcls.h
 ######
 
 clean:
-	rm $(OUTD)/$(TARGET1)
-	rm $(OUTD)/*.o
-	rm $(OUTD)/*.map
+	@rm -f $(OUTD)/$(TARGET1)
+	@rm -f $(OUTD)/*.o
+	@rm -f $(OUTD)/*.map
 
