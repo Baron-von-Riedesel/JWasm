@@ -15,7 +15,7 @@ name = jwasm
 # manually to a directory in the path ( here: d:\msvc10\bin ).
 
 !ifndef VCDIR
-VCDIR  = d:\msvc10
+VCDIR  = \msvc10
 !endif
 !ifndef W64LIB
 W64LIB = \WinInc\Lib64
@@ -35,13 +35,13 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=MSVC64D
+OUTD=build/MSVC64D
 !else
-OUTD=MSVC64R
+OUTD=build/MSVC64R
 !endif
 !endif
 
-inc_dirs  = -IH -I"$(VCDIR)\include"
+inc_dirs  = -Isrc/H -I"$(VCDIR)\include"
 
 linker = $(VCBIN)\link.exe
 lib = $(VCBIN)\lib.exe
@@ -71,7 +71,7 @@ lflagsw = $(LOPTD) /SUBSYSTEM:CONSOLE $(LOPT) /map:$^*.map
 
 CC=$(VCBIN)\cl.exe -c -nologo $(inc_dirs) $(c_flags)
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	@$(CC) -Fo$* $<
 
 proj_obj = \
@@ -93,13 +93,15 @@ $(lflagsw) $(OUTD)/main.obj $(OUTD)/$(name).lib
 !endif
 
 $(OUTD)\$(name).lib : $(proj_obj)
-	@$(lib) /nologo /out:$(OUTD)\$(name).lib $(proj_obj)
+	@$(lib) /nologo /out:$(OUTD)\$(name).lib @<<
+$(proj_obj)
+<<
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	@$(CC) -Fo$* msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
+	@$(CC) -Fo$* src/msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	@$(CC) -Fo$* reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h
+	@$(CC) -Fo$* src/reswords.c
 
 ######
 

@@ -44,13 +44,13 @@ TRMEM=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=Debug
+OUTD=Build\Debug
 !else
-OUTD=Release
+OUTD=Build\Release
 !endif
 !endif
 
-inc_dirs  = -IH -I$(WATCOM)\H
+inc_dirs  = -Isrc\H -I$(WATCOM)\H
 c_flags = -q -bc -bt=nt -3r -fpi87
 
 # -zc flag makes wcc386 place constant data in code segment.
@@ -91,7 +91,7 @@ LOPTD =
 CC=$(WATCOM)\binnt\wcc386 $(c_flags) $(inc_dirs) $(extra_c_flags) -fo$@
 LIB=$(WATCOM)\binnt\wlib
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	$(CC) $<
 
 proj_obj = &
@@ -164,11 +164,11 @@ segment CONST2 readonly
 	pestub.exe -x -z -n $@
 !endif
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	$(CC) msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
+	$(CC) src\msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h H/opndcls.h H/instravx.h
-	$(CC) reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h src/H/opndcls.h src/H/instravx.h
+	$(CC) src\reswords.c
 
 ######
 

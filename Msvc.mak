@@ -45,13 +45,13 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=MSVCD
+OUTD=build/MSVCD
 !else
-OUTD=MSVCR
+OUTD=build/MSVCR
 !endif
 !endif
 
-inc_dirs  = -IH -I"$(VCDIR)\include"
+inc_dirs  = -Isrc\H -I"$(VCDIR)\include"
 
 linker = $(VCDIR)\Bin\link.exe
 lib = $(VCDIR)\Bin\lib.exe
@@ -93,7 +93,7 @@ lflagsw = $(LOPTD) /SUBSYSTEM:CONSOLE $(LOPT) /map:$^*.map
 
 CC=$(VCDIR)\bin\cl.exe -c -nologo $(inc_dirs) $(c_flags)
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	@$(CC) -Fo$* $<
 
 proj_obj = \
@@ -151,13 +151,15 @@ op start=_start, eliminate, map=$(OUTD)/$(name)d.map, stub=$(HXDIR)\Bin\LOADPEX.
 !endif
 
 $(OUTD)\$(name).lib : $(proj_obj)
-	@$(lib) /nologo /out:$(OUTD)\$(name).lib $(proj_obj)
+	@$(lib) /nologo /out:$(OUTD)\$(name).lib @<<
+$(proj_obj)
+<<
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	@$(CC) -Fo$* msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
+	@$(CC) -Fo$* src/msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h H/opndcls.h H/instravx.h
-	@$(CC) -Fo$* reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h src/H/opndcls.h src/H/instravx.h
+	@$(CC) -Fo$* src/reswords.c
 
 ######
 
