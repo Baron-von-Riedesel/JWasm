@@ -1372,7 +1372,11 @@ void SortSegments( int type )
             swap = FALSE;
             switch (type ) {
             case 0:
-                if ( curr->e.seginfo->fileoffset > curr->next->e.seginfo->fileoffset )
+                /* v2.13: if fileoffset equal (file size = 0), use start_offset */
+                // if ( curr->e.seginfo->fileoffset > curr->next->e.seginfo->fileoffset )
+                if ( curr->e.seginfo->fileoffset > curr->next->e.seginfo->fileoffset ||
+                    curr->e.seginfo->fileoffset == curr->next->e.seginfo->fileoffset &&
+                    curr->e.seginfo->start_offset > curr->next->e.seginfo->start_offset )
                     swap = TRUE;
                 break;
             case 1:

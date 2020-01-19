@@ -73,7 +73,7 @@ struct calc_param {
     uint_8 alignment;      /* current aligment */
     uint_32 fileoffset;    /* current file offset */
     uint_32 sizehdr;       /* -mz: size of MZ header, else 0 */
-    uint_32 sizebss;       /* v2.12: -mz: size of BSS segments */
+    //uint_32 sizebss;     /* v2.12: -mz: size of BSS segments. v2.13: removed */
     uint_32 entryoffset;   /* -bin only: offset of first segment */
     struct asym *entryseg; /* -bin only: segment of first segment */
     uint_32 imagestart;    /* -bin: start offset (of first segment), else 0 */
@@ -239,14 +239,18 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     } else {
 #endif
         if ( grp == NULL ) {
-            offset = cp->fileoffset + cp->sizebss - cp->sizehdr;  // + alignbytes;
+            /* v2.13: sizebss removed */
+            //offset = cp->fileoffset + cp->sizebss - cp->sizehdr;  // + alignbytes;
+            offset = cp->fileoffset - cp->sizehdr;  // + alignbytes;
             DebugMsg(("CalcOffset(%s): fileofs=%" I32_SPEC "Xh, ofs=%" I32_SPEC "Xh\n", curr->sym.name, cp->fileoffset, offset ));
         } else {
             /* grp->sym.total_size is 0 for the first segment of the group; it is
              * modified below.
              */
             if ( grp->sym.total_size == 0 ) {
-                grp->sym.offset = cp->fileoffset + cp->sizebss - cp->sizehdr;
+                /* v2.13: sizebss removed */
+                //grp->sym.offset = cp->fileoffset + cp->sizebss - cp->sizehdr;
+                grp->sym.offset = cp->fileoffset - cp->sizehdr;
                 offset = 0;
             } else {
                 /* v2.12: the old way wasn't correct. if there's a segment between the
@@ -255,15 +259,16 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
                  * is no longer used (or, more exactly, used as a flag only).
                  */
                 //offset = grp->sym.total_size + alignbytes;
-                /* v2.12: 17.1.2020; cp->imagestart wasn't added */
+                /* v2.13: 17.1.2020; cp->imagestart wasn't added */
                 //offset = ( cp->fileoffset + cp->sizebss - cp->sizehdr ) - grp->sym.offset;
-                offset = ( cp->fileoffset + cp->sizebss + cp->imagestart - cp->sizehdr ) - grp->sym.offset;
+                /* v2.13: sizebss removed */
+                //offset = ( cp->fileoffset + cp->sizebss + cp->imagestart - cp->sizehdr ) - grp->sym.offset;
+                offset = ( cp->fileoffset + cp->imagestart - cp->sizehdr ) - grp->sym.offset;
             }
-            DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh, sizebss=%" I32_SPEC "Xh, sizehdr=%" I32_SPEC "Xh, grp=%s, grp.ofs=%" I32_SPEC "Xh\n",
+            DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh, sizehdr=%" I32_SPEC "Xh, grp=%s, grp.ofs=%" I32_SPEC "Xh\n",
                       curr->sym.name,
                       offset,
                       cp->fileoffset,
-                      cp->sizebss,
                       cp->sizehdr,
                       grp->sym.name,
                       grp->sym.offset ));
@@ -308,9 +313,10 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
         //fileoffset += curr->sym.max_offset;
 #if PE_SUPPORT
         cp->rva += curr->sym.max_offset - curr->e.seginfo->start_loc;
-        if ( curr->e.seginfo->segtype == SEGTYPE_BSS )
-            cp->sizebss += curr->sym.max_offset;
-        else
+        //v2.13: removed, sizebss not needed
+        //if ( curr->e.seginfo->segtype == SEGTYPE_BSS )
+        //    cp->sizebss += curr->sym.max_offset;
+        //else
 #endif
         cp->fileoffset += curr->sym.max_offset - curr->e.seginfo->start_loc;
     }
@@ -325,15 +331,16 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
             EmitWarn( 2, GROUP_EXCEEDS_64K, grp->sym.name );
         }
         DebugMsg(("CalcOffset(%s): grp %s, grp.total_size=%" I32_SPEC "Xh\n",
+                  curr->sym.name,
                   grp->sym.name,
                   grp->sym.total_size));
     }
 #if PE_SUPPORT
-    DebugMsg(("CalcOffset(%s) exit: seg.fileofs=%" I32_SPEC "Xh, seg.start_ofs=%" I32_SPEC "Xh, endofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh rva=%" I32_SPEC "Xh\n",
+    DebugMsg(("CalcOffset(%s) exit: seg.fileofs=%" I32_SPEC "Xh, seg.start_ofs=%" I32_SPEC "Xh, seg.max_ofs=%" I32_SPEC "Xh fileofs=%" I32_SPEC "Xh rva=%" I32_SPEC "Xh\n",
               curr->sym.name,
               curr->e.seginfo->fileoffset,
               curr->e.seginfo->start_offset,
-              offset,
+              curr->sym.max_offset,
               cp->fileoffset,
               cp->rva ));
 #else
@@ -1569,7 +1576,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
     uint_32 sizetotal;
     //const enum seg_type *segtype;
     int i;
-    int first;
+    int bFirst;
     uint_32 sizeheap;
 #if MZ_SUPPORT
     struct IMAGE_DOS_HEADER *pMZ;
@@ -1604,7 +1611,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
         cp.sizehdr = 0;
     }
     cp.fileoffset = cp.sizehdr;
-    cp.sizebss = 0;
+    //cp.sizebss = 0; /* v2.13: sizebss removed */
 
     if ( cp.sizehdr ) {
         hdrbuf = LclAlloc( cp.sizehdr );
@@ -1785,7 +1792,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
 #endif
 
     /* write sections */
-    for( curr = SymTables[TAB_SEG].head, first = TRUE; curr; curr = curr->next ) {
+    for( curr = SymTables[TAB_SEG].head, bFirst = TRUE; curr; curr = curr->next ) {
         if ( curr->e.seginfo->segtype == SEGTYPE_ABS ) {
             DebugMsg(("bin_write_module(%s): ABS segment not written\n", curr->sym.name ));
             continue;
@@ -1799,7 +1806,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
             /* v2.05: changed */
             size = curr->sym.max_offset - curr->e.seginfo->start_loc;
         //size = sizemem;
-        sizemem = first ? size : curr->sym.max_offset;
+        sizemem = bFirst ? size : curr->sym.max_offset;
         /* if no bytes have been written to the segment, check if there's
          * any further segments with bytes set. If no, skip write! */
         if ( curr->e.seginfo->bytes_written == 0 ) {
@@ -1811,37 +1818,47 @@ static ret_code bin_write_module( struct module_info *modinfo )
                 DebugMsg(("bin_write_module(%s): segment not written, size=% " I32_SPEC "Xh sizemem=%" I32_SPEC "X\n",
                           curr->sym.name, size, sizemem ));
                 size = 0;
+                curr->e.seginfo->fileoffset = 0; /* v2.13: added */
             }
         }
 #if SECTORMAP
         /* v2.05: changed
-         * print name, fileoffset, objoffset, filesize, memsize
+         * print name, fileoffset, RVA, size (in file), sizemem
          */
         //LstPrintf( szSegLine, curr->sym.name, curr->e.seginfo->fileoffset, curr->e.seginfo->start_offset + curr->e.seginfo->start_loc, size, sizemem );
-        LstPrintf( szSegLine, curr->sym.name, curr->e.seginfo->fileoffset, first ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset, size, sizemem );
+        LstPrintf( szSegLine, curr->sym.name,
+                  curr->e.seginfo->fileoffset,
+                  bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
+                  size, sizemem );
         LstNL();
 #endif
-        if ( size != 0 && curr->e.seginfo->CodeBuffer ) {
-            DebugMsg(("bin_write_module(%s): write %" I32_SPEC "Xh bytes at offset %" I32_SPEC "Xh, initialized bytes=%" I32_SPEC "u, RVA=%" I32_SPEC "Xh, buffer=%p\n",
+        if ( size ) { /* v2.13: write in any case, even if bss segment */
+            fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
+            if ( curr->e.seginfo->CodeBuffer ) {
+                DebugMsg(("bin_write_module(%s): write %" I32_SPEC "Xh bytes at offset %" I32_SPEC "Xh, initialized bytes=%" I32_SPEC "u, RVA=%" I32_SPEC "Xh, buffer=%p\n",
                       curr->sym.name,
                       size,
                       curr->e.seginfo->fileoffset,
                       curr->e.seginfo->bytes_written,
-                      first ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
+                      bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
                       curr->e.seginfo->CodeBuffer ));
-            fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
 #ifdef __I86__
-            if ( hfwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
-                WriteError();
+                if ( hfwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
+                    WriteError();
 #else
-            if ( fwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
-                WriteError();
+                if ( fwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
+                    WriteError();
 #endif
+            } else {
+                char nullbyt = '\0';
+                for (;size;size--)
+                    fwrite( &nullbyt, 1, 1, CurrFile[OBJ] );
+            }
         }
 #ifdef DEBUG_OUT
         else DebugMsg(("bin_write_module(%s): nothing written\n", curr->sym.name ));
 #endif
-        first = FALSE;
+        bFirst = FALSE;
     }
 #if PE_SUPPORT && RAWSIZE_ROUND
     if ( modinfo->sub_format == SFORMAT_PE ) {
