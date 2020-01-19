@@ -45,6 +45,7 @@
 #endif
 #define _ltoa   ltoa
 #define _strupr strupr
+char *strupr(char *);
 
 #elif defined(__POCC__)
 
