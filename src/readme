@@ -1,1 +1,0 @@
-To compile under Linux, rename file GccUnix.mak to Makefile, then run make.
