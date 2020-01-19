@@ -356,3 +356,8 @@ pick( ELSE_CLAUSE_ALREADY_OCCURED_IN_THIS_IF_BLOCK, "ELSE clause already occured
 pick( ILLEGAL_USE_OF_SEGMENT_REGISTER,   "Illegal use of segment register" )
 pick( GROUP_EXCEEDS_64K,                 "Group exceeds 64K: %s" )
 pick( EXPORT_MUST_BE_FAR,                "EXPORT must be FAR: %s" )
+#if MZ_SUPPORT
+pick( START_LABEL_NOT_16BIT,             "Start label not in a 16-bit segment" )
+#else
+pick( msg_filler25, "" )
+#endif
