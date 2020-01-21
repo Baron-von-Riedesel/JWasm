@@ -36,7 +36,7 @@ $(OUTD)/%.o: src/%.c
 all:  $(OUTD) $(OUTD)/$(TARGET1)
 
 $(OUTD):
-	mkdir $(OUTD)
+	mkdir -p $(OUTD)
 
 $(OUTD)/$(TARGET1) : $(OUTD)/main.o $(proj_obj)
 ifeq ($(DEBUG),0)
