@@ -48,6 +48,9 @@ $(OUTD)/reswords.o: src/reswords.c src/H/instruct.h src/H/special.h src/H/direct
 
 ######
 
+install:
+	@install $(OUTD)/$(name) /usr/local/bin
+
 clean:
 	@rm -f $(OUTD)/$(name)
 	@rm -f $(OUTD)/*.o
