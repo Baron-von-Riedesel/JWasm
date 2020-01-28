@@ -107,8 +107,8 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
     fixup->def_seg = CurrSeg;           /* may be NULL (END directive) */
     fixup->sym = sym;
 
-    DebugMsg1(("CreateFixup(sym=%s type=%u, opt=%u) cnt=%" I32_SPEC "X, loc=%" I32_SPEC "Xh\n",
-        sym ? sym->name : "NULL", type, option, ++cnt, fixup->locofs ));
+    DebugMsg1(("CreateFixup(sym=%s type=%u, opt=%u) cnt=%" I32_SPEC "X, loc=%" I32_SPEC "Xh frame_type/datum=%u/%u\n",
+        sym ? sym->name : "NULL", type, option, ++cnt, fixup->locofs, fixup->frame_type, fixup->frame_datum ));
     return( fixup );
 }
 
@@ -155,6 +155,8 @@ void SetFixupFrame( const struct asym *sym, char ign_grp )
         case SYM_INTERNAL:
         case SYM_EXTERNAL:
             if( sym->segment != NULL ) {
+                DebugMsg1(("SetFixupFrame(ign_grp=%u): sym=%s (INT/EXT), sym.seg=%s\n",
+                           ign_grp, sym->name, sym->segment->name ));
                 if( ign_grp == FALSE && ( grp = (struct dsym *)GetGroup( sym ) ) ) {
                     Frame_Type = FRAME_GRP;
                     Frame_Datum = grp->e.grpinfo->grp_idx;
@@ -165,10 +167,13 @@ void SetFixupFrame( const struct asym *sym, char ign_grp )
             }
             break;
         case SYM_SEG:
+            DebugMsg1(("SetFixupFrame(ign_grp=%u): sym=%s (SEG)\n", ign_grp, sym->name ));
             Frame_Type = FRAME_SEG;
             Frame_Datum = GetSegIdx( sym->segment );
             break;
         case SYM_GRP:
+            DebugMsg1(("SetFixupFrame(ign_grp=%u): sym=%s (GRP)\n",
+                       ign_grp, sym->name ));
             Frame_Type = FRAME_GRP;
             Frame_Datum = ((struct dsym *)sym)->e.grpinfo->grp_idx;
             break;

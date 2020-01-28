@@ -13,12 +13,12 @@ DEBUG=0
 !endif
 
 !if $(DEBUG)
-OUTD=OWDOS16D
+OUTD=build\OWDOS16D
 !else
-OUTD=OWDOS16R
+OUTD=build\OWDOS16R
 !endif
 
-inc_dirs  = -IH -I$(WATCOM)\H
+inc_dirs  = -Isrc\H -I$(WATCOM)\H
 
 # to track memory leaks, the Open Watcom TRMEM module can be included.
 # it's useful only if FASTMEM=0 is set, though, otherwise most allocs 
@@ -52,7 +52,7 @@ lflagsd = $(LOPTD) sys dos op map=$^*, stack=0x8400
 
 CC=$(WATCOM)\binnt\wcc -q -0 -w3 -zc -ml -bc -bt=dos $(inc_dirs) $(extra_c_flags) -fo$@ -DFASTMEM=0 -DFASTPASS=0 -DCOFF_SUPPORT=0 -DELF_SUPPORT=0 -DAMD64_SUPPORT=0 -DSSSE3SUPP=0 -DSSE4SUPP=0 -DOWFC_SUPPORT=0 -DDLLIMPORT=0 -DAVXSUPP=0 -DPE_SUPPORT=0 -DVMXSUPP=0 -DSVMSUPP=0 -DCVOSUPP=0 -DCOMDATSUPP=0 -DSTACKBASESUPP=0 -zt=12000
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	@$(CC) $<
 
 proj_obj = &
@@ -72,15 +72,15 @@ $(OUTD)/$(name)r.exe: $(OUTD)/$(name).lib $(OUTD)/main.obj
 	@$(LINK) $(lflagsd) file $(OUTD)/main.obj name $@ lib $(OUTD)/$(name).lib
 
 $(OUTD)/$(name).lib: $(proj_obj)
-	@cd $(OUTD)
-	@wlib -q -n $(name).lib $(proj_obj:$(OUTD)/=+)
-	@cd ..
+	cd $(OUTD)
+	$(WATCOM)\binnt\wlib -q -n $(name).lib $(proj_obj:$(OUTD)/=+)
+	cd ..\..
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	@$(CC) msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
+	@$(CC) src\msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	@$(CC) reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h
+	@$(CC) src\reswords.c
 
 ######
 

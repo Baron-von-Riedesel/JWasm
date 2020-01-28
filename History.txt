@@ -9,6 +9,9 @@
       was followed by a segment with data; see mz2.asn.
    -  project tree changed so all generated files are located in 'build'
       subtree, and source files are in 'src'.
+   -  OMF/MZ/BIN format: a segment override may have caused a group 
+      association to be ignored; see fixup5.asm.
+   -  MZ/BIN format: frame-type group was often ignored; see fixup5a.asm.
    
    08/19/2018, v2.12:
 

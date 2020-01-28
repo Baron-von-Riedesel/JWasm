@@ -420,10 +420,11 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
     }
 
     if( CodeInfo->prefix.RegOverride != EMPTY ) {
-        assume = GetOverrideAssume( CodeInfo->prefix.RegOverride );
+        assume = GetOverrideAssume( CodeInfo->prefix.RegOverride, FALSE );
         /* assume now holds assumed SEG/GRP symbol */
         if ( sym ) {
-            DebugMsg1(("seg_override: sym=%s\n", sym->name ));
+            DebugMsg1(("seg_override: sym=%s, assume=%s, calling SetFixupFrame()\n",
+                       sym->name, assume ? assume->name : "NULL" ));
             SetFixupFrame( assume ? assume : sym, FALSE );
         } else if ( direct ) {
             /* no label attached (DS:[0]). No fixup is to be created! */
@@ -733,7 +734,7 @@ ret_code segm_override( const struct expr *opndx, struct code_info *CodeInfo )
                 return( EmitError( ILLEGAL_USE_OF_SEGMENT_REGISTER ) );
             }
 #endif
-            sym = GetOverrideAssume( temp );
+            sym = GetOverrideAssume( temp, FALSE );
             if ( CodeInfo ) {
                 /* hack: save the previous reg override value (needed for CMPS) */
                 LastRegOverride = CodeInfo->prefix.RegOverride;
@@ -742,6 +743,7 @@ ret_code segm_override( const struct expr *opndx, struct code_info *CodeInfo )
         } else {
             sym = SymSearch( opndx->override->string_ptr );
         }
+        DebugMsg1(("segm_override: sym=%s, type=%u\n", sym ? sym->name : "NULL", sym->state ));
         if ( sym && ( sym->state == SYM_GRP || sym->state == SYM_SEG ))
             SegOverride = sym;
     }
@@ -1117,13 +1119,14 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
 
     if( opndx->instr == T_SEG ) {
         fixup_type = FIX_SEG;
+        DebugMsg1(("idata_fixup, fixup_type=SEG\n" ));
     } else if( CodeInfo->mem_type == MT_BYTE ) {
         DebugMsg1(("idata_fixup, mem_type=BYTE\n" ));
         if ( opndx->instr == T_HIGH ) {
-            DebugMsg1(("idata_fixup, FIX_HIBYTE\n" ));
+            DebugMsg1(("idata_fixup, fixup_type=HIBYTE\n" ));
             fixup_type = FIX_HIBYTE;
         } else {
-            DebugMsg1(("idata_fixup, FIX_OFF8\n" ));
+            DebugMsg1(("idata_fixup, fixup_type=OFF8\n" ));
             fixup_type = FIX_OFF8;
         }
 #if 0
@@ -1145,9 +1148,10 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
         //if ( Ofssize == USE64 && CodeInfo->mem_type == MT_QWORD )
         /* v2.10: changed */
         //if ( CodeInfo->opnd[CurrOpnd].type == OP_I64 )
-        if ( CodeInfo->opnd[CurrOpnd].type == OP_I64 && ( opndx->instr == EMPTY || opndx->instr == T_OFFSET ) )
+        if ( CodeInfo->opnd[CurrOpnd].type == OP_I64 && ( opndx->instr == EMPTY || opndx->instr == T_OFFSET ) ) {
+            DebugMsg1(("idata_fixup, fixup_type=OFF64\n" ));
             fixup_type = FIX_OFF64;
-        else
+        } else
 #endif
             /* v2.04: changed, no longer depends on OfsSize */
             /* v2.05a: changed, so size==8 won't get a FIX_OFF16 type */
@@ -1156,12 +1160,17 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
                 /* v2.06: added branch for PTR16 fixup.
                  * it's only done if type coercion is FAR (Masm-compat)
                  */
-                if ( opndx->explicit && Ofssize == USE16 && opndx->mem_type == MT_FAR )
+                if ( opndx->explicit && Ofssize == USE16 && opndx->mem_type == MT_FAR ) {
+                    DebugMsg1(("idata_fixup, fixup_type=PTR16\n" ));
                     fixup_type = FIX_PTR16;
-                else
+                } else {
+                    DebugMsg1(("idata_fixup, fixup_type=OFF32\n" ));
                     fixup_type = FIX_OFF32;
-            } else
+                }
+            } else {
+                DebugMsg1(("idata_fixup, fixup_type=OFF16 (1)\n" ));
                 fixup_type = FIX_OFF16;
+            }
     } else {
         /* v2.04: changed, no longer depends on OfsSize */
         //if ( CodeInfo->mem_type == MT_DWORD ) {
@@ -1170,7 +1179,8 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
              * but fixup is 32-bit */
         //    fixup_type = FIX_OFF32;
         //} else
-            fixup_type = FIX_OFF16;
+        DebugMsg1(("idata_fixup, fixup_type=OFF16 (2)\n" ));
+        fixup_type = FIX_OFF16;
     }
     /* v2.04: 'if' added, don't set W bit if size == 1
      * code example:

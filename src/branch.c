@@ -258,7 +258,7 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
          If no, assume a FAR call.
          */
         if ( SegOverride != NULL && CodeInfo->mem_type == MT_EMPTY ) {
-            if ( SegOverride != GetOverrideAssume( ASSUME_CS ) ) {
+            if ( SegOverride != GetOverrideAssume( ASSUME_CS, TRUE ) ) {
                 CodeInfo->mem_type = MT_FAR;
             }
         }

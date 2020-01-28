@@ -562,8 +562,13 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                         value += cp->imagebase;
                     }
 #endif
-                } else
-                    value = (seg->e.seginfo->start_offset & 0xF) + fixup->offset + offset;
+                } else {
+                    /* v2.13: if frametype == FRAME_GRP, add full segment offset (see fixup5a.asm) */
+                    if ( fixup->frame_type == FRAME_GRP)
+                        value = seg->e.seginfo->start_offset + fixup->offset + offset;
+                    else
+                        value = (seg->e.seginfo->start_offset & 0xF) + fixup->offset + offset;
+                }
 
                 DebugMsg(("DoFixup(%s): loc=%04" I32_SPEC "X, sym=%s, target->start_offset=%" I32_SPEC "Xh, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
                         curr->sym.name, fixup->locofs, fixup->sym->name, seg->e.seginfo->start_offset, fixup->offset, offset ));

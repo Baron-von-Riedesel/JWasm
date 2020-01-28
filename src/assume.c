@@ -501,12 +501,17 @@ enum assume_segreg search_assume( const struct asym *sym,
  - override: segment register override (0,1,2,3,4,5)
 */
 
-struct asym *GetOverrideAssume( enum assume_segreg override )
-/***********************************************************/
+struct asym *GetOverrideAssume( enum assume_segreg override, bool ign_grp )
+/*************************************************************************/
 {
     if( SegAssumeTable[override].is_flat ) {
         return( (struct asym *)ModuleInfo.flat_grp );
     }
+    /* v2.13: optionally return group of segment */
+    if ( ign_grp == FALSE && SegAssumeTable[override].symbol &&
+        SegAssumeTable[override].symbol->state == SYM_SEG &&
+        ((struct dsym *)SegAssumeTable[override].symbol)->e.seginfo->group )
+        return( ( (struct dsym *)SegAssumeTable[override].symbol)->e.seginfo->group );
     return( SegAssumeTable[override].symbol);
 
 }

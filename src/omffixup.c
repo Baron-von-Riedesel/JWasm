@@ -43,10 +43,10 @@ extern unsigned omf_GetGrpIdx( struct asym *sym );
 
 /* logical data for fixup subrecord creation */
 struct logref {
-    uint_8  frame;          /* see enum frame_methods in omfspec.h      */
+    uint_8  frame_meth;     /* see enum frame_methods in omfspec.h      */
     uint_16 frame_datum;    /* datum for certain frame methods          */
     uint_8  is_secondary;   /* can write target in a secondary manner   */
-    uint_8  target;         /* see enum target_methods in omfspec.h     */
+    uint_8  target_meth;    /* see enum target_methods in omfspec.h     */
     uint_16 target_datum;   /* datum for certain target methods         */
     int_32  target_offset;  /* offset of target for target method       */
 };
@@ -130,7 +130,7 @@ static unsigned TranslateLogref( const struct logref *lr, uint_8 *buf, enum fixg
      * cannot just arbitrarily write fixups without a displacment if their
      * displacement field is 0.  So we use the is_secondary field.
      */
-    target = lr->target;
+    target = lr->target_meth;
     if( lr->target_offset == 0 && lr->is_secondary ) {
         target |= 0x04; /* P=1 -> no displacement field */
     }
@@ -145,8 +145,8 @@ static unsigned TranslateLogref( const struct logref *lr, uint_8 *buf, enum fixg
      *      1 = no displacement field
      * tt : target method
      */
-    *p++ = ( lr->frame << 4 ) | ( target );
-    p = putFrameDatum( p, lr->frame, lr->frame_datum );
+    *p++ = ( lr->frame_meth << 4 ) | ( target );
+    p = putFrameDatum( p, lr->frame_meth, lr->frame_datum );
     p = putTargetDatum( p, target, lr->target_datum );
     if( ( target & 0x04 ) == 0 ) {
         if( type == FIX_GEN_MS386 ) {
@@ -169,7 +169,7 @@ static uint TranslatePhysref( const struct physref *ref, uint_8 *buf, enum fixge
     /**/myassert( buf != NULL );
     /**/myassert( type == FIX_GEN_INTEL || type == FIX_GEN_MS386 );
 
-    p = put16( buf, ref->frame );
+    p = put16( buf, ref->frame_meth );
     p = put16( p, ref->offset );
     return( p - buf );
 }
@@ -207,7 +207,7 @@ unsigned OmfFixGenFixModend( const struct fixup *fixup, uint_8 *buf, uint_32 dis
         DebugMsg(("omf_write_modend(%p): fixup->frame_type/datum=%u/%u, EXTERNAL sym=%s\n",
                   fixup, fixup->frame_type, fixup->frame_datum, sym->name));
 
-        lr.target = TARGET_EXT & TARGET_WITH_DISPL;
+        lr.target_meth = TARGET_EXT & TARGET_WITH_DISPL;
         lr.target_datum = sym->ext_idx1;
 
         if( fixup->frame_type == FRAME_GRP && fixup->frame_datum == 0 ) {
@@ -219,29 +219,29 @@ unsigned OmfFixGenFixModend( const struct fixup *fixup, uint_8 *buf, uint_32 dis
                   fixup, fixup->frame_type, fixup->frame_datum, sym->name, sym->state, sym->segment ? sym->segment->name : "NULL" ));
         /**/myassert( sym->state == SYM_INTERNAL );
 
-        lr.target = TARGET_SEG & TARGET_WITH_DISPL;
+        lr.target_meth = TARGET_SEG & TARGET_WITH_DISPL;
         lr.target_datum = GetSegIdx( sym->segment );
     }
 
     if( fixup->frame_type != FRAME_NONE && fixup->frame_type != FRAME_SEG ) {
-        lr.frame = (uint_8)fixup->frame_type;
+        lr.frame_meth = (uint_8)fixup->frame_type;
     } else {
-        lr.frame = FRAME_TARG;
+        lr.frame_meth = FRAME_TARG;
     }
     return( TranslateLogref( &lr, buf, type ) );
 }
 
-/* fill a logref from a fixup's info */
+/* translate a fixup to a logref */
 
-static int omf_fill_logref( const struct fixup *fixup, struct logref *lr )
-/************************************************************************/
+static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
+/***********************************************************************/
 {
     struct asym      *sym;
 
     sym = fixup->sym; /* may be NULL! */
 
-    DebugMsg1(("omf_fill_logref: sym=%s, state=%d, fixup->type=%u\n",
-               sym ? sym->name : "NULL", sym ? sym->state : -1, fixup->type ));
+    DebugMsg1(("omf_set_logref: sym=%s, state=%d, fixup->type=%u, fixup->frame_type=%u\n",
+               sym ? sym->name : "NULL", sym ? sym->state : -1, fixup->type, fixup->frame_type ));
 
     /*------------------------------------*/
     /* Determine the Target and the Frame */
@@ -249,42 +249,42 @@ static int omf_fill_logref( const struct fixup *fixup, struct logref *lr )
 
     if( sym == NULL ) {
 
-        DebugMsg(("omf_fill_logref: sym is NULL, frame_type=%u\n", fixup->frame_type ));
+        DebugMsg(("omf_set_logref: sym is NULL, frame_type=%u\n", fixup->frame_type ));
         if ( fixup->frame_type == FRAME_NONE ) /* v1.96: nothing to do without a frame */
             return( 0 );
-        lr->target = fixup->frame_type;
+        lr->target_meth = fixup->frame_type;
         lr->target_datum = fixup->frame_datum;
-        lr->frame = FRAME_TARG;
+        lr->frame_meth = FRAME_TARG;
 
     } else if( sym->state == SYM_UNDEFINED ) { /* shouldn't happen */
 
-        DebugMsg(("omf_fill_logref: sym->state is SYM_UNDEFINED\n" ));
+        DebugMsg(("omf_set_logref: sym->state is SYM_UNDEFINED\n" ));
         EmitErr( SYMBOL_NOT_DEFINED, sym->name );
         return( 0 );
 
     } else if( sym->state == SYM_GRP ) {
 
-        DebugMsg1(("omf_fill_logref: sym->state is SYM_GRP\n" ));
-        lr->target = TARGET_GRP;
+        DebugMsg1(("omf_set_logref: sym->state is SYM_GRP\n" ));
+        lr->target_meth = TARGET_GRP;
         lr->target_datum = ((struct dsym *)sym)->e.grpinfo->grp_idx;
         if( fixup->frame_type != FRAME_NONE ) {
-            lr->frame = fixup->frame_type;
+            lr->frame_meth = fixup->frame_type;
             lr->frame_datum = fixup->frame_datum;
         } else {
-            lr->frame = FRAME_GRP;
+            lr->frame_meth = FRAME_GRP;
             lr->frame_datum = lr->target_datum;
         }
 
     } else if( sym->state == SYM_SEG ) {
 
-        DebugMsg1(("omf_fill_logref: sym->state is SYM_SEG %s\n" ));
-        lr->target = TARGET_SEG;
+        DebugMsg1(("omf_set_logref: sym->state is SYM_SEG %s\n" ));
+        lr->target_meth = TARGET_SEG;
         lr->target_datum = GetSegIdx( sym );
         if( fixup->frame_type != FRAME_NONE ) {
-            lr->frame = fixup->frame_type;
+            lr->frame_meth = fixup->frame_type;
             lr->frame_datum = fixup->frame_datum;
         } else {
-            lr->frame = FRAME_SEG;
+            lr->frame_meth = FRAME_SEG;
             lr->frame_datum = lr->target_datum;
         }
 
@@ -294,9 +294,9 @@ static int omf_fill_logref( const struct fixup *fixup, struct logref *lr )
 
         lr->frame_datum = fixup->frame_datum;
         if( sym->state == SYM_EXTERNAL ) {
-            DebugMsg1(("omf_fill_logref: sym->state is SYM_EXTERNAL, fixup->frame_type/datum=%u/%u\n",
+            DebugMsg1(("omf_set_logref: sym->state is SYM_EXTERNAL, fixup->frame_type/datum=%u/%u\n",
                       fixup->frame_type, fixup->frame_datum ));
-            lr->target = TARGET_EXT;
+            lr->target_meth = TARGET_EXT;
             lr->target_datum = sym->ext_idx1;
 
             if( fixup->frame_type == FRAME_GRP && fixup->frame_datum == 0 ) {
@@ -306,41 +306,46 @@ static int omf_fill_logref( const struct fixup *fixup, struct logref *lr )
         } else {
             /* must be SYM_INTERNAL */
             /**/myassert( sym->state == SYM_INTERNAL );
-            DebugMsg1(("omf_fill_logref: sym->state is SYM_INTERNAL, sym->segment=%s, fixup->frame/datum=%u/%u\n",
+            DebugMsg1(("omf_set_logref: sym->state is SYM_INTERNAL, sym->segment=%s, fixup->frame/datum=%u/%u\n",
                        sym->segment ? sym->segment->name : "NULL", fixup->frame_type, fixup->frame_datum ));
             /* v2.08: don't use info from assembly-time variables */
             if ( sym->variable ) {
-                lr->target = ( fixup->frame_type == FRAME_GRP ? TARGET_GRP : TARGET_SEG );
+                lr->target_meth = ( fixup->frame_type == FRAME_GRP ? TARGET_GRP : TARGET_SEG );
                 lr->target_datum = fixup->frame_datum;
             } else if ( sym->segment == NULL ) { /* shouldn't happen */
                 EmitErr( SEGMENT_MISSING_FOR_FIXUP, sym->name );
                 return ( 0 );
 #if COMDATSUPP
             } else if ( ( (struct dsym *)sym->segment)->e.seginfo->comdat_selection ) {
-                lr->target = TARGET_EXT;
+                lr->target_meth = TARGET_EXT;
                 lr->target_datum = ((struct dsym *)sym->segment)->e.seginfo->seg_idx;
-                lr->frame = FRAME_TARG;
+                lr->frame_meth = FRAME_TARG;
                 return( 1 );
 #endif
             } else {
-                lr->target = TARGET_SEG;
+                lr->target_meth = TARGET_SEG;
                 lr->target_datum = GetSegIdx( sym->segment );
             }
         }
 
         if( fixup->frame_type != FRAME_NONE ) {
-            lr->frame = (uint_8)fixup->frame_type;
+            lr->frame_meth = (uint_8)fixup->frame_type;
         } else {
-            lr->frame = FRAME_TARG;
+            lr->frame_meth = FRAME_TARG;
         }
     }
 
-    /*--------------------*/
-    /* Optimize the fixup */
-    /*--------------------*/
+    /*
+     * Optimize the fixup
+     * pairs: FRAME_SEG(0) <-> TARGET_SEG(4)
+     *        FRAME_GRP(1) <-> TARGET_GRP(5)
+     *        FRAME_EXT(2) <-> TARGET_EXT(6)
+     * will be optimized.
+    */
 
-    if( lr->frame == ( lr->target - TARGET_SEG ) ) {
-        lr->frame = FRAME_TARG;
+    if( lr->frame_meth == ( lr->target_meth - TARGET_SEG ) ) {
+        DebugMsg1(("omf_set_logref: fixup optimized, frame_meth=%u, target_meth=%u\n", lr->frame_meth, lr->target_meth ));
+        lr->frame_meth = FRAME_TARG; /* frame same as target */
     }
 
     return( 1 );
@@ -419,7 +424,7 @@ unsigned OmfFixGenFix( const struct fixup *fixup, uint_32 start_loc, uint_8 *buf
     }
     locat1 |= self_relative ? 0x80 : 0xc0; /* bit 7: 1=is a fixup subrecord */
 
-    if ( omf_fill_logref( fixup, &lr ) == 0 )
+    if ( omf_set_logref( fixup, &lr ) == 0 )
         return( 0 );
 
     /* magnitude of fixup's position is 10! */
