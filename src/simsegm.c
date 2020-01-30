@@ -177,7 +177,8 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
     const char  *name = NULL;
     char        init;
     int         type;
-    struct expr opndx;
+	struct expr opndx;
+    struct asym *sym;
 
     DebugMsg1(("SimplifiedSegDir(%s) enter\n", tokenarray[i].string_ptr ));
 
@@ -239,6 +240,9 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
         } else {
             if( name == NULL )
                 name = SegmNames[SIM_CODE];
+			/* v2.13: added */
+			if ( ( sym = SymSearch( name ) ) && sym->state == SYM_SEG && ((struct dsym *)sym)->e.seginfo->group )
+                name = ((struct dsym *)sym)->e.seginfo->group->name;
         }
         AddLineQueueX( "%r %r:%s", T_ASSUME, T_CS, name );
         break;

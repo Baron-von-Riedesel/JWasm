@@ -80,7 +80,7 @@ extern const uint_8     vex_flags[];
 extern int_8           Frame_Type;     /* Frame of current fixup */
 extern uint_16         Frame_Datum;    /* Frame datum of current fixup */
 
-struct asym             *SegOverride;
+struct asym             *SegOverride;  /* set by SetSegOverride() */
 static enum assume_segreg  LastRegOverride;/* needed for CMPS */
 
 /* linked lists of:     index
@@ -420,7 +420,7 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
     }
 
     if( CodeInfo->prefix.RegOverride != EMPTY ) {
-        assume = GetOverrideAssume( CodeInfo->prefix.RegOverride, FALSE );
+        assume = GetOverrideAssume( CodeInfo->prefix.RegOverride );
         /* assume now holds assumed SEG/GRP symbol */
         if ( sym ) {
             DebugMsg1(("seg_override: sym=%s, assume=%s, calling SetFixupFrame()\n",
@@ -716,8 +716,8 @@ static ret_code set_rm_sib( struct code_info *CodeInfo, unsigned CurrOpnd, char 
  * 2. Set global variable SegOverride if it's a SEG/GRP symbol
  *    (or whatever is assumed for the segment register)
  */
-ret_code segm_override( const struct expr *opndx, struct code_info *CodeInfo )
-/****************************************************************************/
+ret_code SetSegOverride( const struct expr *opndx, struct code_info *CodeInfo )
+/*****************************************************************************/
 {
     struct asym      *sym;
 
@@ -725,7 +725,7 @@ ret_code segm_override( const struct expr *opndx, struct code_info *CodeInfo )
         if( opndx->override->token == T_REG ) {
             int temp = GetRegNo( opndx->override->tokval );
             if ( SegAssumeTable[temp].error ) {
-                DebugMsg(("segm_override: assume error, reg=%u\n", temp ));
+                DebugMsg(("SetSegOverride: assume error, reg=%u\n", temp ));
                 return( EmitError( USE_OF_REGISTER_ASSUMED_TO_ERROR ) );
             }
 #if AMD64_SUPPORT
@@ -734,7 +734,7 @@ ret_code segm_override( const struct expr *opndx, struct code_info *CodeInfo )
                 return( EmitError( ILLEGAL_USE_OF_SEGMENT_REGISTER ) );
             }
 #endif
-            sym = GetOverrideAssume( temp, FALSE );
+            sym = GetOverrideAssume( temp );
             if ( CodeInfo ) {
                 /* hack: save the previous reg override value (needed for CMPS) */
                 LastRegOverride = CodeInfo->prefix.RegOverride;
@@ -743,7 +743,7 @@ ret_code segm_override( const struct expr *opndx, struct code_info *CodeInfo )
         } else {
             sym = SymSearch( opndx->override->string_ptr );
         }
-        DebugMsg1(("segm_override: sym=%s, type=%u\n", sym ? sym->name : "NULL", sym->state ));
+        DebugMsg1(("SetSegOverride: sym=%s, type=%u\n", sym ? sym->name : "NULL", sym->state ));
         if ( sym && ( sym->state == SYM_GRP || sym->state == SYM_SEG ))
             SegOverride = sym;
     }
@@ -1193,7 +1193,7 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
     if ( CurrOpnd == OPND2 && size != 1 )
         CodeInfo->iswide = 1;
 
-    segm_override( opndx, NULL ); /* set SegOverride global var */
+    SetSegOverride( opndx, NULL ); /* set SegOverride global var */
 
     /* set frame type in variables Frame_Type and Frame_Datum for fixup creation */
     if ( ModuleInfo.offsettype == OT_SEGMENT &&
@@ -1436,7 +1436,7 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
 
     sym = opndx->sym;
 
-    segm_override( opndx, CodeInfo );
+    SetSegOverride( opndx, CodeInfo );
 
     /* change pointer types ( MT_NEAR, MT_FAR, MT_PTR */
     /* v2.04a: should not be called if OFFSET was used */

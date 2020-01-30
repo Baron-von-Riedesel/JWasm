@@ -206,7 +206,7 @@ void AssumeInit( int pass ) /* pass may be -1 here! */
 void ModelAssumeInit( void )
 /**************************/
 {
-    const char *pCS;
+    //const char *pCS;
     const char *pFSassume = szError;
     const char *pGSassume = szError;
     const char *pFmt;
@@ -236,16 +236,23 @@ void ModelAssumeInit( void )
           )
             break;
 #endif
+#if 0 /* v2.13: removed */
         if ( ModuleInfo.model == MODEL_TINY )
             pCS = szDgroup;
         else
             pCS = SimGetSegName( SIM_CODE );
-
+#endif
         if ( ModuleInfo.distance != STACK_FAR )
-            pFmt = "%r %r:%s,%r:%s,%r:%s";
-        else
+            /* v2.13: CS assume removed */
+            //pFmt = "%r %r:%s,%r:%s,%r:%s";
             pFmt = "%r %r:%s,%r:%s";
-        AddLineQueueX( pFmt, T_ASSUME, T_CS, pCS, T_DS, szDgroup, T_SS, szDgroup );
+        else
+            /* v2.13: CS assume removed */
+            //pFmt = "%r %r:%s,%r:%s";
+            pFmt = "%r %r:%s";
+        /* v2.13: CS assume removed */
+        //AddLineQueueX( pFmt, T_ASSUME, T_CS, pCS, T_DS, szDgroup, T_SS, szDgroup );
+        AddLineQueueX( pFmt, T_ASSUME, T_DS, szDgroup, T_SS, szDgroup );
         break;
     }
 }
@@ -501,17 +508,12 @@ enum assume_segreg search_assume( const struct asym *sym,
  - override: segment register override (0,1,2,3,4,5)
 */
 
-struct asym *GetOverrideAssume( enum assume_segreg override, bool ign_grp )
-/*************************************************************************/
+struct asym *GetOverrideAssume( enum assume_segreg override )
+/***********************************************************/
 {
     if( SegAssumeTable[override].is_flat ) {
         return( (struct asym *)ModuleInfo.flat_grp );
     }
-    /* v2.13: optionally return group of segment */
-    if ( ign_grp == FALSE && SegAssumeTable[override].symbol &&
-        SegAssumeTable[override].symbol->state == SYM_SEG &&
-        ((struct dsym *)SegAssumeTable[override].symbol)->e.seginfo->group )
-        return( ( (struct dsym *)SegAssumeTable[override].symbol)->e.seginfo->group );
     return( SegAssumeTable[override].symbol);
 
 }

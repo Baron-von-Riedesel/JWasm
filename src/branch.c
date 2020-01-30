@@ -57,7 +57,7 @@
 /* v2.03: OutputCodeByte no longer needed */
 #define OutputCodeByte( x ) OutputByte( x )
 
-extern ret_code segm_override( const struct expr *opndx, struct code_info *CodeInfo );
+extern ret_code SetSegOverride( const struct expr *opndx, struct code_info *CodeInfo );
 extern struct asym *SegOverride;
 
 /* "short jump extension": extend a (conditional) jump.
@@ -155,7 +155,7 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
      * It might cause the call/jmp to become FAR, though.
      */
     if ( opndx->override != NULL ) {
-        segm_override( opndx, NULL );
+        SetSegOverride( opndx, NULL );
         DebugMsg(("process_branch(%" I32_SPEC "X): segment override %s\n", GetCurrOffset(), SegOverride ? SegOverride->name : "NULL" ));
         if ( SegOverride && opndx->sym && opndx->sym->segment ) {
             if ( SegOverride != opndx->sym->segment &&  SegOverride != ((struct dsym *)opndx->sym->segment)->e.seginfo->group ) {
@@ -258,7 +258,7 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
          If no, assume a FAR call.
          */
         if ( SegOverride != NULL && CodeInfo->mem_type == MT_EMPTY ) {
-            if ( SegOverride != GetOverrideAssume( ASSUME_CS, TRUE ) ) {
+            if ( SegOverride != GetOverrideAssume( ASSUME_CS ) ) {
                 CodeInfo->mem_type = MT_FAR;
             }
         }

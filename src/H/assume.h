@@ -71,7 +71,7 @@ extern void AssumeInit( int );     /* init assume tables */
 extern enum assume_segreg search_assume( const struct asym *sym, enum assume_segreg def, bool search_grps );
 extern enum assume_segreg GetAssume( const struct asym *, const struct asym *, enum assume_segreg, struct asym * * );
 
-extern struct asym      *GetOverrideAssume( enum assume_segreg, bool ign_grp );
+extern struct asym      *GetOverrideAssume( enum assume_segreg );
 extern struct asym      *GetStdAssume( int );
 extern struct asym      *GetStdAssumeEx( int );
 

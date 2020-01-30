@@ -143,6 +143,10 @@ void FreeFixup( struct fixup *fixup )
  * segment override with a symbol (i.e. DGROUP )
  * it has been checked in the expression evaluator that the
  * symbol has type SYM_SEG/SYM_GRP.
+ * called by:
+ * - check_assume()
+ * - seg_override()
+ * - set_frame/2()
  */
 
 void SetFixupFrame( const struct asym *sym, char ign_grp )
