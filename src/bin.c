@@ -564,10 +564,14 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
 #endif
                 } else {
                     /* v2.13: if frametype == FRAME_GRP, add full segment offset (see fixup5a.asm) */
+                    //value = (seg->e.seginfo->start_offset & 0xF) + fixup->offset + offset;
                     if ( fixup->frame_type == FRAME_GRP)
                         value = seg->e.seginfo->start_offset + fixup->offset + offset;
-                    else
-                        value = (seg->e.seginfo->start_offset & 0xF) + fixup->offset + offset;
+                    else {
+                        /* v2.13: use lower 4 bits of group offset */
+                        value = seg->e.seginfo->group ? (seg->e.seginfo->group->offset & 0xF ) : 0;
+                        value += (seg->e.seginfo->start_offset & 0xF) + fixup->offset + offset;
+                    }
                 }
 
                 DebugMsg(("DoFixup(%s): loc=%04" I32_SPEC "X, sym=%s, target->start_offset=%" I32_SPEC "Xh, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
