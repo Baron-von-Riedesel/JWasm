@@ -846,7 +846,15 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                            ( curr->sym.isfar || Ofssize == USE16 ) ) { /* v2.11: added */
                     AddLineQueueX( " pushw %r %s", T_OFFSET, fullparam );
                 } else {
-                    AddLineQueueX( " push %r %s", T_OFFSET, fullparam );
+#if AMD64_SUPPORT
+                    /* v2.13: in 64-bit you can't push a 64-bit offset */
+                    if ( curr->sym.Ofssize == USE64 ) {
+                        AddLineQueueX( " lea %r, %s", T_RAX, fullparam );
+                        AddLineQueueX( " push %r", T_RAX );
+                        *r0flags |= R0_USED;
+                    } else
+#endif
+                        AddLineQueueX( " push %r %s", T_OFFSET, fullparam );
                     /* v2.04: a 32bit offset pushed in 16-bit code */
                     if ( curr->sym.is_vararg && CurrWordSize == 2 && opnd.Ofssize > USE16 ) {
                         size_vararg += CurrWordSize;

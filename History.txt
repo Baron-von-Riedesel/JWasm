@@ -5,13 +5,20 @@
 
    -  regression in v2.12: option -bin didn't work if binary started with
       ORG != 0 ( i.e. DOS COM file format ); see bintest2.asm.
-   -  option -mz: invalid binary was written if a .bss or .stack segment
-      was followed by a segment with data; see mz2.asn.
+   -  option -mz,-bin: invalid binary was written if a .bss or .stack segment
+      was followed by a segment with initialized data; see mz2.asn.
    -  project tree changed so all generated files are located in 'build'
       subtree, and source files are in 'src'.
-   -  OMF/MZ/BIN format: a segment override may have caused a group 
+   -  options -mz,-bin,-omf: a segment override may have caused a group 
       association to be ignored; see fixup5.asm.
-   -  MZ/BIN format: frame-type group was often ignored; see fixup5a.asm.
+   -  options -mz,-bin: simplified segment directives now generate an assume
+      for CS that refers to the group (if the segment is in a group).
+      This solves some fixup problems; see fixup5a.asm.
+   -  INVOKE directive, 64-bit: if the calling convention wasn't win64 
+      (=fastcall), an address argument was translated to a "push offset <arg>",
+      which didn't work in 64-bit code; see invok64c.asn.
+   -  option -pe: if a DOS stub was added in the source (section .hdr$2), it
+      got the wrong segtype, resulting in an invalid binary.
    
    08/19/2018, v2.12:
 
