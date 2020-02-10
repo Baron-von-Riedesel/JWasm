@@ -324,6 +324,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     //offset += curr->sym.max_offset - curr->e.seginfo->start_loc;
     offset += curr->sym.max_offset;
     if ( grp ) {
+        /* changed in v1.96 */
         //grp->sym.total_size = offset + curr->e.seginfo->start_loc;
         grp->sym.total_size = offset;
         /* v2.07: for 16-bit groups, ensure that it fits in 64 kB */
@@ -765,9 +766,13 @@ static void pe_create_MZ_header( struct module_info *modinfo )
             AddLineQueue( p );
         AddLineQueueX("%s1 %r", hdrname, T_ENDS );
         RunLineQueue();
-        if ( ( sym = SymSearch( hdrname "1" ) ) && sym->state == SYM_SEG )
-           (( struct dsym *)sym)->e.seginfo->segtype = SEGTYPE_HDR;
     }
+    /* v2.13: moved 2 lines out of the previous if block;
+     * the segtype must be set even if the .hdr$1 segment was not
+     * defined via generated code.
+     */
+    if ( ( sym = SymSearch( hdrname "1" ) ) && sym->state == SYM_SEG )
+        (( struct dsym *)sym)->e.seginfo->segtype = SEGTYPE_HDR;
 }
 
 /* get/set value of @pe_file_flags variable */
@@ -1359,9 +1364,9 @@ static void pe_set_values( struct calc_param *cp )
                 }
 #endif
                 curr->e.seginfo->lname_idx = i;
+                DebugMsg(("pe_set_values: found %s\n", curr->sym.name ));
             }
         }
-
     }
     SortSegments( 2 );
     falign = get_bit( GHF( OptionalHeader.FileAlignment ) );
@@ -1386,7 +1391,11 @@ static void pe_set_values( struct calc_param *cp )
 
     if ( reloc ) {
         pe_set_base_relocs( reloc );
-        cp->rva = reloc->e.seginfo->start_offset + reloc->sym.max_offset;
+        /* v2.13: if no relocs exist, remove the .reloc section that was just created */
+        if ( reloc->sym.max_offset )
+            cp->rva = reloc->e.seginfo->start_offset + reloc->sym.max_offset;
+        else
+            objtab->sym.max_offset -= sizeof( struct IMAGE_SECTION_HEADER );
     }
 
     sizeimg = cp->rva;
@@ -1528,8 +1537,11 @@ static void pe_set_values( struct calc_param *cp )
 
     /* set relocation data dir value */
     if ( curr = (struct dsym *)SymSearch(".reloc") ) {
-        datadir[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress = curr->e.seginfo->start_offset;
-        datadir[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size = curr->sym.max_offset;
+        /* v2.13: don't set relocation entry if reloc size is 0 */
+        if ( curr->sym.max_offset ) {
+            datadir[IMAGE_DIRECTORY_ENTRY_BASERELOC].VirtualAddress = curr->e.seginfo->start_offset;
+            datadir[IMAGE_DIRECTORY_ENTRY_BASERELOC].Size = curr->sym.max_offset;
+        }
     }
 
     /* fixme: TLS entry is not written because there exists a segment .tls, but
