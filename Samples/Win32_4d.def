@@ -1,0 +1,5 @@
+;--- the hdld16.bin stub is a 16bit DOS extender. It can be
+;--- found in HXDEV16. The resulting binary will be stand-alone.
+EXPORTS
+ Export1
+ Export2

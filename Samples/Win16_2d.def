@@ -1,0 +1,9 @@
+LIBRARY
+DESCRIPTION 'Sample 16bit dll'
+EXETYPE WINDOWS
+PROTMODE
+CODE DISCARDABLE
+EXPORTS
+ WEP              @1 RESIDENTNAME
+ Export1          @2
+ Export2          @3

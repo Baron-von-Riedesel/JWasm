@@ -1406,8 +1406,9 @@ static void pe_set_values( struct calc_param *cp )
 
     /* set number of sections in PE file header (doesn't matter if it's 32- or 64-bit) */
     fh = &((struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer)->FileHeader;
-    fh->NumberOfSections = objtab->sym.max_offset / sizeof( struct IMAGE_SECTION_HEADER );
-    DebugMsg(("pe_set_values: no of sections=%u (objtab.sym.max_offset=%u)\n", fh->NumberOfSections, objtab->sym.max_offset ));
+    /* v2.13: number of sections is calculated later now */
+    //fh->NumberOfSections = objtab->sym.max_offset / sizeof( struct IMAGE_SECTION_HEADER );
+    //DebugMsg(("pe_set_values: no of sections=%u (objtab.sym.max_offset=%u)\n", fh->NumberOfSections, objtab->sym.max_offset ));
 
 #if RAWSIZE_ROUND
     cp->rawpagesize = ( ModuleInfo.defOfssize == USE64 ? ph64->OptionalHeader.FileAlignment : ph32->OptionalHeader.FileAlignment );
@@ -1420,6 +1421,8 @@ static void pe_set_values( struct calc_param *cp )
             continue;
         if ( curr->sym.max_offset == 0 ) /* ignore empty sections */
             continue;
+        if ( curr->e.seginfo->info ) /* v2.13: ignore 'info' sections (linker directives) */
+            continue;
         if ( curr->e.seginfo->lname_idx != i ) {
             i = curr->e.seginfo->lname_idx;
             secname = ( curr->e.seginfo->aliasname ? curr->e.seginfo->aliasname : ConvertSectionName( &curr->sym, NULL, buffer ) );
@@ -1430,8 +1433,11 @@ static void pe_set_values( struct calc_param *cp )
             /* file offset of first section in object table defines SizeOfHeader */
             if ( sizehdr == 0 )
                 sizehdr = curr->e.seginfo->fileoffset;
+            DebugMsg(("pe_set_values(%s): section name=%.8s, rva=%" I32_SPEC "X\n",
+                      curr->sym.name, section->Name, section->VirtualAddress ));
         }
         section->Characteristics |= pe_get_characteristics( curr );
+
         if ( curr->e.seginfo->segtype != SEGTYPE_BSS ) {
             section->SizeOfRawData += curr->sym.max_offset;
         }
@@ -1453,20 +1459,33 @@ static void pe_set_values( struct calc_param *cp )
                 if ( codebase == 0 )
                     codebase = section->VirtualAddress;
                 codesize += section->SizeOfRawData;
+                DebugMsg(("pe_set_values(%s): %.8s 'code' size=%" I32_SPEC "X, rva=%" I32_SPEC "X\n",
+                          curr->sym.name, section->Name, section->SizeOfRawData, section->VirtualAddress  ));
             }
             if ( section->Characteristics & IMAGE_SCN_CNT_INITIALIZED_DATA ) {
-                if ( database == 0 )
-                    database = section->VirtualAddress;
-                datasize += section->SizeOfRawData;
+                DebugMsg(("pe_set_values(%s): %.8s 'initialized data' size=%" I32_SPEC "X rva=%" I32_SPEC "X\n",
+                          curr->sym.name, section->Name, section->SizeOfRawData, section->VirtualAddress ));
+                /* v2.13: use non-empty sections only */
+                if ( section->SizeOfRawData ) {
+                    if ( database == 0 )
+                        database = section->VirtualAddress;
+                    datasize += section->SizeOfRawData;
+                }
             }
-            DebugMsg(("pe_set_values(%s): %.8s.SizeOfRawData set to %" I32_SPEC "X\n", curr->sym.name, section->Name, section->SizeOfRawData ));
-        }
-        if ( curr->next && curr->next->e.seginfo->lname_idx != i ) {
             DebugMsg(("pe_set_values: object %.8s, VA=%" I32_SPEC "X size=%" I32_SPEC "X phys ofs/size=%" I32_SPEC "Xh/%" I32_SPEC "Xh\n",
                   section->Name, section->VirtualAddress, section->Misc.VirtualSize, section->PointerToRawData, section->SizeOfRawData ));
-            section++;
+            section++; /* v2.13: section inc now done here */
         }
-    }
+        /* v2.13: removed */
+        //if ( curr->next && curr->next->e.seginfo->lname_idx != i ) {
+        //    DebugMsg(("pe_set_values: object %.8s, VA=%" I32_SPEC "X size=%" I32_SPEC "X phys ofs/size=%" I32_SPEC "Xh/%" I32_SPEC "Xh\n",
+        //          section->Name, section->VirtualAddress, section->Misc.VirtualSize, section->PointerToRawData, section->SizeOfRawData ));
+        //    section++;
+        //}
+    } /* end for */
+    /* v2.13: calculate the real no of sections */
+    fh->NumberOfSections = section - (struct IMAGE_SECTION_HEADER *)objtab->e.seginfo->CodeBuffer;
+    DebugMsg(("pe_set_values: no of sections=%u (objtab.sym.max_offset=%u)\n", fh->NumberOfSections, objtab->sym.max_offset ));
 
 
     if ( ModuleInfo.g.start_label ) {
