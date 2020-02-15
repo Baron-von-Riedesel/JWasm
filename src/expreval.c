@@ -689,9 +689,12 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                  must be stored in the <value> field */
                 if ( sym->state == SYM_STACK ) {
 #if STACKBASESUPP
-                    opnd->llvalue = sym->offset + StackAdj;
+                    /* v2.13: fixes github #6 */
+                    //opnd->llvalue = sym->offset + StackAdj;
+                    opnd->llvalue = (int_64)sym->offset + StackAdj;
 #else
-                    opnd->llvalue = sym->offset;
+                    //opnd->llvalue = sym->offset;
+                    opnd->llvalue = (int_64)sym->offset;
 #endif
                     opnd->indirect = TRUE;
                     /* v2.10: base register values now set here */

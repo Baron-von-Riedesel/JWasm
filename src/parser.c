@@ -1796,7 +1796,8 @@ static ret_code process_address( struct code_info *CodeInfo, unsigned CurrOpnd, 
                 return( EmitConstError( opndx ) );
             }
 #endif
-            EmitWarn( 3, DISPLACEMENT_OUT_OF_RANGE, opndx->value64 );
+            if( Parse_Pass == PASS_1 ) /* v2.13: don't warn multiple times */
+                EmitWarn( 3, DISPLACEMENT_OUT_OF_RANGE, opndx->value64 );
         }
         if( opndx->sym == NULL || opndx->sym->state == SYM_STACK ) {
             return( memory_operand( CodeInfo, CurrOpnd, opndx, FALSE ) );

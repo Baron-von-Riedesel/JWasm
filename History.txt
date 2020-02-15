@@ -19,6 +19,10 @@
       which didn't work in 64-bit code; see invok64c.asn.
    -  option -pe: if a DOS stub was added in the source (section .hdr$1), it
       got the wrong segtype, resulting in an invalid binary; see pe4.asc.
+   -  stack offsets may have caused an error in 64-bit mode or a warning in
+      the other modes if an overflow occured; see stkdisp1.asm.
+   -  option -pe,-bin: relative fixups weren't handled correctly in all cases;
+      was relevant for 64-bit only; see pe5.asc.
    
    08/19/2018, v2.12:
 

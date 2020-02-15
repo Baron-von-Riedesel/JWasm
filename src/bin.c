@@ -481,6 +481,9 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
 #if PE_SUPPORT && AMD64_SUPPORT
     uint_64 value64;
 #endif
+#ifdef DEBUG_OUT
+    uint_32 oldvalue;
+#endif
     uint_32 offset;  /* v2.07 */
     struct fixup *fixup;
     char *tmp;
@@ -542,7 +545,12 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
             case FIX_RELOFF16:
             case FIX_RELOFF32:
                 /* v1.96: special handling for "relative" fixups */
-                value = seg->e.seginfo->start_offset + fixup->offset + offset;
+                /* v2.13: content of fixup->offset is already stored at fixup location;
+                 * since 'value' is added to the item at fixup location,
+                 * it was added twice.
+                 */
+                //value = seg->e.seginfo->start_offset + fixup->offset + offset;
+                value = seg->e.seginfo->start_offset + offset;
                 DebugMsg(("DoFixup(%s): RELOFFx, loc=%" I32_SPEC "X, sym=%s, [start_offset=%" I32_SPEC "Xh, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
                         curr->sym.name, fixup->locofs, fixup->sym->name, seg->e.seginfo->start_offset, fixup->offset, offset ));
                 break;
@@ -608,8 +616,12 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
 #endif
             //*codeptr.dd += (value - fixup->locofs + 4);
             /* changed in v1.95 */
+#ifdef DEBUG_OUT
+            oldvalue = *codeptr.dd;
+#endif
             *codeptr.dd += (value - (fixup->locofs + curr->e.seginfo->start_offset) - 4);
-            DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_RELOFF32, value=%" I32_SPEC "Xh, *target=%Xh\n", curr->sym.name, fixup->locofs, value, *codeptr.dd ));
+            DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_RELOFF32, value=%" I32_SPEC "Xh, *target=%Xh [prev=%Xh]\n",
+                      curr->sym.name, fixup->locofs, value, *codeptr.dd, oldvalue ));
             break;
         case FIX_OFF8:
             *codeptr.db = value & 0xff;
