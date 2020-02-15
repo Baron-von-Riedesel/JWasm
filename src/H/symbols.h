@@ -215,7 +215,7 @@ struct asym {
 #if DLLIMPORT
         struct dll_desc *dll;         /* SYM_EXTERNAL (isproc=1) */
 #endif
-        /* for SYM_SEG; v2.11: moved here to make segment's offset field contain "local start offset" (=0) */
+        /* for SYM_SEG,SYM_GRP; v2.11: moved here to make segment's offset field contain "local start offset" (=0) */
         int_32          max_offset;
     };
     union {

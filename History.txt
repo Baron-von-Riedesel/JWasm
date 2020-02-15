@@ -18,7 +18,7 @@
       (=fastcall), an address argument was translated to a "push offset <arg>",
       which didn't work in 64-bit code; see invok64c.asn.
    -  option -pe: if a DOS stub was added in the source (section .hdr$1), it
-      got the wrong segtype, resulting in an invalid binary.
+      got the wrong segtype, resulting in an invalid binary; see pe4.asc.
    
    08/19/2018, v2.12:
 
