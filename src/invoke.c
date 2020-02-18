@@ -1396,7 +1396,9 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                             break;
                         case 8:
 #if AMD64_SUPPORT
-                            if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 )
+                            /* v2.13: .x64 doesn't mean that the current segment is 64-bit */
+                            //if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 )
+                            if ( Ofssize == USE64 )
                                 break;
 #endif
                             /* v2.06: added support for double constants */

@@ -23,6 +23,12 @@
       the other modes if an overflow occured; see stkdisp1.asm.
    -  option -pe,-bin: relative fixups weren't handled correctly in all cases;
       was relevant for 64-bit only; see pe5.asc.
+   -  if an 'undefined symbol' error was displayed, a wrong source file was
+      given if the error occured in a macro and the line was the first 'real' 
+      code line; see undef1.aso.
+   -  a qword-sized parameter in an invoke wasn't pushed correctly if a .x64
+      directive was in the source, although the current mode was not 64-bit;
+      see invoke40.asm.
    
    08/19/2018, v2.12:
 
