@@ -45,6 +45,7 @@ struct mod_state {
         struct equ_item *head; /* the list of modified assembly time variables */
         struct equ_item *tail;
     } Equ;
+    unsigned saved_src; /* v2.13: save the current src item */
     uint_8 modinfo[ sizeof( struct module_info ) - sizeof( struct module_vars ) ];
 };
 

@@ -53,7 +53,7 @@
 //#define min(x,y) (((x) < (y)) ? (x) : (y))
 //#endif
 
-extern ret_code segm_override( const struct expr *, struct code_info * );
+extern ret_code SetSegOverride( const struct expr *, struct code_info * );
 extern struct asym *SegOverride;
 extern const char szNull[];
 
@@ -1044,7 +1044,7 @@ next_item:  /* <--- continue scan if a comma has been detected */
              * Init var SegOverride, it's used inside set_frame()
              */
             SegOverride = NULL;
-            segm_override( &opndx, NULL );
+            SetSegOverride( &opndx, NULL );
 
             /* set global vars Frame and Frame_Datum */
             /* opndx.sym may be NULL, then SegOverride is set. */

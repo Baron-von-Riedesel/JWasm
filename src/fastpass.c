@@ -55,6 +55,9 @@ static void SaveState( void )
     modstate.init = TRUE;
     modstate.Equ.head = modstate.Equ.tail = NULL;
 
+    /* v2.13: save the current source file */
+    modstate.saved_src = get_curr_srcfile();
+    /* save the part of ModuleInfo that is NOT in module_vars */
     memcpy( &modstate.modinfo, (uint_8 *)&ModuleInfo + sizeof( struct module_vars ), sizeof( modstate.modinfo ) );
 
     SegmentSaveState();
@@ -121,7 +124,7 @@ void StoreLine( const char *srcline, int flags, uint_32 lst_position )
 void SkipSavedState( void )
 /*************************/
 {
-    DebugMsg(("SkipSavedState enter\n"));
+    DebugMsg(("SkipSavedState called\n"));
     UseSavedState = FALSE;
 }
 
@@ -181,6 +184,8 @@ struct line_item *RestoreState( void )
          */
         //memcpy( &modstate.modinfo.g, &ModuleInfo.g, sizeof( ModuleInfo.g ) );
         memcpy( (char *)&ModuleInfo + sizeof( struct module_vars ), &modstate.modinfo, sizeof( modstate.modinfo ) );
+        /* v2.13: restore the current source file */
+        set_curr_srcfile( modstate.saved_src, 0 );
         SetOfssize();
         SymSetCmpFunc();
     }

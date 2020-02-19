@@ -509,6 +509,8 @@ void print_source_nesting_structure( void )
     struct src_item *curr;
     unsigned        tab = 1;
 
+    DebugMsg1(("print_source_nesting_structure enter, src_stack=%s\n",
+              src_stack == NULL ? "<null>" : GetTopSrcName() ));
     /* in main source file? */
     if ( src_stack == NULL || src_stack->next == NULL )
         return;

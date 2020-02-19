@@ -341,6 +341,10 @@ ret_code ModelDirective( int i, struct asm_tok tokenarray[] )
         /* v2.11: define FLAT symbol is to early here, because defOfssize isn't set yet */
         //DefineFlatGroup();
     }
+#if AMD64_SUPPORT /* v2.13: if current cpu is 64-bit, flat model required */
+    else if ( ( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 )
+        return( EmitError( MODEL_MUST_BE_FLAT ) );
+#endif
 
     ModuleInfo.model = model;
     if ( init & INIT_LANG )

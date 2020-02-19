@@ -775,16 +775,22 @@ static void PassOneChecks( void )
         }
     }
 #if FASTPASS
+    /* to force a full second pass in case of missing symbols,
+     * activate the next block. It was implemented to have proper
+     * error displays if a forward reference wasn't found.
+     * However, v1.95 final won't need this anymore, because both
+     * filename + lineno for every line is known now in pass 2.
+     *
+     * v2.13: if the undefined symbol occurs in a macro, there's
+     * still a problem, since macro names aren't stored in the
+     * line store. So the block is activated again.
+     */
+#if 0
     if ( SymTables[TAB_UNDEF].head ) {
-        /* to force a full second pass in case of missing symbols,
-         * activate the next line. It was implemented to have proper
-         * error displays if a forward reference wasn't found.
-         * However, v1.95 final won't need this anymore, because both
-         * filename + lineno for every line is known now in pass 2.
-         */
-        /* SkipSavedState(); */
+        DebugMsg(("PassOneChecks: undefined symbols exist, first=%s\n", SymTables[TAB_UNDEF].head->sym.name ));
+        SkipSavedState();
     }
-
+#endif
     /* check if there's an undefined segment reference.
      * This segment was an argument to a group definition then.
      * Just do a full second pass, the GROUP directive will report
@@ -998,7 +1004,9 @@ static int OnePass( void )
             /* v2.06: list flags now initialized on the top level */
             ModuleInfo.line_flags = 0;
             MacroLevel = ( LineStoreCurr->srcfile == 0xFFF ? 1 : 0 );
-            DebugMsg1(("OnePass(%u) cur/nxt=%X/%X src=%X.%u mlvl=%u: >%s<\n", Parse_Pass+1, LineStoreCurr, LineStoreCurr->next, LineStoreCurr->srcfile, LineStoreCurr->lineno, MacroLevel, LineStoreCurr->line ));
+            DebugMsg1(("OnePass(%u) cur/nxt=%X/%X src=%X(%s).%u mlvl=%u: >%s<\n",
+                Parse_Pass+1, LineStoreCurr, LineStoreCurr->next, LineStoreCurr->srcfile, GetTopSrcName(),
+                LineStoreCurr->lineno, MacroLevel, LineStoreCurr->line ));
             ModuleInfo.CurrComment = NULL; /* v2.08: added (var is never reset because GetTextLine() isn't called) */
 #if USELSLINE
             if ( Token_Count = Tokenize( LineStoreCurr->line, 0, ModuleInfo.tokenarray, TOK_DEFAULT ) )
