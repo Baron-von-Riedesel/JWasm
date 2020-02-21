@@ -32,6 +32,7 @@ ftell   proto c :ptr
 fread   proto c :ptr BYTE, :DWORD, :DWORD, :ptr
 malloc  proto c :DWORD
 free    proto c :ptr
+atoi    proto c :ptr BYTE
 
 SEEK_SET equ 0
 SEEK_END equ 2
@@ -78,12 +79,15 @@ local filesize2:dword
 local buffer2:dword
 local header2:dword
 local cnt:dword
+local dwLine:dword
 local fPE:byte
 local fCoff:byte
+local fText:byte
 
     xor eax, eax
     mov fPE, 0
     mov fCoff, 0
+    mov fText, 0
     mov file1, eax
     mov file2, eax
 ;--- scan cmdline
@@ -102,11 +106,19 @@ local fCoff:byte
                 mov fPE, 1
             .elseif ( ax == "oc" )
                 mov fCoff, 1
+            .elseif ( ax == " t" )
+                mov fText, 1
             .else
                 invoke printf, CStr("unknown option",lf)
                 mov eax,1
                 ret
             .endif
+        .elseif ( fText == 1 )
+            push ecx
+            invoke atoi, edx
+            pop ecx
+            mov dwLine, eax
+            inc fText
         .elseif ( file1 == 0 )
             mov file1, edx
         .elseif ( file2 == 0 )
@@ -121,9 +133,12 @@ local fCoff:byte
     .endw
 
     .if ( file1 == 0 || file2 == 0 )
-        invoke printf, CStr("jfc v1.3, Public Domain.",lf)
-        invoke printf, CStr("jfc compares two binary files.",lf)
-        invoke printf, CStr("usage: jfc [-co|-pe] file1 file2",lf)
+        invoke printf, CStr("jfc v1.4, Public Domain.",lf)
+        invoke printf, CStr("jfc compares two (binary) files.",lf)
+        invoke printf, CStr("usage: jfc [-co|-pe|-t <n>] file1 file2",lf)
+        invoke printf, CStr("   -co: files in coff format, ignore timestamps",lf)
+        invoke printf, CStr("   -pe: files in PE format, ignore timestamps",lf)
+        invoke printf, CStr("   -t: files are plain text, ignore first <n> lines",lf)
         mov eax,1
         ret
     .endif
@@ -284,6 +299,24 @@ noexp:
         mov [edi+4],eax
         ;--- todo: if codeview info is contained,
         ;--- don't compare the compiler info
+    .elseif ( fText )
+        mov ecx,filesize1
+        mov edx,filesize2
+        .while dwLine
+            xchg esi,edi
+            mov al,10
+            repnz scasb
+            jnz faterr2
+            xchg esi,edi
+            xchg ecx,edx
+            mov al,10
+            repnz scasb
+            jnz faterr2
+            xchg ecx,edx
+            dec dwLine
+        .endw
+        mov filesize1,ecx
+        mov filesize2,edx
     .endif
 
     mov eax, filesize1
@@ -328,6 +361,10 @@ compare:
     .endw
     retn
 
+faterr2:
+    invoke printf, CStr("files don't have that many lines",lf)
+    mov eax, 1
+    ret
 faterr1:
     invoke printf, CStr("invalid PE binary: %s",lf), ecx
     mov eax, 1

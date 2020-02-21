@@ -29,6 +29,11 @@
    -  a qword-sized parameter in an invoke wasn't pushed correctly if a .x64
       directive was in the source, although the current mode was not 64-bit;
       see invoke40.asm.
+   -  equates in listing weren't always displayed correctly if value exceeded 
+      32-bit; see lst1.asc.
+   -  -Sz cmdline option added to suppress assembly result in listing. This
+      was mostly done to simplify comparing listing files in regression tests.
+   -  ensured that if cpu is 64-bit, .model is restricted to flat.
    
    08/19/2018, v2.12:
 

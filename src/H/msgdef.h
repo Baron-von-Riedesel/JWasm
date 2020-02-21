@@ -267,7 +267,7 @@ pick( TOO_MANY_UNWIND_CODES_IN_FRAME_PROC,"Too many unwind codes in FRAME proced
 #else
 pick( msg_filler26,                      "" )
 #endif
-#if PE_SUPPORT
+#if PE_SUPPORT || AMD64_SUPPORT
 pick( MODEL_MUST_BE_FLAT,                "Model must be FLAT" )
 #else
 pick( msg_filler24, "" )

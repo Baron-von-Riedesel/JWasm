@@ -1523,7 +1523,9 @@ int EXPQUAL AssembleModule( const char *source )
     if ( Options.quiet == FALSE )
         printf( "%s\n", CurrSource );
 
-    if ( CurrFile[LST] ) {
+    /* v2.13: suppress the final msg (mostly useful for regression tests) */
+    //if ( CurrFile[LST] ) {
+    if ( CurrFile[LST] && Options.no_final_msg_listing == FALSE ) {
         LstPrintf( CurrSource );
         LstNL();
     }

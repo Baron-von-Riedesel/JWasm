@@ -267,7 +267,9 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         ll.buffer[idx] = '=';
 #if AMD64_SUPPORT
         if ( sym->value3264 != 0 && ( sym->value3264 != -1 || sym->value >= 0 ) )
-            sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value + ( (uint_64)sym->value3264 << 32 ) );
+            /* v2.13: the addition & shift did not work. */
+            //sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value + ( (uint_64)sym->value3264 << 32 ) );
+            sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
         else
 #endif
             sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I32_SPEC "X", sym->value );

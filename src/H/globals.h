@@ -617,6 +617,7 @@ struct global_options {
     enum listmacro list_macro;           /* -Sa option  */
     bool        no_symbol_listing;       /* -Sn option  */
     bool        first_pass_listing;      /* -Sf option  */
+    bool        no_final_msg_listing;    /* -Sz option (v2.13) */
     bool        all_symbols_public;      /* -Zf option  */
     bool        safeseh;                 /* -safeseh option */
     uint_8      ignore_include;          /* -X option */
