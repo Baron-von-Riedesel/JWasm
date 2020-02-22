@@ -12,6 +12,7 @@
 ;--- link:     gcc -o jfc jfc.o
 
 ;--- v1.3: timestamp in export directory equalized
+;--- v1.4: option -t added to compare text files
 
     .386
     .MODEL FLAT, c
@@ -299,6 +300,8 @@ noexp:
         mov [edi+4],eax
         ;--- todo: if codeview info is contained,
         ;--- don't compare the compiler info
+
+;--- v1.4: compare text files, optionally starting with line x
     .elseif ( fText )
         mov ecx,filesize1
         mov edx,filesize2

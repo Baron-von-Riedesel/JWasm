@@ -351,7 +351,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
     int         j;
     char        labelbuff[16];/* for anonymous labels */
 
-    DebugMsg1(("%u get_operand(idx=%u >%s<) enter [memtype=%Xh]\n", evallvl, i, tokenarray[i].tokpos, opnd->mem_type ));
+    DebugMsg1(("%u get_operand(idx=%u >%s<, flgs=%Xh) enter [memtype=%Xh]\n", evallvl, i, tokenarray[i].tokpos, flags, opnd->mem_type ));
     switch( tokenarray[i].token ) {
     case T_NUM:
         DebugMsg1(("%u get_operand: T_NUM, %s, base=%u, len=%u\n", evallvl, tokenarray[i].string_ptr, tokenarray[i].numbase, tokenarray[i].itemlen ));
@@ -1125,16 +1125,14 @@ static ret_code sizlen_op( int oper, struct expr *opnd1, struct expr *opnd2, str
 static ret_code type_op( int oper, struct expr *opnd1, struct expr *opnd2, struct asym *sym, char *name )
 /*******************************************************************************************************/
 {
-    DebugMsg1(("type_op: opnd2 kind=%d memtype=%X sym=%s type=%s instr=%d istype=%u explicit=%u\n",
+    DebugMsg1(("type_op: opnd2 kind=%d memtype=%X sym=%s type=%s instr=%d istype=%u explicit=%u indirect=%u\n",
                opnd2->kind,
                opnd2->mem_type,
                sym ? sym->name : "NULL",
                opnd2->type ? opnd2->type->name : "NULL",
-               opnd2->instr,
-               opnd2->is_type,
-               opnd2->explicit ));
+               opnd2->instr, opnd2->is_type, opnd2->explicit,  opnd2->indirect ));
     opnd1->kind = EXPR_CONST;
-    /* TYPE accepts arrays/structs/unions */
+    /* TYPE accepts arrays/structs/unions/registers */
     /* v2.11: if memtype isn't empty, ignore any unary operator
      * test cases:
      * - type qword ptr sym.
@@ -2375,6 +2373,7 @@ static void CheckAssume( struct expr *opnd )
 {
     struct asym *sym = NULL;
 
+    DebugMsg1(( "CheckAssume: enter\n" ));
 #if 1 /* v2.10: see regression test ptr2.asm */
     if ( opnd->explicit ) { /* perhaps check mem_type instead of explicit */
         if ( opnd->type && opnd->type->mem_type == MT_PTR ) {
@@ -3212,8 +3211,7 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
         init_expr( &opnd2 );
         PrepareOp( &opnd2, opnd1, &tokenarray[curr_operator] );
 
-        /* read the (next) operand.
-         */
+        /* read the (next) operand. */
 
         if( tokenarray[curr_operator].token == T_OP_BRACKET ||
            tokenarray[curr_operator].token == T_OP_SQ_BRACKET ) {
@@ -3248,13 +3246,17 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
             }
 
         } else if( is_unary_op( tokenarray[*i].token ) ) { /* brackets, +, -, T_UNARY_OPERATOR? */
-            rc = evaluate( &opnd2, i, tokenarray, end, flags | EXPF_ONEOPND );
+            /* v2.13: see types16.asm */
+            //rc = evaluate( &opnd2, i, tokenarray, end, flags | EXPF_ONEOPND );
+            rc = evaluate( &opnd2, i, tokenarray, end, ( flags | EXPF_ONEOPND ) & ~EXPF_IN_SQBR );
         } else {
             /* get either:
              * - operand of unary operator OR
              * - 2. operand of binary operator
              */
-            rc = get_operand( &opnd2, i, tokenarray, flags );
+            /* v2.13: remove "inside brackets" for unary ops */
+            //rc = get_operand( &opnd2, i, tokenarray, flags );
+            rc = get_operand( &opnd2, i, tokenarray, ( tokenarray[curr_operator].token == T_UNARY_OPERATOR ) ? ( flags & ~EXPF_IN_SQBR): flags );
         }
 
         /*
@@ -3276,6 +3278,7 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
             if( get_precedence( &tokenarray[*i] ) >= get_precedence( &tokenarray[curr_operator] ) )
                 break;
 
+            DebugMsg1(("evaluate: inner loop, calling evaluate(), i=%u\n", *i ));
             rc = evaluate( &opnd2, i, tokenarray, end, flags | EXPF_ONEOPND );
         }
 
@@ -3288,8 +3291,9 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
             opnd2.kind = EXPR_EMPTY;
             rc = NOT_ERROR;
         }
-        if( rc != ERROR )
+        if( rc != ERROR ) {
             rc = calculate( opnd1, &opnd2, &tokenarray[curr_operator] );
+        }
 
         if( flags & EXPF_ONEOPND ) /* stop after one operand? */
             break;
