@@ -34,6 +34,8 @@
    -  -Sz cmdline option added to suppress assembly result in listing. This
       was mostly done to simplify comparing listing files in regression tests.
    -  ensured that if cpu is 64-bit, .model is restricted to flat.
+   -  TYPE operator didn't work with register operands inside square brackets;
+      see types16.asm.
    
    08/19/2018, v2.12:
 

@@ -1125,16 +1125,14 @@ static ret_code sizlen_op( int oper, struct expr *opnd1, struct expr *opnd2, str
 static ret_code type_op( int oper, struct expr *opnd1, struct expr *opnd2, struct asym *sym, char *name )
 /*******************************************************************************************************/
 {
-    DebugMsg1(("type_op: opnd2 kind=%d memtype=%X sym=%s type=%s instr=%d istype=%u explicit=%u\n",
+    DebugMsg1(("type_op: opnd2 kind=%d memtype=%X sym=%s type=%s instr=%d istype=%u explicit=%u indirect=%u\n",
                opnd2->kind,
                opnd2->mem_type,
                sym ? sym->name : "NULL",
                opnd2->type ? opnd2->type->name : "NULL",
-               opnd2->instr,
-               opnd2->is_type,
-               opnd2->explicit ));
+               opnd2->instr, opnd2->is_type, opnd2->explicit,  opnd2->indirect ));
     opnd1->kind = EXPR_CONST;
-    /* TYPE accepts arrays/structs/unions */
+    /* TYPE accepts arrays/structs/unions/registers */
     /* v2.11: if memtype isn't empty, ignore any unary operator
      * test cases:
      * - type qword ptr sym.
@@ -2375,6 +2373,7 @@ static void CheckAssume( struct expr *opnd )
 {
     struct asym *sym = NULL;
 
+    DebugMsg1(( "CheckAssume: enter\n" ));
 #if 1 /* v2.10: see regression test ptr2.asm */
     if ( opnd->explicit ) { /* perhaps check mem_type instead of explicit */
         if ( opnd->type && opnd->type->mem_type == MT_PTR ) {
@@ -3248,7 +3247,9 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
             }
 
         } else if( is_unary_op( tokenarray[*i].token ) ) { /* brackets, +, -, T_UNARY_OPERATOR? */
-            rc = evaluate( &opnd2, i, tokenarray, end, flags | EXPF_ONEOPND );
+            /* v2.13: see types16.asm */
+            //rc = evaluate( &opnd2, i, tokenarray, end, flags | EXPF_ONEOPND );
+            rc = evaluate( &opnd2, i, tokenarray, end, ( flags | EXPF_ONEOPND ) & ~EXPF_IN_SQBR );
         } else {
             /* get either:
              * - operand of unary operator OR
@@ -3288,8 +3289,9 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
             opnd2.kind = EXPR_EMPTY;
             rc = NOT_ERROR;
         }
-        if( rc != ERROR )
+        if( rc != ERROR ) {
             rc = calculate( opnd1, &opnd2, &tokenarray[curr_operator] );
+        }
 
         if( flags & EXPF_ONEOPND ) /* stop after one operand? */
             break;
