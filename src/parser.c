@@ -1620,6 +1620,12 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
             CodeInfo->prefix.adrsiz = FALSE;
         } else {
             CodeInfo->prefix.adrsiz = TRUE;
+#if AMD64_SUPPORT /* v2.13: check added. see expr6.aso */
+            /* 16bit addressing modes don't exist in long mode */
+            if ( ( GetValueSp( index ) & OP_R16) && CodeInfo->Ofssize == USE64 ) {
+                return( EmitError( INVALID_ADDRESSING_MODE_WITH_CURRENT_CPU_SETTING ) );
+            }
+#endif
         }
 
         /* v2.10: register swapping has been moved to expreval.c, index_connect().

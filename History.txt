@@ -36,6 +36,7 @@
    -  ensured that if cpu is 64-bit, .model is restricted to flat.
    -  TYPE operator didn't work with register operands inside square brackets;
       see types16.asm & types17.asm.
+   -  in 64-bit mode, 16-bit index register wasn't rejected; see expr6.aso.
    
    08/19/2018, v2.12:
 
