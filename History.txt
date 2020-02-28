@@ -37,6 +37,8 @@
    -  TYPE operator didn't work with register operands inside square brackets;
       see types16.asm & types17.asm.
    -  in 64-bit mode, 16-bit index register wasn't rejected; see expr6.aso.
+   -  assembly-time variables modified by directives SIZESTR/INSTR did set
+      the lower 32-bits of the value only; see equate29.asm.
    
    08/19/2018, v2.12:
 

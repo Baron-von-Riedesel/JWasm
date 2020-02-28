@@ -318,6 +318,7 @@ struct asym *CreateVariable( const char *name, int value )
     //sym->mem_type = MT_ABS;
     sym->variable = TRUE;
     sym->value    = value;
+    sym->value3264 = (value >= 0 ? 0 : -1); /* v2.13: added: see equate29.asm */
     sym->isequate = TRUE;
     return( sym );
 }
