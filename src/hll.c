@@ -593,7 +593,7 @@ static ret_code GetAndExpression( struct hll_item *hll, int *i, struct asm_tok t
     while ( COP_AND == GetCOp( &tokenarray[*i] ) ) {
 
         (*i)++;
-        DebugMsg1(("%u GetAndExpression: &&-operator found, is_true=%u, lastjmp=%s\n", evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL" ));
+        DebugMsg1(("%u GetAndExpression: &&-operator found, is_true=%u, lastjmp=%s, lasttruelabel=%u\n", evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL", hllop->lasttruelabel ));
 
         if ( is_true ) {
             /* todo: please describe what's done here and why! */
@@ -638,7 +638,7 @@ static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok toke
     char *ptr = buffer;
     uint_32 truelabel = 0;
 
-    DebugMsg1(("%u GetExpression(>%.32s< buf=>%s<) enter\n", ++evallvl, tokenarray[*i].tokpos, buffer ));
+    DebugMsg1(("%u GetExpression(>%.32s< is_true=%u buf=>%s<) enter\n", ++evallvl, tokenarray[*i].tokpos, is_true, buffer ));
 
     /* v2.08: structure changed from for(;;) to while() to increase
      * readability and - optionally - handle the second operand differently
@@ -668,7 +668,7 @@ static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok toke
          */
 
         (*i)++;
-        DebugMsg1(("%u GetExpression: ||-operator found, is_true=%u, lastjmp=%s\n", evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL" ));
+        DebugMsg1(("%u GetExpression: ||-operator found, is_true=%u, lastjmp=%s, lasttruelabel=%u\n", evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL", hllop->lasttruelabel ));
 
         if ( is_true == FALSE ) {
             if ( hllop->lastjmp ) {
@@ -716,10 +716,10 @@ static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok toke
         ptr += strlen( ptr );
         GetLabelStr( truelabel, ptr );
         strcat( ptr, LABELQUAL EOLSTR );
-        DebugMsg1(("%u GetExpression: label added >%s<\n", evallvl, ptr ));
         hllop->lasttruelabel = truelabel; /* v2.08 */
+        DebugMsg1(("%u GetExpression: label added >%s<, lasttruelabel=%u\n", evallvl, ptr, hllop->lasttruelabel ));
     }
-    DebugMsg1(("%u GetExpression exit\n", evallvl-- ));
+    DebugMsg1(("%u GetExpression exit >%.32s<\n", evallvl--, tokenarray[*i].tokpos ));
     return( NOT_ERROR );
 }
 

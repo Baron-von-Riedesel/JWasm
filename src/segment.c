@@ -1364,6 +1364,11 @@ void SortSegments( int type )
     bool swap;
     struct dsym *curr;
     //int index = 1;
+#if PE_SUPPORT
+    char *name1;
+    char *name2;
+    char buffer[2*MAX_ID_LEN+2];
+#endif
 
     while ( changed == TRUE ) {
         struct dsym *prev = NULL;
@@ -1383,12 +1388,20 @@ void SortSegments( int type )
                 if ( strcmp( curr->sym.name, curr->next->sym.name ) > 0 )
                     swap = TRUE;
                 break;
+#if PE_SUPPORT
             case 2:
-                if ( curr->e.seginfo->lname_idx > curr->next->e.seginfo->lname_idx ||
-                    ( curr->e.seginfo->lname_idx == curr->next->e.seginfo->lname_idx &&
-                    ( _stricmp( curr->sym.name, curr->next->sym.name ) > 0 ) ) )
+                /* v2.13: compare the "final" names of the sections */
+                if ( curr->e.seginfo->lname_idx > curr->next->e.seginfo->lname_idx )
                     swap = TRUE;
+                else if ( curr->e.seginfo->lname_idx == curr->next->e.seginfo->lname_idx ) {
+                    buffer[0] = '\0';
+                    name1 = ConvertSectionName( &curr->sym, NULL, buffer );
+                    name2 = ConvertSectionName( &curr->next->sym, NULL, buffer+MAX_ID_LEN+1 );
+                    if ( _stricmp( name1, name2 ) > 0 )
+                        swap = TRUE;
+                }
                 break;
+#endif
 #ifdef DEBUG_OUT
             default: /**/myassert( 0 );
 #endif

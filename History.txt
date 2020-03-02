@@ -39,6 +39,10 @@
    -  in 64-bit mode, 16-bit index register wasn't rejected; see expr6.aso.
    -  assembly-time variables modified by directives SIZESTR/INSTR did set
       the lower 32-bits of the value only; see equate29.asm.
+   -  option -pe: when arranging segments to sections, the segment names
+      defined in the source were used; this may have given unexpected results
+      if segment names were translated to section names ("_TEXT" to ".text" );
+      see pe6.asc.
    
    08/19/2018, v2.12:
 

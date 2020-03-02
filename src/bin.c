@@ -127,7 +127,8 @@ static const char idataattr[] = { "FLAT read public alias('.rdata') 'DATA'" };
 
 static const char mzcode[] = {
     "db 'MZ'\0"           /* e_magic */
-    "dw 80h, 1, 0, 4\0"   /* e_cblp, e_cp, e_crlc, e_cparhdr */
+//    "dw 80h, 1, 0, 4\0"   /* v2.13: file size is 40h (hdr) + 28h (code) */
+    "dw 68h, 1, 0, 4\0"   /* e_cblp, e_cp, e_crlc, e_cparhdr */
     "dw 0, -1, 0, 0B8h\0" /* e_minalloc, e_maxalloc, e_ss, e_sp */
     "dw 0, 0, 0, 40h\0"   /* e_csum, e_ip, e_cs, e_sp, e_lfarlc */
     "org 40h\0"           /* e_lfanew, will be set by program */
@@ -1296,17 +1297,53 @@ static void pe_set_base_relocs( struct dsym *reloc )
  * .tls   - IMAGE_DIRECTORY_ENTRY_TLS
  */
 
+struct codedata {
+    uint_32 codebase;
+    uint_32 codesize;
+    uint_32 database;
+    uint_32 datasize;
+};
+
+/* finish a section in a PE */
+
+void pe_finish_section( struct IMAGE_SECTION_HEADER *section, struct calc_param *cp, struct codedata *cd )
+{
+#if RAWSIZE_ROUND /* AntiVir TR/Crypt.XPACK Gen */
+    section->SizeOfRawData += cp->rawpagesize - 1;
+    section->SizeOfRawData &= ~(cp->rawpagesize - 1);
+#endif
+    if ( section->Characteristics & IMAGE_SCN_MEM_EXECUTE ) {
+        if ( cd->codebase == 0 )
+            cd->codebase = section->VirtualAddress;
+        cd->codesize += section->SizeOfRawData;
+        DebugMsg(("pe_finish_section: %.8s 'code' size=%" I32_SPEC "X, rva=%" I32_SPEC "X\n",
+                  section->Name, section->SizeOfRawData, section->VirtualAddress  ));
+    }
+    if ( section->Characteristics & IMAGE_SCN_CNT_INITIALIZED_DATA ) {
+        /* v2.13: use non-empty sections only */
+        if ( section->SizeOfRawData ) {
+            if ( cd->database == 0 )
+                cd->database = section->VirtualAddress;
+            cd->datasize += section->SizeOfRawData;
+            DebugMsg(("pe_finish_section: %.8s 'initialized data' size=%" I32_SPEC "X rva=%" I32_SPEC "X\n",
+                      section->Name, section->SizeOfRawData, section->VirtualAddress ));
+        }
+    }
+    DebugMsg(("pe_finish_section: object %.8s, VA=%" I32_SPEC "X size=%" I32_SPEC "X phys ofs/size=%" I32_SPEC "Xh/%" I32_SPEC "Xh\n",
+              section->Name, section->VirtualAddress, section->Misc.VirtualSize, section->PointerToRawData, section->SizeOfRawData ));
+    return;
+}
+
+
 static void pe_set_values( struct calc_param *cp )
 /************************************************/
 {
     int i;
+    bool unfinishedSection;
     int falign;
     int malign;
     uint_16 ff;
-    uint_32 codebase = 0;
-    uint_32 database = 0;
-    uint_32 codesize = 0;
-    uint_32 datasize = 0;
+    struct codedata cd = {0,0,0,0};
     uint_32 sizehdr  = 0;
     uint_32 sizeimg  = 0;
     struct dsym *curr;
@@ -1413,8 +1450,8 @@ static void pe_set_values( struct calc_param *cp )
     if ( mzhdr->sym.max_offset >= 0x40 )
         ((struct IMAGE_DOS_HEADER *)mzhdr->e.seginfo->CodeBuffer)->e_lfanew = pehdr->e.seginfo->fileoffset;
 
-    /* set number of sections in PE file header (doesn't matter if it's 32- or 64-bit) */
     fh = &((struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer)->FileHeader;
+    /* set number of sections in PE file header (doesn't matter if it's 32- or 64-bit) */
     /* v2.13: number of sections is calculated later now */
     //fh->NumberOfSections = objtab->sym.max_offset / sizeof( struct IMAGE_SECTION_HEADER );
     //DebugMsg(("pe_set_values: no of sections=%u (objtab.sym.max_offset=%u)\n", fh->NumberOfSections, objtab->sym.max_offset ));
@@ -1424,15 +1461,28 @@ static void pe_set_values( struct calc_param *cp )
 #endif
 
     /* fill object table values */
+    DebugMsg(("pe_set_values: start scanning sections\n" ));
     section = (struct IMAGE_SECTION_HEADER *)objtab->e.seginfo->CodeBuffer;
-    for( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
-        if ( curr->e.seginfo->segtype == SEGTYPE_HDR )
+    for( curr = SymTables[TAB_SEG].head, i = -1, unfinishedSection = FALSE; curr; curr = curr->next ) {
+        if ( curr->e.seginfo->segtype == SEGTYPE_HDR ) {
+            DebugMsg(("pe_set_values: skip %s - segtype hdr\n", curr->sym.name ));
             continue;
-        if ( curr->sym.max_offset == 0 ) /* ignore empty sections */
+        }
+        if ( curr->sym.max_offset == 0 ) { /* ignore empty sections */
+            DebugMsg(("pe_set_values: skip %s - max_offset=0\n", curr->sym.name ));
             continue;
-        if ( curr->e.seginfo->info ) /* v2.13: ignore 'info' sections (linker directives) */
+        }
+        if ( curr->e.seginfo->info ) {/* v2.13: ignore 'info' sections (linker directives) */
+            DebugMsg(("pe_set_values: skip %s - info\n", curr->sym.name ));
             continue;
+        }
         if ( curr->e.seginfo->lname_idx != i ) {
+            /* v2.13: section finish & increment now done here */
+            if ( unfinishedSection ) {
+                pe_finish_section( section, cp, &cd );
+                section++;
+            }
+            unfinishedSection = TRUE;
             i = curr->e.seginfo->lname_idx;
             secname = ( curr->e.seginfo->aliasname ? curr->e.seginfo->aliasname : ConvertSectionName( &curr->sym, NULL, buffer ) );
             strncpy( section->Name, secname, sizeof ( section->Name ) );
@@ -1455,43 +1505,11 @@ static void pe_set_values( struct calc_param *cp )
         //section->Misc.VirtualSize += curr->sym.max_offset;
         section->Misc.VirtualSize = curr->sym.max_offset + ( curr->e.seginfo->start_offset - section->VirtualAddress );
 
-        /* v2.12: todo: describe what is done here
-         * 1. checks for a segment type change
-         * 2. may adjust variables codebase/codesize, database/datasize (fields in optionalheader)
-         */
-        if ( curr->next == NULL || curr->next->e.seginfo->lname_idx != i ) {
-#if RAWSIZE_ROUND /* AntiVir TR/Crypt.XPACK Gen */
-            section->SizeOfRawData += cp->rawpagesize - 1;
-            section->SizeOfRawData &= ~(cp->rawpagesize - 1);
-#endif
-            if ( section->Characteristics & IMAGE_SCN_MEM_EXECUTE ) {
-                if ( codebase == 0 )
-                    codebase = section->VirtualAddress;
-                codesize += section->SizeOfRawData;
-                DebugMsg(("pe_set_values(%s): %.8s 'code' size=%" I32_SPEC "X, rva=%" I32_SPEC "X\n",
-                          curr->sym.name, section->Name, section->SizeOfRawData, section->VirtualAddress  ));
-            }
-            if ( section->Characteristics & IMAGE_SCN_CNT_INITIALIZED_DATA ) {
-                DebugMsg(("pe_set_values(%s): %.8s 'initialized data' size=%" I32_SPEC "X rva=%" I32_SPEC "X\n",
-                          curr->sym.name, section->Name, section->SizeOfRawData, section->VirtualAddress ));
-                /* v2.13: use non-empty sections only */
-                if ( section->SizeOfRawData ) {
-                    if ( database == 0 )
-                        database = section->VirtualAddress;
-                    datasize += section->SizeOfRawData;
-                }
-            }
-            DebugMsg(("pe_set_values: object %.8s, VA=%" I32_SPEC "X size=%" I32_SPEC "X phys ofs/size=%" I32_SPEC "Xh/%" I32_SPEC "Xh\n",
-                  section->Name, section->VirtualAddress, section->Misc.VirtualSize, section->PointerToRawData, section->SizeOfRawData ));
-            section++; /* v2.13: section inc now done here */
-        }
-        /* v2.13: removed */
-        //if ( curr->next && curr->next->e.seginfo->lname_idx != i ) {
-        //    DebugMsg(("pe_set_values: object %.8s, VA=%" I32_SPEC "X size=%" I32_SPEC "X phys ofs/size=%" I32_SPEC "Xh/%" I32_SPEC "Xh\n",
-        //          section->Name, section->VirtualAddress, section->Misc.VirtualSize, section->PointerToRawData, section->SizeOfRawData ));
-        //    section++;
-        //}
     } /* end for */
+    if ( unfinishedSection ) {
+        pe_finish_section( section, cp, &cd );
+        section++;
+    }
     /* v2.13: calculate the real no of sections */
     fh->NumberOfSections = section - (struct IMAGE_SECTION_HEADER *)objtab->e.seginfo->CodeBuffer;
     DebugMsg(("pe_set_values: no of sections=%u (objtab.sym.max_offset=%u)\n", fh->NumberOfSections, objtab->sym.max_offset ));
@@ -1515,8 +1533,8 @@ static void pe_set_values( struct calc_param *cp )
         /* round up the SizeOfImage field to page boundary */
         sizeimg = ( sizeimg + ph64->OptionalHeader.SectionAlignment - 1 ) & ~(ph64->OptionalHeader.SectionAlignment - 1);
 #endif
-        ph64->OptionalHeader.SizeOfCode = codesize;
-        ph64->OptionalHeader.BaseOfCode = codebase;
+        ph64->OptionalHeader.SizeOfCode = cd.codesize;
+        ph64->OptionalHeader.BaseOfCode = cd.codebase;
         ph64->OptionalHeader.SizeOfImage = sizeimg;
         ph64->OptionalHeader.SizeOfHeaders = sizehdr;
         datadir = &ph64->OptionalHeader.DataDirectory[0];
@@ -1526,10 +1544,10 @@ static void pe_set_values( struct calc_param *cp )
         /* round up the SizeOfImage field to page boundary */
         sizeimg = ( sizeimg + ph32->OptionalHeader.SectionAlignment - 1 ) & ~(ph32->OptionalHeader.SectionAlignment - 1);
 #endif
-        ph32->OptionalHeader.SizeOfCode = codesize;
-        ph32->OptionalHeader.SizeOfInitializedData = datasize;
-        ph32->OptionalHeader.BaseOfCode = codebase;
-        ph32->OptionalHeader.BaseOfData = database;
+        ph32->OptionalHeader.SizeOfCode = cd.codesize;
+        ph32->OptionalHeader.SizeOfInitializedData = cd.datasize;
+        ph32->OptionalHeader.BaseOfCode = cd.codebase;
+        ph32->OptionalHeader.BaseOfData = cd.database;
         ph32->OptionalHeader.SizeOfImage = sizeimg;
         ph32->OptionalHeader.SizeOfHeaders = sizehdr;
         datadir = &ph32->OptionalHeader.DataDirectory[0];
