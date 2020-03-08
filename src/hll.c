@@ -80,12 +80,19 @@ struct hll_item {
     char                *condlines;     /* .WHILE-blocks only: lines to add after 'test' label */
     enum hll_cmd        cmd;            /* start cmd (IF, WHILE, REPEAT) */
     enum hll_flags      flags;          /* v2.08: added */
+    uint_32 truelabel; /* v2.08: new member */
+};
+
+enum hll_op {
+    HLLO_NONE,
+    HLLO_OR,
+    HLLO_AND
 };
 
 /* v2.08: struct added */
 struct hll_opnd {
+    enum hll_op op; /* v2.13: added */
     char    *lastjmp;
-    uint_32 lasttruelabel; /* v2.08: new member */
 };
 
 static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok[], int ilabel, bool is_true, char *buffer, struct hll_opnd * );
@@ -445,9 +452,11 @@ static ret_code GetSimpleExpression( struct hll_item *hll, int *i, struct asm_to
             if ( ( is_true == TRUE && op1.value ) ||
                 ( is_true == FALSE && op1.value == 0 ) ) {
                 sprintf( buffer, "jmp " LABELFMT EOLSTR, label );
+                DebugMsg1(("%u GetSimpleExpression: jmp created >%s<\n", evallvl, buffer ));
             } else {
                 //strcpy( buffer, " " EOLSTR ); /* v2.11: obsolete */
                 *buffer = NULLC;
+                DebugMsg1(("%u GetSimpleExpression: nullc created\n", evallvl ));
             }
             break;
 #ifdef DEBUG_OUT
@@ -556,12 +565,13 @@ static void InvertJump( char *p )
  * then the simple memcpy() below won't work!
  */
 
-static void ReplaceLabel( char *p, uint_32 olabel, uint_32 nlabel )
+static bool ReplaceLabel( char *p, uint_32 olabel, uint_32 nlabel )
 /*****************************************************************/
 {
     char oldlbl[16];
     char newlbl[16];
-    int i;
+	int i;
+    bool ret = FALSE;
 
     GetLabelStr( olabel, oldlbl );
     GetLabelStr( nlabel, newlbl );
@@ -572,7 +582,9 @@ static void ReplaceLabel( char *p, uint_32 olabel, uint_32 nlabel )
     while ( p = strstr( p, oldlbl ) ) {
         memcpy( p, newlbl, i );
         p += i;
+        ret = TRUE;
     }
+    return( ret );
 }
 
 /* operator &&, which has the second lowest precedence, is handled here */
@@ -581,52 +593,72 @@ static ret_code GetAndExpression( struct hll_item *hll, int *i, struct asm_tok t
 /***********************************************************************************************************************************************************/
 {
     char *ptr = buffer;
-    uint_32 truelabel = 0;
-    //char buff[16];
-    //char *nlabel;
-    //char *olabel;
+    char opfound = FALSE;
 
-    DebugMsg1(("%u GetAndExpression(>%.32s< buf=>%s<) enter\n", evallvl, tokenarray[*i].tokpos, buffer ));
+    DebugMsg1(("%u GetAndExpression(>%.32s< buf=>%s<) enter, truelabel=%u\n", evallvl, tokenarray[*i].tokpos, buffer, hll->truelabel ));
 
     if ( ERROR == GetSimpleExpression( hll, i, tokenarray, ilabel, is_true, ptr, hllop ) )
         return( ERROR );
     while ( COP_AND == GetCOp( &tokenarray[*i] ) ) {
 
-        (*i)++;
-        DebugMsg1(("%u GetAndExpression: &&-operator found, is_true=%u, lastjmp=%s, lasttruelabel=%u\n", evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL", hllop->lasttruelabel ));
+        struct hll_opnd hllop2 = {HLLO_NONE,NULL};
+        char buff[16];
 
+        (*i)++;
+        DebugMsg1(("%u GetAndExpression: &&-operator found, is_true=%u, lastjmp=%s, truelabel=%u\n",
+            evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL", hll->truelabel ));
+
+        if ( hllop->op == HLLO_OR ) {
+            ptr = buffer+strlen( buffer );
+            GetLabelStr( hll->truelabel, ptr );
+            strcat( ptr, LABELQUAL EOLSTR );
+            DebugMsg1(("%u GetAndExpression: label appended >%s<, truelabel=%u\n", evallvl, ptr, hll->truelabel ));
+            if (is_true) /* perhaps for is_true only? */
+                ReplaceLabel( buffer, GetLabel( hll, ilabel ), hll->truelabel );
+            hllop->op = HLLO_NONE;
+            hll->truelabel = 0;
+        }
         if ( is_true ) {
+
             /* todo: please describe what's done here and why! */
             if ( hllop->lastjmp ) {
                 char *p = hllop->lastjmp;
                 InvertJump( p );          /* step 1 */
-                if ( truelabel == 0 )     /* step 2 */
-                    truelabel = GetHllLabel();
+                //if ( hllop->op == HLLO_NONE ) {    /* step 2 */
+                if (hll->truelabel == 0) {
+                    hllop->op = HLLO_AND;
+                    hll->truelabel = GetHllLabel();
+                }
 
                 if ( *p ) {               /* v2.11: there might be a 0 at lastjmp */
                     p += 4;               /* skip 'jcc ' or 'jmp ' */
-                    GetLabelStr( truelabel, p );
-                    strcat( p, EOLSTR );
+                    /* v2.13: don't skip a label that might be behind lastjmp */
+                    //GetLabelStr( hllop->truelabel, p );
+                    //strcat( p, EOLSTR );
+                    GetLabelStr( hll->truelabel, buff );
+                    strcat( buff, EOLSTR );
+                    if (*p)
+                        memcpy( p, buff, strlen(buff) );
+                    else
+                        strcpy( p, buff );
+                    DebugMsg1(("%u GetAndExpression: label set/replaced >%s<\n", evallvl, hllop->lastjmp ));
                 }
 
-                DebugMsg1(("%u GetAndExpression: jmp inverted >%s<\n", evallvl, hllop->lastjmp ));
-                ReplaceLabel( buffer, GetLabel( hll, ilabel ), truelabel );
+                ReplaceLabel( buffer, GetLabel( hll, ilabel ), hll->truelabel );
+                DebugMsg1(("%u GetAndExpression: truelabel=%u, buffer >%s<\n", evallvl, hll->truelabel, buffer ));
                 hllop->lastjmp = NULL;
             }
+            opfound = TRUE;
         }
-        ptr += strlen( ptr );
-        hllop->lasttruelabel = 0; /* v2.08 */
-        if ( ERROR == GetSimpleExpression( hll, i, tokenarray, ilabel, is_true, ptr, hllop ) )
-            return( ERROR );
-    };
 
-    if ( truelabel > 0 ) {
         ptr += strlen( ptr );
-        GetLabelStr( truelabel, ptr );
-        strcat( ptr, LABELQUAL EOLSTR );
-        DebugMsg1(("%u GetAndExpression: label added >%s<\n", evallvl, ptr ));
-        hllop->lastjmp = NULL;
-    }
+        if ( ERROR == GetSimpleExpression( hll, i, tokenarray, ilabel, is_true, ptr, &hllop2 ) )
+            return( ERROR );
+        memcpy( hllop, &hllop2, sizeof(hllop2) );
+    };
+    if (opfound)
+        hllop->op = HLLO_AND;
+    DebugMsg1(("%u GetAndExpression: exit, truelabel=%u\n", evallvl, hll->truelabel ));
     return( NOT_ERROR );
 }
 
@@ -636,7 +668,7 @@ static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok toke
 /********************************************************************************************************************************************************/
 {
     char *ptr = buffer;
-    uint_32 truelabel = 0;
+    char opfound = FALSE;
 
     DebugMsg1(("%u GetExpression(>%.32s< is_true=%u buf=>%s<) enter\n", ++evallvl, tokenarray[*i].tokpos, is_true, buffer ));
 
@@ -653,73 +685,72 @@ static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok toke
 
         uint_32 nlabel;
         uint_32 olabel;
+        struct hll_opnd hllop2 = {HLLO_NONE,NULL};
         char buff[16];
 
-        /* the generated code of last simple expression has to be modified
-         1. the last jump must be inverted
-         2. a "is_true" label must be created (it's used to jump "behind" the expr)
-         3. create a new label
-         4. the current "false" label must be generated
-
-         if it is a .REPEAT, step 4 is slightly more difficult, since the "false"
-         label is already "gone":
-         4a. create a new label
-         4b. replace the "false" label in the generated code by the new label
+        /* what's done inside the loop:
+         1. check if the preceding expression needs a "terminating" label ( hllop->op != HLLO_NONE )
+            if so, create the label (truelabel)
+         2. create a (new) truelabel
+         3. if is_true == FALSE, the last Jcc target must be inverted and a label replaced
+         4. get the next expression
          */
 
         (*i)++;
-        DebugMsg1(("%u GetExpression: ||-operator found, is_true=%u, lastjmp=%s, lasttruelabel=%u\n", evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL", hllop->lasttruelabel ));
+        DebugMsg1(("%u GetExpression: ||-operator found, is_true=%u, lastjmp=%s, truelabel=%u\n", evallvl, is_true, hllop->lastjmp ? hllop->lastjmp : "NULL", hll->truelabel ));
 
+        if ( hllop->op == HLLO_AND ) {
+            ptr = buffer+strlen( buffer );
+            GetLabelStr( hll->truelabel, ptr );
+            strcat( ptr, LABELQUAL EOLSTR );
+            DebugMsg1(("%u GetExpression: label appended >%s<, truelabel=%u\n", evallvl, ptr, hll->truelabel ));
+            //ReplaceLabel( buffer, GetLabel( hll, ilabel ), hll->truelabel );
+            hllop->op = HLLO_NONE;
+            hll->truelabel = 0;
+        }
+        opfound = TRUE;
+        //if ( hllop->op == HLLO_NONE ) {
+        if ( hll->truelabel == 0 ) {
+            hll->truelabel = GetHllLabel();
+            DebugMsg1(("%u GetExpression: new truelabel=%u\n", evallvl, hll->truelabel ));
+        }
         if ( is_true == FALSE ) {
             if ( hllop->lastjmp ) {
                 char *p = hllop->lastjmp;
                 InvertJump( p );           /* step 1 */
-                if ( truelabel == 0 )      /* step 2 */
-                    truelabel = GetHllLabel();
+                if (hll->truelabel == 0)
+                    hll->truelabel = GetHllLabel();
                 if ( *p ) { /* v2.11: there might be a 0 at lastjmp */
                     p += 4;                /* skip 'jcc ' or 'jmp ' */
-                    GetLabelStr( truelabel, p );
+                    GetLabelStr( hll->truelabel, p );
                     strcat( p, EOLSTR );
                 }
                 /* v2.08: if-block added */
-                if ( hllop->lasttruelabel )
-                    ReplaceLabel( ptr, hllop->lasttruelabel, truelabel );
-                DebugMsg1(("%u GetExpression: jmp inverted, dest changed >%s<\n", evallvl, ptr ));
+                //if ( hll->truelabel )
+                //    ReplaceLabel( ptr, hll->truelabel, truelabel );
+                DebugMsg1(("%u GetExpression: jmp inverted(%s), truelabel=%u\n", evallvl, hllop->lastjmp, hll->truelabel ));
                 hllop->lastjmp = NULL;
 
                 nlabel = GetHllLabel();  /* step 3 */
                 olabel = GetLabel( hll, ilabel );
-                if ( hll->cmd == HLL_REPEAT ) {
-                    ReplaceLabel( buffer, olabel, nlabel );
+                if ( ReplaceLabel( buffer, olabel, nlabel )) {
                     sprintf( ptr + strlen( ptr ), "%s" LABELQUAL EOLSTR, GetLabelStr( nlabel, buff ) );
-                } else {
-                    sprintf( ptr + strlen( ptr ), "%s" LABELQUAL EOLSTR, GetLabelStr( olabel, buff ) );
-                    ReplaceLabel( buffer, olabel, nlabel );
-                }
-                DebugMsg1(("%u GetExpression: dest changed, label added >%s<\n", evallvl, ptr ));
+                    DebugMsg1(("%u GetExpression: dest changed, label added >%s<\n", evallvl, ptr ));
+                } else
+                    ModuleInfo.hll_label--;
+
             }
         }
         ptr += strlen( ptr );
-        hllop->lasttruelabel = 0; /* v2.08 */
-        if ( ERROR == GetAndExpression( hll, i, tokenarray, ilabel, is_true, ptr, hllop ) ) {
+        if ( ERROR == GetAndExpression( hll, i, tokenarray, ilabel, is_true, ptr, &hllop2 ) ) {
             DebugMsg1(("%u GetExpression exit, error\n", evallvl-- ));
             return( ERROR );
         }
+        memcpy( hllop, &hllop2, sizeof(hllop2) );
     }
-    if ( truelabel > 0 ) {
-        /* v2.08: this is needed, but ober-hackish. to be improved... */
-        if ( hllop->lastjmp && hllop->lasttruelabel ) {
-            DebugMsg1(("%u GetExpression: suppressed ReplaceLabel %u -> %u, lastjmp=%s\n", evallvl, hllop->lasttruelabel, truelabel, hllop->lastjmp ));
-            ReplaceLabel( ptr, hllop->lasttruelabel, truelabel );
-            *(strchr( hllop->lastjmp, EOLCHAR ) + 1 ) = NULLC;
-        }
-        ptr += strlen( ptr );
-        GetLabelStr( truelabel, ptr );
-        strcat( ptr, LABELQUAL EOLSTR );
-        hllop->lasttruelabel = truelabel; /* v2.08 */
-        DebugMsg1(("%u GetExpression: label added >%s<, lasttruelabel=%u\n", evallvl, ptr, hllop->lasttruelabel ));
-    }
-    DebugMsg1(("%u GetExpression exit >%.32s<\n", evallvl--, tokenarray[*i].tokpos ));
+    if (opfound)
+        hllop->op = HLLO_OR;
+    DebugMsg1(("%u GetExpression exit, truelabel=%u >%.32s<\n", evallvl--, hll->truelabel, tokenarray[*i].tokpos ));
     return( NOT_ERROR );
 }
 
@@ -764,13 +795,14 @@ static ret_code QueueTestLines( char *src )
  *   .CONT .IF: TRUE
  */
 
-
 static ret_code EvaluateHllExpression( struct hll_item *hll, int *i, struct asm_tok tokenarray[], int ilabel, bool is_true, char *buffer )
 /****************************************************************************************************************************************/
 {
-    struct hll_opnd hllop = {NULL,0};
+    struct hll_opnd hllop = {HLLO_NONE,NULL};
+    char *ptr;
 
     DebugMsg1(("EvaluateHllExpression enter\n"));
+    hll->truelabel = 0;
 
     *buffer = NULLC;
     if ( ERROR == GetExpression( hll, i, tokenarray, ilabel, is_true, buffer, &hllop ) )
@@ -781,6 +813,13 @@ static ret_code EvaluateHllExpression( struct hll_item *hll, int *i, struct asm_
     if ( tokenarray[*i].token != T_FINAL ) {
         DebugMsg(( "EvaluateHllExpression: unexpected tokens >%s<\n", tokenarray[*i].tokpos ));
         return( EmitError( SYNTAX_ERROR_IN_CONTROL_FLOW_DIRECTIVE ) );
+    }
+    /* is there a "true" label remaining that has to be generated? */
+    if ( hll->truelabel ) {
+        ptr = buffer+strlen( buffer );
+        GetLabelStr( hll->truelabel, ptr );
+        strcat( ptr, LABELQUAL EOLSTR );
+        DebugMsg1(("EvaluateHllExpression: label appended >%s<, truelabel=%u\n", ptr, hll->truelabel ));
     }
     return( NOT_ERROR );
 }
