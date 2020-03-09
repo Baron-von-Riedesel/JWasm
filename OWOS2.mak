@@ -11,7 +11,7 @@
 # - Removed a trailing space after the '&' in the object-list on the 
 #   line with '$(OUTD)/omffixup.obj' that breaks wmake v1.9.
 # - Added '.SYMBOLIC' to 'clean:' to supress dependency checking.
-# - Added check for existence of files to 'clean:' to supress 
+# - Added check for existence of files to 'clean:' to suppress 
 #   abort when files are not found.
 # - Replaced 'erase' with 'del' in 'clean:' as this is the more common name.
 
@@ -23,16 +23,16 @@ DEBUG=0
 !endif
 
 !if $(DEBUG)
-OUTD=OWOS2D
+OUTD=Build\OWOS2D
 !else
-OUTD=OWOS2R
+OUTD=Build\OWOS2R
 !endif
 
 # calling convention for compiler: s=Stack, r=register
 # r will create a slightly smaller binary
 CCV=r
 
-inc_dirs  = -IH
+inc_dirs  = -Isrc\H
 
 LINK = wlink.exe
 
@@ -56,7 +56,7 @@ lflagso = $(LOPTD) system os2v2 $(LOPT) op map=$^*
 
 CC=wcc386 -q -3$(CCV) -bc -bt=os2 $(inc_dirs) $(extra_c_flags) -fo$@
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
    $(CC) $<
 
 proj_obj = &
@@ -74,11 +74,11 @@ $(TARGET1): $(OUTD)/main.obj $(proj_obj)
 $(lflagso) file { $(OUTD)/main.obj $(proj_obj) } name $@ op stack=0x20000
 <<
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	$(CC) msgtext.c
+$(OUTD)\msgtext.obj: src\msgtext.c src\H\msgdef.h src\H\globals.h
+	$(CC) src\msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	$(CC) reswords.c
+$(OUTD)\reswords.obj: src\reswords.c src\H\instruct.h src\H\special.h src\H\directve.h
+	$(CC) src\reswords.c
 
 ######
 
