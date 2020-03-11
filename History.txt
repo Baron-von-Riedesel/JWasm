@@ -45,7 +45,7 @@
       see pe6.asc.
    -  hll directives: an internally created label was "swallowed" in some cases
       if operators && and || were used in combination with brackets; see
-      rtcond10.asm - rtcond15.asm.
+      rtcond10.asm - rtcond16.asm.
    
    08/19/2018, v2.12:
 
