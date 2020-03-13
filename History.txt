@@ -46,6 +46,14 @@
    -  hll directives: an internally created label was "swallowed" in some cases
       if operators && and || were used in combination with brackets; see
       rtcond10.asm - rtcond16.asm.
+   -  check for segment word size change wasn't as strict as Masm's. If a not 
+      yet defined segment was added to a group, no consistency check was done
+      later when the segment was actually defined; see group4.aso.
+   -  32-bit relative fixups were created only when the target was 64-bit. Now
+      they were created generally when the current segment is 64-bit. This
+      makes a difference for mixed-mode binaries ( -mz and -bin format ), 
+      because it simplifies access of variables in 16-/32-bit segments from
+      64-bit.
    
    08/19/2018, v2.12:
 

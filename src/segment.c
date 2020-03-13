@@ -438,8 +438,10 @@ ret_code GrpDir( int i, struct asm_tok tokenarray[] )
             if( seg == NULL || seg->sym.state == SYM_UNDEFINED ) {
                 seg = CreateSegment( seg, name, TRUE );
                 /* inherit the offset magnitude from the group */
-                if ( grp->e.grpinfo->seglist )
+                if ( grp->e.grpinfo->seglist ) {
                     seg->e.seginfo->Ofssize = grp->sym.Ofssize;
+                    DebugMsg1(("GrpDir: segment >%s< has inherited Ofssize %u\n", name, seg->e.seginfo->Ofssize ));
+                }
             } else if( seg->sym.state != SYM_SEG ) {
                 return( EmitErr( SEGMENT_EXPECTED, name ) );
             } else if( seg->e.seginfo->group != NULL &&
@@ -490,6 +492,10 @@ ret_code GrpDir( int i, struct asm_tok tokenarray[] )
                 curr->next = si;
             }
         }
+#ifdef DEBUG_OUT
+        else
+            DebugMsg(("GrpDir(%s): assignment to group silently ignored, curr grp=%s\n", grp->sym.name, seg->e.seginfo->group->name ));
+#endif
 
         if ( i < Token_Count ) {
             if ( tokenarray[i].token != T_COMMA || tokenarray[i+1].token == T_FINAL ) {
@@ -955,6 +961,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
         sym = (struct asym *)CreateSegment( (struct dsym *)sym, name, TRUE );
         sym->list = TRUE; /* always list segments */
         dir = (struct dsym *)sym;
+        oldOfssize = USE_EMPTY; /* v2.13: added */
         /* v2.12: seg_idx member now set AFTER parsing is done */
         //dir->e.seginfo->seg_idx = ++ModuleInfo.g.num_segs;
 #if 0 //COFF_SUPPORT || ELF_SUPPORT /* v2.09: removed, since not Masm-compatible */
@@ -1003,6 +1010,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
                 SymTables[TAB_SEG].tail->next = dir;
                 SymTables[TAB_SEG].tail = dir;
             }
+            oldOfssize = dir->e.seginfo->Ofssize; /* v2.13: check segment's word size */
         } else {
             is_old = TRUE;
             //oldreadonly = dir->e.seginfo->readonly;
@@ -1327,6 +1335,12 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
         sym->isdefined = TRUE;
         sym->segment = sym;
         sym->offset = 0; /* remains 0 ( =segment's local start offset ) */
+        /* v2.13: check segment's word size. This is mainly for segment forward
+         * refs in GROUP directives. If this check is missing, one can mix segments
+         * in a group by adding segments BEFORE they were defined.
+         */
+        if ( oldOfssize != USE_EMPTY && oldOfssize != dir->e.seginfo->Ofssize )
+            EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
 #if COMDATSUPP
         /* no segment index for COMDAT segments in OMF! */
         if ( dir->e.seginfo->comdat_selection && Options.output_format == OFORMAT_OMF )

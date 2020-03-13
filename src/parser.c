@@ -743,7 +743,7 @@ ret_code SetSegOverride( const struct expr *opndx, struct code_info *CodeInfo )
         } else {
             sym = SymSearch( opndx->override->string_ptr );
         }
-        DebugMsg1(("SetSegOverride: sym=%s, type=%u\n", sym ? sym->name : "NULL", sym->state ));
+        DebugMsg1(("SetSegOverride: sym=%s, type=%u\n", sym ? sym->name : "NULL", sym ? sym->state : 0 ));
         if ( sym && ( sym->state == SYM_GRP || sym->state == SYM_SEG ))
             SegOverride = sym;
     }
@@ -1703,7 +1703,10 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         if( base == EMPTY && index == EMPTY ) {
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, Ofssize );
 #if AMD64_SUPPORT
-            if ( Ofssize == USE64 )
+            /* v2.13: also check CI->Ofssize. if current segm is 64-bit,
+             * use 32-bit rel fixups (mixed mode 64-bit mz binary) - ignore Ofssize */
+            //if ( Ofssize == USE64 )
+            if (  Ofssize == USE64 || CodeInfo->Ofssize == USE64 )
                 /* v2.03: override with a segment assumed != FLAT? */
                 if ( opndx->override != NULL &&
                     SegOverride != &ModuleInfo.flat_grp->sym )
