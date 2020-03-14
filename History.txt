@@ -1,12 +1,12 @@
 
    Changelog
 
-   __/__/2020, v2.13:
+   03/14/2020, v2.13:
 
    -  regression in v2.12: option -bin didn't work if binary started with
       ORG != 0 ( i.e. DOS COM file format ); see bintest2.asm.
    -  option -mz,-bin: invalid binary was written if a .bss or .stack segment
-      was followed by a segment with initialized data; see mz2.asn.
+      was followed by a segment with initialized data; see mz2.asm.
    -  project tree changed so all generated files are located in 'build'
       subtree, and source files are in 'src'.
    -  options -mz,-bin,-omf: a segment override may have caused a group 
@@ -16,64 +16,64 @@
       This solves some fixup problems; see fixup5a.asm.
    -  INVOKE directive, 64-bit: if the calling convention wasn't win64 
       (=fastcall), an address argument was translated to a "push offset <arg>",
-      which didn't work in 64-bit code; see invok64c.asn.
+      which didn't work in 64-bit code; see invok64c.asm.
    -  option -pe: if a DOS stub was added in the source (section .hdr$1), it
-      got the wrong segtype, resulting in an invalid binary; see pe4.asc.
+      got the wrong segtype, resulting in an invalid binary; see pe4.asm.
    -  stack offsets may have caused an error in 64-bit mode or a warning in
       the other modes if an overflow occured; see stkdisp1.asm.
    -  option -pe,-bin: relative fixups weren't handled correctly in all cases;
-      was relevant for 64-bit only; see pe5.asc.
+      was relevant for 64-bit only; see pe5.asm.
    -  if an 'undefined symbol' error was displayed, a wrong source file was
       given if the error occured in a macro and the line was the first 'real' 
-      code line; see undef1.aso.
+      code line; see undef1.asm.
    -  a qword-sized parameter in an invoke wasn't pushed correctly if a .x64
       directive was in the source, although the current mode was not 64-bit;
       see invoke40.asm.
    -  equates in listing weren't always displayed correctly if value exceeded 
-      32-bit; see lst1.asc.
+      32-bit; see lst1.asm.
    -  -Sz cmdline option added to suppress assembly result in listing. This
       was mostly done to simplify comparing listing files in regression tests.
    -  ensured that if cpu is 64-bit, .model is restricted to flat.
    -  TYPE operator didn't work with register operands inside square brackets;
       see types16.asm & types17.asm.
-   -  in 64-bit mode, 16-bit index register wasn't rejected; see expr6.aso.
+   -  in 64-bit mode, 16-bit index register wasn't rejected; see expr6.asm.
    -  assembly-time variables modified by directives SIZESTR/INSTR did set
       the lower 32-bits of the value only; see equate29.asm.
    -  option -pe: when arranging segments to sections, the segment names
       defined in the source were used; this may have given unexpected results
       if segment names were translated to section names ("_TEXT" to ".text" );
-      see pe6.asc.
+      see pe6.asm.
    -  hll directives: an internally created label was "swallowed" in some cases
       if operators && and || were used in combination with brackets; see
       rtcond10.asm - rtcond16.asm.
    -  check for segment word size change wasn't as strict as Masm's. If a not 
       yet defined segment was added to a group, no consistency check was done
-      later when the segment was actually defined; see group4.aso.
+      later when the segment was actually defined; see group4.asm.
    -  32-bit relative fixups were created only when the target was 64-bit. Now
       they were created generally when the current segment is 64-bit. This
       makes a difference for mixed-mode binaries ( -mz and -bin format ), 
       because it simplifies access of variables in 16-/32-bit segments from
-      64-bit.
+      64-bit; see relfix64.asm.
    
    08/19/2018, v2.12:
 
    Bugfixes:
    -  COMM directive: there was no check that numeric arguments 'size' or 
-      'count' did fit into 32-bits; see comm06.aso.
+      'count' did fit into 32-bits; see comm06.asm.
    -  regression in v2.10-2.11: in 16-/32-bit, if a FASTCALL procedure was
       first prototyped and then defined, the assembly process may have stopped
       with error 'General Failure'; see proc9.asm.
    -  regression in v2.10-2.11, COFF format: if full segment directives were
       used and a bss segment didn't have the expected class name, jwasm may
       have calculated wrong file positions of section data and relocations;
-      see coff1.asc.
+      see coff1.asm.
    -  operator OPATTR: bit 1 (=indirect memref) and language type flags of 
       result may have been set even if operand was an invalid reference; see
       opattr9.asm.
    -  ELF format: object module may have been larger than necessary due to
       bss section sizes that were not ignored for file offset calculations.
    -  GPF might have occured if a TYPE for an undefined variable was 
-      specified in an expression; see expr5.aso. 
+      specified in an expression; see expr5.asm. 
    -  procedure equates didn't inherit the language type; subsequently, if
       used with INVOKE, the arguments might have been pushed in incorrect
       order.
@@ -83,14 +83,14 @@
       argument was enclosed in angle brackets (see expans41.asm).
    -  regression in v2.05-2.11: 'push lowword offset label32' did push a
       dword instead of a word only (see lowword.asm and also the comment in
-      offset10.asn).
+      offset10.asm).
    -  warning 'for -coff leading underscore required for start label' is no
       longer emitted if coff format is 64-bit.
    -  [] operator didn't work correctly if located between a struct name and
       a member name; see dotop6.asm.
    -  option -mz: if a "nongroup"-segment was located between 2 segments of
       a group, the offsets of the second "group"-segment were calculated 
-      wrong. See group2.asn & group3.asn.
+      wrong. See group2.asm & group3.asm.
    -  if direct addressing without symbol was used ( ds:[0] ) in a mixed
       32-/64-bit module, error 'magnitude of offset exceeds 16 bit' may have
       been generated. See mixed2.asm & mixed3.asm.
@@ -98,7 +98,7 @@
       segment calculations if the bss segment was not part of a group. See
       mz1.asm.
    -  option -mz: no warning was displayed when start label was not located
-      in a 16-bit segment. See text32.aso.
+      in a 16-bit segment. See text32.asm.
 
    Other changes:
    -  OPTION WIN64:4 added.
@@ -118,7 +118,7 @@
    -  regression in v2.10: type expression may have given incorrect result
       if it contained an indirect memory operand; see types14.asm.
    -  shift instructions with unsized memory operand as first operand were
-      silently assumed to have byte size; see shift4.aso.
+      silently assumed to have byte size; see shift4.asm.
    -  concatenation operator (a '\' as last non-white space character) wasn't
       handled if it appeared after line expansion only; see expans38.asm.
    -  EXPORT or PRIVATE attributes in a PROTO directive weren't ignored;
@@ -138,7 +138,7 @@
    -  INVOKE directive: in 16-bit code, extending arguments to DWORD size
       didn't always work correctly; see invoke25.asm & invoke26.asm.
    -  undefined members in critical expressions were accepted in some cases;
-      see struct39.aso.
+      see struct39.asm.
    -  64-bit: if more than 128 unwind codes were created inside a FRAME
       procedure, a GPF may have occured.
    -  64-bit: unwind codes generated by .ALLOCSTACK weren't always correct.
@@ -166,9 +166,9 @@
    -  64-bit: direct memory addressing with non-RIP-relative addresses didn't
       work in all cases; see mov644.asm.
    -  overflow and underflow of real4 and real8 constants wasn't detected
-      reliably; see float8.aso.
+      reliably; see float8.asm.
    -  empty quoted strings were accepted as instruction operands; see
-      quotstr2.aso ).
+      quotstr2.asm ).
    -  fatal errors were displayed, but did not appear in the .err-file.
    -  BSS segments with the COMDAT attribute caused a GPF.
    -  INVOKE: if the target's offset magnitude wasn't the current one ( i.e.
@@ -177,11 +177,11 @@
    -  regression in v2.09-2.10: in 16-bit code, a jump extension may have
       occurred although the distance was 'short'; see forward8.asm.
    -  64-bit: register names TR3-TR7 were included in reserved words table.
-   -  COMM directive did accept NEAR/FAR types; see comm05.aso.
+   -  COMM directive did accept NEAR/FAR types; see comm05.asm.
    -  OMF format, options -Zd, -Zi: the size of line number records may have
-      exceeded 1024; see linnum.asc.
+      exceeded 1024; see linnum.asm.
    -  OMF format, option -Cu: names of communals and exports weren't converted
-      to uppercase; see casemap1.asc.
+      to uppercase; see casemap1.asm.
    -  ALIGN in 16-bit code segments: the 2-byte filler was different from
       Masm's; see align4.asm.
    -  macro functions calls after directives .IF, .ELSEIF, .WHILE or .UNTIL
@@ -193,7 +193,7 @@
       when jwasm run on systems without FPU ( 80386/80486SX ) and floating
       point initializers were used in the assembly source.
    -  EXTERN directive, weak externals: an "infinite" loop may have occured;
-      see extern15.asc.
+      see extern15.asm.
 
    Other changes:
    -  OPTION STACKBASE added.
@@ -231,10 +231,10 @@
       struct34.asm.
    -  regression in v2.09: if the difference of two labels ( at least one must
       be a forward reference ) was stored in a byte variable, an error occured
-      if output format was COFF; regression test data10.asc.
+      if output format was COFF; regression test data10.asm.
    -  ALIAS segment attribute: the alias name was likely to become "corrupted".
    -  operators IMAGEREL and SECTIONREL were ignored if their operand was the
-      displacement of an indirect memory reference; regression test coffop.asc.
+      displacement of an indirect memory reference; regression test coffop.asm.
    -  -pe: size of data directory for imports did comprise all import data.
    -  -pe: in object table, the entry of the internally generated .reloc 
       section may have been invalid.
@@ -256,8 +256,8 @@
    -  option -Fd without filename argument might have caused a GPF.
    -  if a symbol with local scope was to be defined and the name was
       referenced previously ( but not defined [yet]! ), a confusing error msg
-      "Symbol already defined" was emitted; regression tests local2.aso and
-      proc5.aso.
+      "Symbol already defined" was emitted; regression tests local2.asm and
+      proc5.asm.
    -  -bin: absolute segments weren't fully supported; regression tests
       absseg2.asm and absseg3.asm.
    -  directives PUSHCONTEXT & POPCONTEXT did not behave exactly as in Masm;
@@ -271,7 +271,7 @@
    -  -coff: static (=private) PROCedures weren't included into the coff
       symbol table.
    -  it was possible to change the ALIAS segment attribute; regression test
-      alias2.asc.
+      alias2.asm.
    -  if OPATTR operand was an undefined struct member, an error was emitted;
       regression test opattr3.asm.
    -  if an alias defined via '=' or EQU directives was forward-referenced,
@@ -279,10 +279,10 @@
       in a premature end of the assembly task; regression test forward5.asm.
    -  directive ENDP, v2.05-2.09: the matching of the labels ( PROC and
       associated ENDP ) was only tested with the length of the PROC label -
-      which wasn't reliable; regression test proc6.aso.
+      which wasn't reliable; regression test proc6.asm.
    -  option -Zg, INVOKE directive: if an argument was to be extended from
       WORD to DWORD, the hiword wasn't initialized to 0; regression test
-      invoke21.asc.
+      invoke21.asm.
    -  type coercion inside brackets wasn't dereferenced for usage outside
       the brackets; regression test ptr2.asm.
    -  regression in v2.05-2.09, options -Fo, -Fl,...: white spaces in filename
@@ -291,7 +291,7 @@
       in macro call' ( JWASMR.EXE only? ).
    -  regression in v2.09: if a struct member was an alias for another struct
       or union, it was not properly initialized; regression tests struct35.asm
-      and struct36.aso.
+      and struct36.asm.
    -  option -Zf: code labels created via '@@:' weren't sorted out.
    -  regression in v2.05-2.09: code label @@: at the very beginning caused
       problems ("symbol not defined" ).
@@ -307,10 +307,10 @@
    -  INVOKE may have rejected a valid argument if it was a struct type with
       size 4,6 or 8; regression test invoke22.asm.
    -  using $ in an expression outside of segment block or struct/union was
-      not rejected; regression test equate28.aso.
+      not rejected; regression test equate28.asm.
    -  regression in v2.06-2.09: use of an absolute external in an arithmetic
       instruction may have suppressed generation of opsize prefix; regression
-      test extern12.asz.
+      test extern12.asm.
    -  EXITM directive inside a macro did not "fix" if-nesting-level issues
       caused by the usage of GOTO; regression tests goto1.asm and goto2.asm.
    -  LOW32 operator in 64-bit didn't always set 32-bit address fixup;
@@ -352,7 +352,7 @@
    -  the difference of two labels was assumed to be a constant, even if one
       or both labels weren't defined (yet). This caused problems if the result
       was used in a preprocessor expression or as argument for an
-      assembly-time variable (see regression test equate22.aso).
+      assembly-time variable (see regression test equate22.asm).
    -  multiple consecutive expansion operators (%) in a macro argument were
       rejected.
    -  comparing two types for (in)equality didn't work in all cases.
@@ -408,7 +408,7 @@
 
    Bugfixes:
    -  forward references of structures in an expression may have failed
-      ( regression test assume7.aso ).
+      ( regression test assume7.asm ).
    -  if C-style expressions in runtime conditional directives were too
       complicated, the generated code may have caused 'symbol not defined'
       errors ( regression tests rtcond3.asm, rtcond4.asm ).
@@ -418,7 +418,7 @@
    -  expansion operator % at position 0 in a line with a macro procedure
       call caused a syntax error if nothing was expanded.
    -  absolute externals were rejected if they were used to initialize a
-      1-byte variable ( regression test extern8.asz ).
+      1-byte variable ( regression test extern8.asm ).
    -  identifiers inside quoted strings were expanded if the expansion
       operator % was at position 0.
    -  OMF, MZ format: if an assembly-time variable that contained an address
