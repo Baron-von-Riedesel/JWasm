@@ -27,13 +27,13 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=ICD
+OUTD=build/ICD
 !else
-OUTD=ICR
+OUTD=build/ICR
 !endif
 !endif
 
-inc_dirs  = -IH -I"$(CDIR)\include" -I"$(VCDIR)\include"
+inc_dirs  = -Isrc\H -I"$(CDIR)\include" -I"$(VCDIR)\include"
 
 linker = $(CDIR)\Bin\xilink.exe
 lib = $(CDIR)\Bin\xilib.exe
@@ -63,7 +63,7 @@ lflagsw = $(LOPTD) /SUBSYSTEM:CONSOLE $(LOPT) /map:$^*.map /OPT:NOWIN98
 
 CC=$(CDIR)\bin\icl.exe -c -nologo $(inc_dirs) $(c_flags)
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	@$(CC) -Fo$* $<
 
 proj_obj = \
@@ -89,11 +89,11 @@ $(lflagsw) $(OUTD)/main.obj $(OUTD)/$(name).lib
 $(OUTD)\$(name).lib : $(proj_obj)
 	@$(lib) /nologo /out:$(OUTD)\$(name).lib $(proj_obj)
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	@$(CC) -Fo$* msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
+	@$(CC) -Fo$* src/msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	@$(CC) -Fo$* reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h
+	@$(CC) -Fo$* src/reswords.c
 
 ######
 

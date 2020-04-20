@@ -332,6 +332,7 @@ static struct dsym *CreateGroup( const char *name )
         sym_add_table( &SymTables[TAB_GRP], grp );
 
         grp->sym.list = TRUE;
+        grp->sym.Ofssize = USE_EMPTY; /* v2.14: added */
         grp->e.grpinfo->grp_idx = ++grpdefidx;
         /* grp->e.grpinfo->lname_idx = */ AddLnameItem( &grp->sym );
     } else if( grp->sym.state != SYM_GRP ) {
@@ -341,6 +342,13 @@ static struct dsym *CreateGroup( const char *name )
     grp->sym.isdefined = TRUE;
     return( grp );
 }
+
+/* create a segment item.
+ * called by
+ * - GrpDir() (if segment to add isn't defined yet)
+ * - CreateIntSegment()
+ * - SegmentDir()
+ */
 
 static struct dsym *CreateSegment( struct dsym *seg, const char *name, bool add_global )
 /**************************************************************************************/
@@ -437,10 +445,16 @@ ret_code GrpDir( int i, struct asm_tok tokenarray[] )
         if ( Parse_Pass == PASS_1 ) {
             if( seg == NULL || seg->sym.state == SYM_UNDEFINED ) {
                 seg = CreateSegment( seg, name, TRUE );
+                DebugMsg1(("GrpDir: segment >%s< created\n", name ));
                 /* inherit the offset magnitude from the group */
                 if ( grp->e.grpinfo->seglist ) {
                     seg->e.seginfo->Ofssize = grp->sym.Ofssize;
                     DebugMsg1(("GrpDir: segment >%s< has inherited Ofssize %u\n", name, seg->e.seginfo->Ofssize ));
+                } else {
+                    /* v2.14: reset the default offset size to "undefined", to avoid
+                     * an error when the segment is actually defined (group5.asm)
+                     */
+                    seg->e.seginfo->Ofssize = USE_EMPTY;
                 }
             } else if( seg->sym.state != SYM_SEG ) {
                 return( EmitErr( SEGMENT_EXPECTED, name ) );
@@ -453,7 +467,9 @@ ret_code GrpDir( int i, struct asm_tok tokenarray[] )
                 return( EmitErr( SEGMENT_IN_ANOTHER_GROUP, name ) );
             }
             /* the first segment will define the group's word size */
-            if( grp->e.grpinfo->seglist == NULL ) {
+            /* v2.14: set the group's word size until it's != USE_EMPTY */
+            //if( grp->e.grpinfo->seglist == NULL ) {
+            if( grp->sym.Ofssize == USE_EMPTY ) {
                 grp->sym.Ofssize = seg->e.seginfo->Ofssize;
             } else if ( grp->sym.Ofssize != seg->e.seginfo->Ofssize ) {
                 return( EmitErr( GROUP_SEGMENT_SIZE_CONFLICT, grp->sym.name, seg->sym.name ) );
@@ -1011,6 +1027,9 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
                 SymTables[TAB_SEG].tail = dir;
             }
             oldOfssize = dir->e.seginfo->Ofssize; /* v2.13: check segment's word size */
+            /* v2.14: set a default ofsset size */
+            if ( dir->e.seginfo->Ofssize == USE_EMPTY )
+                dir->e.seginfo->Ofssize = ModuleInfo.Ofssize;
         } else {
             is_old = TRUE;
             //oldreadonly = dir->e.seginfo->readonly;
@@ -1341,6 +1360,12 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
          */
         if ( oldOfssize != USE_EMPTY && oldOfssize != dir->e.seginfo->Ofssize )
             EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
+        /* v2.14: added */
+        if ( dir->e.seginfo->group )
+            if ( dir->e.seginfo->group->Ofssize == USE_EMPTY )
+                dir->e.seginfo->group->Ofssize = dir->e.seginfo->Ofssize;
+            else if ( dir->e.seginfo->group->Ofssize != dir->e.seginfo->Ofssize )
+                EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
 #if COMDATSUPP
         /* no segment index for COMDAT segments in OMF! */
         if ( dir->e.seginfo->comdat_selection && Options.output_format == OFORMAT_OMF )

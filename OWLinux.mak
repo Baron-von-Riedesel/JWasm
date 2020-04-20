@@ -13,16 +13,16 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=OWLinuxD
+OUTD=build\OWLinuxD
 !else
-OUTD=OWLinuxR
+OUTD=build\OWLinuxR
 !endif
 !endif
 
 # calling convention for compiler: s=Stack, r=Register
 CCV=r
 
-inc_dirs  = -IH -I$(WATCOM)\LH
+inc_dirs  = -Isrc\H -I$(WATCOM)\LH
 
 # to track memory leaks, the Open Watcom TRMEM module can be included
 !ifndef TRMEM
@@ -58,7 +58,7 @@ LOPTD = debug dwarf op symfile
 
 CC = $(WATCOM)\Binnt\wcc386 -q -3$(CCV) $(c_flags) -bc -bt=linux $(inc_dirs) $(extra_c_flags) -fo$@
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	$(CC) $<
 
 proj_obj = &
@@ -84,11 +84,11 @@ file { $(OUTD)/main.obj $(proj_obj) }
 name $@.
 <<
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	$(CC) msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
+	$(CC) src\msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	$(CC) reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h
+	$(CC) src\reswords.c
 
 ######
 

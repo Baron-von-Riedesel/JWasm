@@ -619,10 +619,10 @@ static ret_code GetAndExpression( struct hll_item *hll, int *i, struct asm_tok t
                 /* the last jmp has to be inverted and the label modified */
                 char *p = hllop->lastjmp;
                 InvertJump( p );           /* step 1 */
-				if ( hll->falselabel == 0 ) {/* step 2 */
-					hll->falselabel = GetHllLabel();
-					opfound = TRUE;
-				}
+                if ( hll->falselabel == 0 ) {/* step 2 */
+                    hll->falselabel = GetHllLabel();
+                    opfound = TRUE;
+                }
                 if ( *p ) {               /* v2.11: there might be a 0 at lastjmp */
                     p += 4;               /* skip 'jcc ' or 'jmp ' */
                     /* v2.13: don't skip a label that might be behind lastjmp */
@@ -660,7 +660,7 @@ static ret_code GetAndExpression( struct hll_item *hll, int *i, struct asm_tok t
 static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok tokenarray[], bool is_true, char *buffer, struct hll_opnd *hllop )
 /********************************************************************************************************************************************/
 {
-	char *ptr = buffer;
+    char *ptr = buffer;
     uint_32 truelabel = 0;
     char opfound = FALSE;
 
@@ -703,10 +703,10 @@ static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok toke
             hll->falselabel = 0;
         }
         opfound = TRUE;
-		if ( truelabel == 0 ) {
-			truelabel = GetHllLabel();
-			DebugMsg1(("%u GetExpression: new truelabel=%u\n", evallvl, truelabel ));
-		}
+        if ( truelabel == 0 ) {
+            truelabel = GetHllLabel();
+            DebugMsg1(("%u GetExpression: new truelabel=%u\n", evallvl, truelabel ));
+        }
         if ( is_true == FALSE ) {
             if ( hllop->lastjmp ) {
                 char *p = hllop->lastjmp;
@@ -737,14 +737,14 @@ static ret_code GetExpression( struct hll_item *hll, int *i, struct asm_tok toke
         memcpy( hllop, &hllop2, sizeof(hllop2) );
     }
     if (opfound) {
-		hllop->op = HLLO_OR;
-		DebugMsg1(("%u GetExpression, HLLO_OR set, truelabels=%u/%u\n", evallvl, truelabel, hll->truelabel ));
+        hllop->op = HLLO_OR;
+        DebugMsg1(("%u GetExpression, HLLO_OR set, truelabels=%u/%u\n", evallvl, truelabel, hll->truelabel ));
         if ( truelabel )
-			if ( hll->truelabel )
-				ReplaceLabel( buffer, truelabel, hll->truelabel );
-			else
-				hll->truelabel = truelabel;
-	}
+            if ( hll->truelabel )
+                ReplaceLabel( buffer, truelabel, hll->truelabel );
+            else
+                hll->truelabel = truelabel;
+    }
     DebugMsg1(("%u GetExpression exit, truelabel=%u, opfound=%u >%.32s<\n", evallvl--, hll->truelabel, opfound, tokenarray[*i].tokpos ));
     return( NOT_ERROR );
 }
