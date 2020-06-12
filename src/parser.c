@@ -2194,11 +2194,26 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
 #if AMD64_SUPPORT
     case T_MOVSQ:
 #endif
-        /* movs allows prefix for the second operand (=source) only */
+        /* MOVSx allows prefix for the second operand (=source) only.
+         * there's only one place to store the register override in CodeInfo,
+         * so it's a problem if both operands have an override; to be improved.
+         */
         if ( CodeInfo->prefix.RegOverride != ASSUME_NOTHING )/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
-            if ( opndx[OPND2].override == NULL )
+#if 1 /* v2.14*/
+            if ( opndx[OPND1].override && opndx[OPND1].override->token == T_REG && opndx[OPND1].override->tokval != T_ES ) {
+                DebugMsg1(("HandleStringInstructions: CMPS: CodeInfo->RegOverride=%X, opndx->override=%s\n", CodeInfo->prefix.RegOverride, opndx[OPND1].override->string_ptr ));
                 EmitError( INVALID_INSTRUCTION_OPERANDS );
-            else if ( CodeInfo->prefix.RegOverride == ASSUME_DS )
+            } else
+#endif
+            if ( opndx[OPND2].override == NULL ) {
+                /* v2.14: "if block" added */
+                if ( CodeInfo->prefix.RegOverride == ASSUME_ES )
+                    CodeInfo->prefix.RegOverride = ASSUME_NOTHING;
+                else {
+                    DebugMsg(("HandleStringInstructions: MOVS: override==NULL for second operand\n" ));
+                    EmitError( INVALID_INSTRUCTION_OPERANDS );
+                }
+            } else if ( CodeInfo->prefix.RegOverride == ASSUME_DS )
                 CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
         break;
     case T_OUTS:

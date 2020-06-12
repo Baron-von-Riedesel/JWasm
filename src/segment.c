@@ -1214,23 +1214,29 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
             dir->e.seginfo->combine = type->value;
             break;
 #endif
-        case INIT_OFSSIZE:
         case INIT_OFSSIZE_FLAT:
-            if ( type->init == INIT_OFSSIZE_FLAT ) {
-                DefineFlatGroup();
+            /* v2.14: FLAT not accepted in 16-bit. Masm emits the same error */
+            if ( ModuleInfo.defOfssize == USE16 ) {
+                EmitError( INSTRUCTION_OR_REGISTER_NOT_ACCEPTED_IN_CURRENT_CPU_MODE );
+                break;
+            }
+            DefineFlatGroup();
 #if AMD64_SUPPORT
-                /* v2.09: make sure ofssize is at least USE32 for FLAT */
-                dir->e.seginfo->Ofssize = ( ModuleInfo.defOfssize > USE16 ? ModuleInfo.defOfssize : USE32 );
+            /* v2.09: make sure ofssize is at least USE32 for FLAT */
+            /* v2.14: USE16 doesn't need to be handled here anymore */
+            //dir->e.seginfo->Ofssize = ( ModuleInfo.defOfssize > USE16 ? ModuleInfo.defOfssize : USE32 );
+            dir->e.seginfo->Ofssize = ModuleInfo.defOfssize;
 #else
-                dir->e.seginfo->Ofssize = USE32;
+            dir->e.seginfo->Ofssize = USE32;
 #endif
-                /* put the segment into the FLAT group.
-                 * this is not quite Masm-compatible, because trying to put
-                 * the segment into another group will cause an error.
-                 */
-                dir->e.seginfo->group = &ModuleInfo.flat_grp->sym;
-            } else
-                dir->e.seginfo->Ofssize = type->value;
+            /* put the segment into the FLAT group.
+             * this is not quite Masm-compatible, because trying to put
+             * the segment into another group will cause an error.
+             */
+            dir->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+            break;
+        case INIT_OFSSIZE:
+            dir->e.seginfo->Ofssize = type->value;
             break;
 #if COFF_SUPPORT || ELF_SUPPORT || PE_SUPPORT
         case INIT_CHAR_INFO:
@@ -1360,12 +1366,13 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
          */
         if ( oldOfssize != USE_EMPTY && oldOfssize != dir->e.seginfo->Ofssize )
             EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
-        /* v2.14: added */
-        if ( dir->e.seginfo->group )
-            if ( dir->e.seginfo->group->Ofssize == USE_EMPTY )
-                dir->e.seginfo->group->Ofssize = dir->e.seginfo->Ofssize;
-            else if ( dir->e.seginfo->group->Ofssize != dir->e.seginfo->Ofssize )
-                EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
+        else {  /* v2.14: else-block added */
+            if ( dir->e.seginfo->group )
+                if ( dir->e.seginfo->group->Ofssize == USE_EMPTY )
+                    dir->e.seginfo->group->Ofssize = dir->e.seginfo->Ofssize;
+                else if ( dir->e.seginfo->group->Ofssize != dir->e.seginfo->Ofssize )
+                    EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
+        }
 #if COMDATSUPP
         /* no segment index for COMDAT segments in OMF! */
         if ( dir->e.seginfo->comdat_selection && Options.output_format == OFORMAT_OMF )

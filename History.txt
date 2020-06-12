@@ -9,6 +9,10 @@
       offset size when the segment was created; see group5.asm.
    -  there was still the possibility that segments with different offset 
       sizes were added to the same group; see group6.asm.
+   -  string operation MOVSx with operands: if destination got an override 
+      (ES:), a source without override was rejected; see string4.asm.
+   -  string operation MOVSx with operands: destination with override 
+      != ES wasn't rejected; see string5.asm.
 
    03/14/2020, v2.13:
 
