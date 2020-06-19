@@ -398,8 +398,8 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
     //if ( InstrTable[optable_idx[CodeInfo->token]].allowed_prefix == AP_REP ||
     //     InstrTable[optable_idx[CodeInfo->token]].allowed_prefix == AP_REPxx )
     if ( CodeInfo->pinstr->allowed_prefix == AP_REP ||
-         CodeInfo->pinstr->allowed_prefix == AP_REPxx )
-        return;
+        CodeInfo->pinstr->allowed_prefix == AP_REPxx )
+            return;
 
     if( CodeInfo->token == T_LEA ) {
         CodeInfo->prefix.RegOverride = ASSUME_NOTHING; /* skip segment override */
@@ -2154,7 +2154,7 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
     case T_CMPSQ:
 #endif
          /* cmps allows prefix for the first operand (=source) only */
-        if ( CodeInfo->prefix.RegOverride != EMPTY ) {
+        if ( CodeInfo->prefix.RegOverride != ASSUME_NOTHING ) {
             if ( opndx[OPND2].override != NULL ) {
                 if ( CodeInfo->prefix.RegOverride == ASSUME_ES ) {
                     /* content of LastRegOverride is valid if
@@ -2168,10 +2168,14 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
                     DebugMsg1(("HandleStringInstructions: CMPS: CodeInfo->RegOverride=%X, opndx->override=%s\n", CodeInfo->prefix.RegOverride, opndx[OPND2].override->string_ptr ));
                     EmitError( INVALID_INSTRUCTION_OPERANDS );
                 }
-            } else if ( CodeInfo->prefix.RegOverride == ASSUME_DS ) {
-                /* prefix for first operand? */
-                CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
             }
+        } else if ( CodeInfo->opnd[OPND1].type != OP_NONE && /* v2.14 */
+                   opndx[OPND1].override == NULL &&
+                   opndx[OPND1].sym ) {
+            check_assume( CodeInfo, opndx[OPND1].sym, ASSUME_DS );
+        }
+        if ( CodeInfo->prefix.RegOverride == ASSUME_DS ) {
+            CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
         }
         break;
 #if AVXSUPP
@@ -2198,10 +2202,10 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
          * there's only one place to store the register override in CodeInfo,
          * so it's a problem if both operands have an override; to be improved.
          */
-        if ( CodeInfo->prefix.RegOverride != ASSUME_NOTHING )/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
-#if 1 /* v2.14*/
+        if ( CodeInfo->prefix.RegOverride != ASSUME_NOTHING ) {/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
+#if 1 /* v2.14: destination must be ES: */
             if ( opndx[OPND1].override && opndx[OPND1].override->token == T_REG && opndx[OPND1].override->tokval != T_ES ) {
-                DebugMsg1(("HandleStringInstructions: CMPS: CodeInfo->RegOverride=%X, opndx->override=%s\n", CodeInfo->prefix.RegOverride, opndx[OPND1].override->string_ptr ));
+                DebugMsg1(("HandleStringInstructions: MOVS: CodeInfo->RegOverride=%X, opndx->override=%s\n", CodeInfo->prefix.RegOverride, opndx[OPND1].override->string_ptr ));
                 EmitError( INVALID_INSTRUCTION_OPERANDS );
             } else
 #endif
@@ -2213,8 +2217,15 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
                     DebugMsg(("HandleStringInstructions: MOVS: override==NULL for second operand\n" ));
                     EmitError( INVALID_INSTRUCTION_OPERANDS );
                 }
-            } else if ( CodeInfo->prefix.RegOverride == ASSUME_DS )
-                CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
+            } //else if ( CodeInfo->prefix.RegOverride == ASSUME_DS )
+              //  CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
+        } else if ( CodeInfo->opnd[OPND2].type != OP_NONE && /* v2.14 */
+                   opndx[OPND2].override == NULL &&
+                   opndx[OPND2].sym ) {
+            check_assume( CodeInfo, opndx[OPND2].sym, ASSUME_DS );
+        }
+        if ( CodeInfo->prefix.RegOverride == ASSUME_DS )
+            CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
         break;
     case T_OUTS:
     case T_OUTSB:
@@ -2232,6 +2243,9 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
 #if AMD64_SUPPORT
     case T_LODSQ:
 #endif
+        /* v2.14 */
+        if ( CodeInfo->opnd[OPND1].type != OP_NONE && opndx[OPND1].override == NULL && opndx[OPND1].sym )
+            check_assume( CodeInfo, opndx[OPND1].sym, ASSUME_DS );
         /* v2.10: remove unnecessary DS prefix ( Masm-compatible ) */
         if ( CodeInfo->prefix.RegOverride == ASSUME_DS )
             CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */

@@ -13,6 +13,8 @@
       (ES:), a source without override was rejected; see string4.asm.
    -  string operation MOVSx with operands: destination with override 
       != ES wasn't rejected; see string5.asm.
+   -  string operations with symbolic memory operands did ignore assumes, thus
+      no segment prefix was created; see string8.asm.
 
    03/14/2020, v2.13:
 
