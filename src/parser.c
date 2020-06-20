@@ -2132,6 +2132,10 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
 {
     int opndidx = OPND1;
     int op_size;
+    enum assume_segreg reg; /* v2.14 */
+    struct asym *assume; /* v2.14 */
+
+    /* v2.14: added quite a few checks. It works, but the source needs some cleanup now. */
 
     switch( CodeInfo->token ) {
 #if AVXSUPP
@@ -2153,6 +2157,14 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
 #if AMD64_SUPPORT
     case T_CMPSQ:
 #endif
+        /* v2.14: reject segment != ES for second op if symbolic */
+        if ( CodeInfo->opnd[OPND2].type != OP_NONE && opndx[OPND2].override == NULL && opndx[OPND2].sym && SegAssumeTable[ASSUME_ES].symbol != NULL ) {
+            reg = GetAssume( NULL, opndx[OPND2].sym, ASSUME_ES, &assume );
+            if ( reg != ASSUME_ES && reg != ASSUME_NOTHING ) {
+                EmitError( INVALID_INSTRUCTION_OPERANDS );
+                break;
+            }
+        }
          /* cmps allows prefix for the first operand (=source) only */
         if ( CodeInfo->prefix.RegOverride != ASSUME_NOTHING ) {
             if ( opndx[OPND2].override != NULL ) {
@@ -2198,6 +2210,14 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
 #if AMD64_SUPPORT
     case T_MOVSQ:
 #endif
+        /* v2.14: reject segment != ES for first op if symbolic */
+        if ( CodeInfo->opnd[OPND1].type != OP_NONE && opndx[OPND1].override == NULL && opndx[OPND1].sym && SegAssumeTable[ASSUME_ES].symbol != NULL ) {
+            reg = GetAssume( NULL, opndx[OPND1].sym, ASSUME_ES, &assume );
+            if ( reg != ASSUME_ES && reg != ASSUME_NOTHING ) {
+                EmitError( INVALID_INSTRUCTION_OPERANDS );
+                break;
+            }
+        }
         /* MOVSx allows prefix for the second operand (=source) only.
          * there's only one place to store the register override in CodeInfo,
          * so it's a problem if both operands have an override; to be improved.
@@ -2231,6 +2251,9 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
     case T_OUTSB:
     case T_OUTSW:
     case T_OUTSD:
+        /* v2.14 */
+        if ( CodeInfo->opnd[OPND2].type != OP_NONE && opndx[OPND2].override == NULL && opndx[OPND2].sym )
+            check_assume( CodeInfo, opndx[OPND2].sym, ASSUME_DS );
         /* v2.01: remove default DS prefix */
         if ( CodeInfo->prefix.RegOverride == ASSUME_DS )
             CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
@@ -2254,6 +2277,14 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
         /* INSx, SCASx and STOSx don't allow any segment prefix != ES
          for the memory operand.
          */
+        /* v2.14: check added to reject invalid segment assumes */
+        if ( CodeInfo->opnd[OPND1].type != OP_NONE && opndx[OPND1].override == NULL && opndx[OPND1].sym && SegAssumeTable[ASSUME_ES].symbol != NULL ) {
+            reg = GetAssume( NULL, opndx[OPND1].sym, ASSUME_ES, &assume );
+            if ( reg != ASSUME_ES && reg != ASSUME_NOTHING ) {
+                EmitError( INVALID_INSTRUCTION_OPERANDS );
+                break;
+            }
+        }
         if ( CodeInfo->prefix.RegOverride != ASSUME_NOTHING )
             if ( CodeInfo->prefix.RegOverride == ASSUME_ES )
                 CodeInfo->prefix.RegOverride = ASSUME_NOTHING;/* v2.12: EMPTY -> ASSUME_NOTHING to avoid warning */
