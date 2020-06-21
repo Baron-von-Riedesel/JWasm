@@ -2113,6 +2113,16 @@ static ret_code process_register( struct code_info *CodeInfo, unsigned CurrOpnd,
     return( NOT_ERROR );
 }
 
+/* v2.14: check if variable is accessible thru ES */
+
+static bool IsAccessible( struct asym *sym, enum assume_segreg sr )
+/*****************************************************************/
+{
+    if ( sym->segment && SegAssumeTable[sr].symbol )
+        if ( sym->segment != SegAssumeTable[sr].symbol && GetGroup( sym ) != SegAssumeTable[sr].symbol )
+            return( FALSE );
+    return( TRUE );
+}
 
 /* special handling for string instructions
  * CMPS[B|W|D|Q]
@@ -2132,8 +2142,6 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
 {
     int opndidx = OPND1;
     int op_size;
-    enum assume_segreg reg; /* v2.14 */
-    struct asym *assume; /* v2.14 */
 
     /* v2.14: added quite a few checks. It works, but the source needs some cleanup now. */
 
@@ -2158,9 +2166,8 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
     case T_CMPSQ:
 #endif
         /* v2.14: reject segment != ES for second op if symbolic */
-        if ( CodeInfo->opnd[OPND2].type != OP_NONE && opndx[OPND2].override == NULL && opndx[OPND2].sym && SegAssumeTable[ASSUME_ES].symbol != NULL ) {
-            reg = GetAssume( NULL, opndx[OPND2].sym, ASSUME_ES, &assume );
-            if ( reg != ASSUME_ES && reg != ASSUME_NOTHING ) {
+        if ( CodeInfo->opnd[OPND2].type != OP_NONE && opndx[OPND2].override == NULL && opndx[OPND2].sym ) {
+            if (!IsAccessible( opndx[OPND2].sym, ASSUME_ES )) {
                 EmitError( INVALID_INSTRUCTION_OPERANDS );
                 break;
             }
@@ -2211,9 +2218,8 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
     case T_MOVSQ:
 #endif
         /* v2.14: reject segment != ES for first op if symbolic */
-        if ( CodeInfo->opnd[OPND1].type != OP_NONE && opndx[OPND1].override == NULL && opndx[OPND1].sym && SegAssumeTable[ASSUME_ES].symbol != NULL ) {
-            reg = GetAssume( NULL, opndx[OPND1].sym, ASSUME_ES, &assume );
-            if ( reg != ASSUME_ES && reg != ASSUME_NOTHING ) {
+        if ( CodeInfo->opnd[OPND1].type != OP_NONE && opndx[OPND1].override == NULL && opndx[OPND1].sym ) {
+            if (!IsAccessible( opndx[OPND1].sym, ASSUME_ES )) {
                 EmitError( INVALID_INSTRUCTION_OPERANDS );
                 break;
             }
@@ -2278,9 +2284,9 @@ static void HandleStringInstructions( struct code_info *CodeInfo, const struct e
          for the memory operand.
          */
         /* v2.14: check added to reject invalid segment assumes */
-        if ( CodeInfo->opnd[OPND1].type != OP_NONE && opndx[OPND1].override == NULL && opndx[OPND1].sym && SegAssumeTable[ASSUME_ES].symbol != NULL ) {
-            reg = GetAssume( NULL, opndx[OPND1].sym, ASSUME_ES, &assume );
-            if ( reg != ASSUME_ES && reg != ASSUME_NOTHING ) {
+        if ( CodeInfo->opnd[OPND1].type != OP_NONE && opndx[OPND1].override == NULL && opndx[OPND1].sym ) {
+            DebugMsg1(("HandleStringInstructions: INS,SCAS,STOS: opndx->sym=%s\n", opndx[OPND1].sym->name ));
+            if (!IsAccessible( opndx[OPND1].sym, ASSUME_ES )) {
                 EmitError( INVALID_INSTRUCTION_OPERANDS );
                 break;
             }
