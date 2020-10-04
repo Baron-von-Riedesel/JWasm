@@ -15,6 +15,7 @@
       != ES wasn't rejected; see string5.asm.
    -  string operations with symbolic memory operands did ignore assumes, thus
       no segment prefix was created; see string8.asm.
+   -  comment behind MACRO directive was appended to all lines inside the macro.
 
    03/14/2020, v2.13:
 

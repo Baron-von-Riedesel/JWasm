@@ -280,6 +280,7 @@ char *RenderMacroLine( const char *src )
 /*
  * store a macro's parameter, local and content list.
  * i = start index of macro params in token buffer.
+ * store_data : if true, store the macro text lines
  */
 
 ret_code StoreMacro( struct dsym *macro, int i, struct asm_tok tokenarray[], bool store_data )
@@ -425,6 +426,7 @@ ret_code StoreMacro( struct dsym *macro, int i, struct asm_tok tokenarray[], boo
         /* v2.09: don't make listing depend on store_data */
         //if ( ModuleInfo.list && store_data ) {
         if ( ModuleInfo.list ) {
+            ModuleInfo.CurrComment = NULL; /* v2.14: reset comment, since line wasn't preprocessed */
             ModuleInfo.line_flags &= ~LOF_LISTED;
             LstWrite( LSTTYPE_MACROLINE, 0, buffer );
         }
