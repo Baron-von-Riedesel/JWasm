@@ -1426,7 +1426,7 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
     uint_8              Ofssize;
     enum fixup_types    fixup_type;
 
-    DebugMsg1(("memory_operand(opndx.value=%X / sym=%s / memtype=%Xh, with_fixup=%u) enter, [CodeInfo->memtype=%Xh, Ofssize=%u, adrsiz=%u]\n",
+    DebugMsg1(("memory_operand(opndx.value=%" I32_SPEC "X / sym=%s / memtype=%Xh, with_fixup=%u) enter, [CodeInfo->memtype=%Xh, Ofssize=%u, adrsiz=%u]\n",
                opndx->value, opndx->sym ? opndx->sym->name : "NULL", opndx->mem_type, with_fixup, CodeInfo->mem_type, CodeInfo->Ofssize, CodeInfo->prefix.adrsiz ));
 
     /* v211: use full 64-bit value */

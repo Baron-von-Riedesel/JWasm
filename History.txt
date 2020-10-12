@@ -15,7 +15,10 @@
       != ES wasn't rejected; see string5.asm.
    -  string operations with symbolic memory operands did ignore assumes, thus
       no segment prefix was created; see string8.asm.
-   -  comment behind MACRO directive was appended to all lines inside the macro.
+   -  comment behind MACRO directive was appended to all lines inside the macro;
+      see lst2.asm.
+   -  jwasmr.exe: memory corruption may have caused a system crash if pass one
+      ended with an error.
 
    03/14/2020, v2.13:
 

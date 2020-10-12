@@ -5162,8 +5162,8 @@ In some cases (i.e. overlays) a missing stack may be ok.</TD>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x211</b></TD>
-<TD></TD>
-<TD></TD>
+<TD>Model must be FLAT</TD>
+<TD>In 64-bit mode, or if output format is -pe, there's no segmented model available.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -5572,6 +5572,13 @@ group must fit into a physical segment.</TD>
 <TD><b>x276</b></TD>
 <TD>EXPORT must be FAR: &lt;symbol&gt;</TD>
 <TD>A 16-bit procedure that is to be exported must be declared with the FAR distance attribute.</TD>
+</TR>
+
+<TR BGCOLOR="#F0F0F0">
+<TD><b>x277</b></TD>
+<TD>Start label not in a 16-bit segment</TD>
+<TD>MZ format only: the start label is in a 32- or 64-bit segment.
+The resulting MZ binary won't run without further modification, i.e. adding a DOS-extender stub.</TD>
 </TR>
 
 </TABLE>

@@ -410,7 +410,7 @@ static void free_ext( struct asym *sym )
 }
 
 /* free a symbol.
- * the symbol is no unlinked from hash tables chains,
+ * the symbol is not unlinked from hash table chains,
  * hence it is assumed that this is either not needed
  * or done by the caller.
  */
@@ -418,15 +418,18 @@ static void free_ext( struct asym *sym )
 void SymFree( struct asym *sym )
 /******************************/
 {
-    //DebugMsg(("SymFree: free %X, name=%s, state=%X\n", sym, sym->name, sym->state));
+    //DebugMsg(("SymFree: free %p, name=%s, state=%u\n", sym, sym->name, sym->state));
     free_ext( sym );
 #if FASTMEM==0
-    if ( sym->state != SYM_EXTERNAL ) {
+    if ( sym->state != SYM_EXTERNAL ) { /* external backpatches are cleared in PassOneChecks() */
         struct fixup *fix;
         for( fix = sym->bp_fixup ; fix; ) {
             struct fixup *next = fix->nextbp;
-            DebugMsg(("SymFree: free bp fixup %p\n", fix ));
-            LclFree( fix );
+            DebugMsg(("SymFree: free backpatch fixup %p [count=%u]\n", fix, fix->count ));
+            /* v2.14: free fixup only if not referenced anymore */
+            fix->count--;
+            if ( !fix->count )
+                LclFree( fix );
             fix = next;
         }
     }

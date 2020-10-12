@@ -253,7 +253,7 @@ ret_code BackPatch( struct asym *sym )
     uint_32 oldofs = sym->offset;
 #endif
 
-    DebugMsg1(("BackPatch(%s): location=%s:%X, bp_fixup=%p\n", sym->name, sym->segment ? sym->segment->name : "!NULL!", sym->offset, sym->bp_fixup ));
+    DebugMsg1(("BackPatch(%s): location=%s:%" I32_SPEC "X, bp_fixup=%p\n", sym->name, sym->segment ? sym->segment->name : "!NULL!", sym->offset, sym->bp_fixup ));
 
     for( fixup = sym->bp_fixup; fixup; fixup = next ) {
         next = fixup->nextbp;

@@ -3189,7 +3189,7 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
         struct expr opnd2;
 
         curr_operator = *i;
-        DebugMsg1(("%u evaluate loop, operator=>%s< opnd1->sym=%X, type=%s\n",
+        DebugMsg1(("%u evaluate loop, operator=>%s< opnd1->sym=%p, type=%s\n",
                    evallvl, tokenarray[curr_operator].string_ptr, opnd1->sym, (opnd1->type ? opnd1->type->name : "NULL") ));
 
         if ( opnd1->kind != EXPR_EMPTY ) {

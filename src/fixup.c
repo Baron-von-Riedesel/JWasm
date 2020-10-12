@@ -69,6 +69,7 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
     fixup->marker = 'XF';
     DebugMsg1(("CreateFixup, pass=%u: fix=%p sym=%s\n", Parse_Pass+1, fixup, sym ? sym->name : "NULL" ));
 #endif
+    fixup->flags = 0; /* v2.14: moved up here so count won't be overwritten */
 
     /* add the fixup to the symbol's linked list (used for backpatch)
      * this is done for pass 1 only.
@@ -80,6 +81,9 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
         if ( sym ) { /* changed v1.96 */
             fixup->nextbp = sym->bp_fixup;
             sym->bp_fixup = fixup;
+#if FASTMEM==0
+            fixup->count++;
+#endif
         }
         /* v2.03: in pass one, create a linked list of
          * fixup locations for a segment. This is to improve
@@ -92,6 +96,9 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
         if ( CurrSeg ) {
             fixup->nextrlc = CurrSeg->e.seginfo->FixupList.head;
             CurrSeg->e.seginfo->FixupList.head = fixup;
+#if FASTMEM==0
+            fixup->count++;
+#endif
         }
     }
     /* initialize locofs member with current offset.
@@ -101,13 +108,12 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
     fixup->offset = 0;
     fixup->type = type;
     fixup->option = option;
-    fixup->flags = 0;
     fixup->frame_type = Frame_Type;     /* this is just a guess */
     fixup->frame_datum = Frame_Datum;
     fixup->def_seg = CurrSeg;           /* may be NULL (END directive) */
     fixup->sym = sym;
 
-    DebugMsg1(("CreateFixup(sym=%s type=%u, opt=%u) cnt=%" I32_SPEC "X, loc=%" I32_SPEC "Xh frame_type/datum=%u/%u\n",
+    DebugMsg1(("CreateFixup(sym=%s type=%u, opt=%u) cnt=%" I32_SPEC "u, loc=%" I32_SPEC "Xh frame_type/datum=%u/%u\n",
         sym ? sym->name : "NULL", type, option, ++cnt, fixup->locofs, fixup->frame_type, fixup->frame_datum ));
     return( fixup );
 }
@@ -125,17 +131,30 @@ void FreeFixup( struct fixup *fixup )
         if ( dir ) {
             if ( fixup == dir->e.seginfo->FixupList.head ) {
                 dir->e.seginfo->FixupList.head = fixup->nextrlc;
+#if FASTMEM==0
+                fixup->count--;
+#endif
             } else {
                 for ( fixup2 = dir->e.seginfo->FixupList.head; fixup2; fixup2 = fixup2->nextrlc ) {
                     if ( fixup2->nextrlc == fixup ) {
                         fixup2->nextrlc = fixup->nextrlc;
+#if FASTMEM==0
+                        fixup->count--;
+#endif
                         break;
                     }
                 }
             }
         }
     }
+#if FASTMEM==0
+    DebugMsg1(("FreeFixup( %p ), count=%u, def_seg=%p\n", fixup, fixup->count, fixup->def_seg ));
+    if ( !fixup->count ) {
+        LclFree( fixup );
+    }
+#else
     LclFree( fixup );
+#endif
 }
 
 /*

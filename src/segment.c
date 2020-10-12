@@ -1505,8 +1505,13 @@ void SegmentFini( void )
         DebugMsg(("SegmentFini: segment %s\n", curr->sym.name ));
         for ( fix = curr->e.seginfo->FixupList.head; fix ; ) {
             struct fixup *next = fix->nextrlc;
-            DebugMsg(("SegmentFini: free fixup [sym=%s, loc=%" I32_SPEC "X]\n", fix->sym ? fix->sym->name : "NULL", fix->location ));
-            LclFree( fix );
+            DebugMsg(("SegmentFini: free fixup %p [sym=%s, count=%u]\n", fix, fix->sym ? fix->sym->name : "NULL", fix->count ));
+            /* v2.14: problem is that a fixup may be in two linked lists after step 1;
+             * hence only free the fixup if nextbp is NULL.
+             */
+            fix->count--;
+            if ( !fix->count )
+                LclFree( fix );
             fix = next;
         }
     }
