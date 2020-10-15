@@ -83,4 +83,7 @@ typedef   signed __int64  int_64;
 #define I64_SPEC "I64"
 #endif
 
+#define INT32_MAX 0x7fffffff
+#define INT32_MIN (-INT32_MAX - 1)
+
 #endif

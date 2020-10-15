@@ -19,6 +19,15 @@
       see lst2.asm.
    -  jwasmr.exe: memory corruption may have caused a system crash if pass one
       ended with an error.
+   -  some errors occured in LP64 systems (linux, unix) because LONG_MAX and
+      LONG_MIN were used inadequately.
+
+   Other changes:
+   -  jfc.asm translated to jfc.c so it can be used in both 32- and 64-bit 
+      systems.
+   -  added runtest.sh, clrdir.sh and compress.sh to allow regression test in
+      unix systems. A few tests are skipped, since jwasmr.exe and MS link.exe
+      won't run in those systems.
 
    03/14/2020, v2.13:
 
