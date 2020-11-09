@@ -1,1 +1,0 @@
-this directory contains regression tests. They are useful if you modify the jwasm source. It's compressed, because the test consists of more than 1500 files.

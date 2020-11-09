@@ -9,10 +9,10 @@ name = jwasm
 #          Default is WinInc ( may be changed to the MS Platform SDK ).
 
 # PLEASE NOTE: I didn't install the whole MS Visual Studio stuff,
-# just copied the VC branch to D:\MSVC10. However, some binaries
+# just copied the VC branch to \MSVC10. However, some binaries
 # related to MS symbol files ( mspdbsrv.exe, mspdb100.dll, mspdbcore.dll ),
 # which are to be found in \<MSVS root>\Common7\IDE, must then be copied
-# manually to a directory in the path ( here: d:\msvc10\bin ).
+# manually to a directory in the path ( here: \msvc10\bin ).
 
 !ifndef VCDIR
 VCDIR  = \msvc10
@@ -35,9 +35,9 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=build/MSVC64D
+OUTD=build\MSVC64D
 !else
-OUTD=build/MSVC64R
+OUTD=build\MSVC64R
 !endif
 !endif
 

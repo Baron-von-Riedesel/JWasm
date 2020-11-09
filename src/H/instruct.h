@@ -363,6 +363,7 @@ insn(MOV, 9,                    OpCls( MS,       A,          NONE ), 0,      0, 
 insn(MOV, 10,                   OpCls( MS,       R,          NONE ), 0,      0,  0,      0x88,     0x00,       P_86,        0)
 insn(MOV, 11,                   OpCls( MS,       I,          NONE ), 0,      0,  0,      0xC6,     0x00,       P_86,        0)
 insn(MOV, 12,                   OpCls( MS,       SR,         NONE ), 0,      0,  no_WDS, 0x8C,     0x00,       P_86,        0)
+/* move to/from special registers are privileged, but masm accepts them w/o the cpu 'p' suffix */
 insn(MOV, 13,                   OpCls( RGT16,    RSPEC,      NONE ), F_0FNO66,0, no_WDS, 0x20,     0xC0,       P_386,       0)
 insn(MOV, 14,                   OpCls( RSPEC,    RGT16,      NONE ), F_0FNO66,1, no_WDS, 0x22,     0xC0,       P_386,       0)
 
@@ -396,6 +397,7 @@ insn(IN, 1,                     OpCls( A,        I8_U,       NONE ), 0,      0, 
 ins (INT, int,                  OpCls( I_3,      NONE,       NONE ), 0,      0,  no_RM,  0xCC,     0x00,       P_86,        0)
 insn(INT, 1,                    OpCls( I8_U,     NONE,       NONE ), 0,      0,  no_RM,  0xCD,     0x00,       P_86,        0)
 ins (INTO, into,                OpCls( NONE,     NONE,       NONE ), 0,      0,  no_RM,  0xCE,     0x00,       P_86,        0)
+/* invd and invlpg are privileged, but masm accepts them w/o the cpu 'p' suffix */
 ins (INVD, invd,                OpCls( NONE,     NONE,       NONE ), F_0F,   0,  no_RM,  0x08,     0x00,       P_486,       0)
 ins (INVLPG, invlpg,            OpCls( M_ANY,    NONE,       NONE ), F_0F,   0,  no_WDS, 0x01,     0x38,       P_486,       0)
 ins (IRET, iret,                OpCls( NONE,     NONE,       NONE ), F_16,   0,  no_RM,  0xCF,     0x00,       P_86,        0)
@@ -448,6 +450,7 @@ insn(TEST, 3,                   OpCls( R_MS,     I,          NONE ), 0,      0, 
 insn(TEST, 4,                   OpCls( MS,       R,          NONE ), 0,      0,  0,      0x84,     0x00,       P_86,        0)
 ins (UD2, ud2,                  OpCls( NONE,     NONE,       NONE ), F_0F,   0,  no_RM,  0x0B,     0x00,       P_686,       0)
 ins (WAIT, wait,                OpCls( NONE,     NONE,       NONE ), 0,      0,  no_RM,  0x9B,     0x00,       P_86,        0)
+/* wbinvd & wrmsr are privileged, but masm accepts them w/o the cpu 'p' suffix */
 ins (WBINVD, wbinvd,            OpCls( NONE,     NONE,       NONE ), F_0F,   0,  no_RM,  0x09,     0x00,       P_486,       0)
 ins (WRMSR, wrmsr,              OpCls( NONE,     NONE,       NONE ), F_0F,   0,  no_RM,  0x30,     0x00,       P_586,       0)
 ins (XADD, xadd,                OpCls( R,        R,          NONE ), F_0F,   0,  0,      0xC0,     0x00,       P_486,       0)

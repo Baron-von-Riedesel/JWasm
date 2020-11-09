@@ -21,10 +21,12 @@
       ended with an error.
    -  some errors occured in LP64 systems (linux, unix) because LONG_MAX and
       LONG_MIN were used inadequately.
+   -  DJGPP: djgpp apparently doesn't know "_stat", needs "stat" instead; see
+      omf.c
 
    Other changes:
    -  jfc.asm translated to jfc.c so it can be used in both 32- and 64-bit 
-      systems.
+      unix systems.
    -  added runtest.sh, clrdir.sh and compress.sh to allow regression test in
       unix systems. A few tests are skipped, since jwasmr.exe and MS link.exe
       won't run in those systems.

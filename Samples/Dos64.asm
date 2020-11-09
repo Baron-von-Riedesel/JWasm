@@ -7,14 +7,31 @@
 ;--- To create the binary enter:
 ;---  JWasm -mz DOS64.asm
 
+    .model small
+    .stack 4096
+    .dosseg         ;arrange segments in "DOS" order
+
+DGROUP group _TEXT  ;make a tiny model
+
     .x64p
+
+?MPIC equ 78h       ;reprogram master PIC to base 78h
 
 ;--- 16bit start/exit code
 
-_TEXT16 segment use16 para public 'CODE'
+    .code
 
-    assume ds:_TEXT16
-    assume es:_TEXT16
+    assume ds:DGROUP
+    assume es:DGROUP
+
+GDT dq 0                    ; null descriptor
+    dw 0FFFFh,0,9A00h,0AFh  ; 64-bit code descriptor
+    dw 0FFFFh,0,9A00h,000h  ; compatibility mode code descriptor
+    dw 0FFFFh,0,9200h,000h  ; compatibility mode data descriptor
+
+SEL_CODE64 equ 1*8
+SEL_CODE16 equ 2*8
+SEL_DATA16 equ 3*8
 
 GDTR label fword        ; Global Descriptors Table Register
     dw 4*8-1            ; limit of GDT (size minus one)
@@ -26,17 +43,9 @@ nullidt label fword
     dw 3FFh
     dd 0
   
-    align 8
-GDT dq 0                    ; null descriptor
-    dw 0FFFFh,0,9A00h,0AFh  ; 64-bit code descriptor
-    dw 0FFFFh,0,9A00h,000h  ; compatibility mode code descriptor
-    dw 0FFFFh,0,9200h,000h  ; compatibility mode data descriptor
-
-SEL_CODE64 equ 1*8
-SEL_CODE16 equ 2*8
-SEL_DATA16 equ 3*8
-
 wPICMask dw 0   ; variable to save/restore PIC masks
+wStack   dw 0   ; real-mode SP
+;bKey     db 0   ; 1-byte keyboard "buffer"
 
 start16:
     push cs
@@ -69,6 +78,7 @@ start16:
     push ds
     pop ss
     mov sp,ax       ; make a TINY model, CS=SS=DS=ES
+    mov wStack,ax
 
     smsw ax
     test al,1
@@ -92,7 +102,7 @@ err1 db "Mode is V86. Need REAL mode to switch to LONG mode!",13,10,'$'
     int 21h
 err2 db "No 64bit cpu detected.",13,10,'$'
 @@:
-    mov bx,1000h    ; allocate 64 kB
+    mov bx,600h    ; allocate 24 kB (needed are 4 pages for paging, 1 for IDT)
     mov ah,48h
     int 21h
     jnc @F
@@ -120,7 +130,7 @@ err3 db "Out of memory",13,10,'$'
     shl eax,4
     mov cr3,eax             ; load page-map level-4 base
 
-    lea edx, [eax+5000h]
+    lea edx, [eax+4000h]
     mov dword ptr [IDTR+2], edx
 
     or eax,111b
@@ -139,16 +149,15 @@ err3 db "Out of memory",13,10,'$'
     add eax,1000h
     loop @B
 
-;--- setup ebx/rbx with linear address of _TEXT
+;--- setup ebx/rbx with linear address of _TEXT64
 
-    mov bx,_TEXT
-    movzx ebx,bx
+    mov ebx,_TEXT64
     shl ebx,4
     add [llg], ebx
 
 ;--- create IDT
 
-    mov di,5000h
+    mov di,4000h
     mov cx,32
     mov edx, offset exception
     add edx, ebx
@@ -178,53 +187,38 @@ make_int_gates:
     stosd
     loop make_int_gates
 
-    mov di,5000h
+    mov di,4000h
     mov eax, ebx
     add eax, offset clock
-    mov es:[di+80h*16+0],ax ; set IRQ 0 handler
+    mov es:[di+?MPIC*16+0],ax ; set IRQ 0 handler
     shr eax,16
-    mov es:[di+80h*16+6],ax
+    mov es:[di+?MPIC*16+6],ax
 
     mov eax, ebx
     add eax, offset keyboard
-    mov es:[di+81h*16+0],ax ; set IRQ 1 handler
+    mov es:[di+(?MPIC+1)*16+0],ax ; set IRQ 1 handler
     shr eax,16
-    mov es:[di+81h*16+6],ax
+    mov es:[di+(?MPIC+1)*16+6],ax
 
-;--- clear NT flag
-
-    pushf
-    pop ax
-    and ah,0BFh
-    push ax
-    popf
-
-;--- reprogram PIC: change IRQ 0-7 to INT 80h-87h, IRQ 8-15 to INT 88h-8Fh
+;--- reprogram PIC: change IRQ 0-7 to INT 78h-7Fh
 
     cli
     in al,0A1h
     mov ah,al
     in al,21h
     mov [wPICMask],ax
-    mov al,10001b       ; begin PIC 1 initialization
+
+    mov al,10001b       ; ICW1: begin PIC 1 initialization
     out 20h,al
-    mov al,10001b       ; begin PIC 2 initialization
-    out 0A0h,al
-    mov al,80h          ; IRQ 0-7: interrupts 80h-87h
+    mov al,?MPIC        ; ICW2: IRQ 0-7: interrupts 78h-7Fh
     out 21h,al
-    mov al,88h          ; IRQ 8-15: interrupts 88h-8Fh
-    out 0A1h,al
-    mov al,100b         ; slave connected to IRQ2
+    mov al,100b         ; ICW3: slave connected to IRQ2
     out 21h,al
-    mov al,2
-    out 0A1h,al
-    mov al,1            ; Intel environment, manual EOI
+    mov al,1            ; ICW4: Intel environment, manual EOI
     out 21h,al
-    out 0A1h,al
-    in al,21h
-    mov al,11111100b    ; enable only clock and keyboard IRQ
+
+    mov al,11111100b    ; enable clock and keyboard IRQ only
     out 21h,al
-    in al,0A1h
     mov al,11111111b
     out 0A1h,al
 
@@ -240,15 +234,9 @@ make_int_gates:
     lgdt [GDTR]
     lidt [IDTR]
 
-    mov cx,ss
-    movzx ecx,cx        ; get base of SS
-    shl ecx,4
-    movzx esp,sp
-    add ecx, esp        ; ECX=linear address of current SS:ESP
-
     mov eax,cr0
     or eax,80000001h
-    mov cr0,eax         ; enable paging + pmode
+    mov cr0,eax         ; enable paging & protected-mode
 
     db 66h, 0EAh        ; jmp 0008:oooooooo
 llg dd offset long_start
@@ -258,60 +246,38 @@ llg dd offset long_start
 
 backtoreal:
     cli
-
     mov eax,cr0
-    and eax,7FFFFFFFh   ; disable paging
+    and eax,7FFFFFFEh   ; disable paging & protected-mode
     mov cr0,eax
+
+    jmp far16 ptr @F    ; clear instruction cache, CS=real-mode seg
+@@:
+    mov ax,cs
+    mov ds,ax           ; DS=DGROUP
+    mov ss,ax           ; SS=DGROUP
+    mov sp,wStack
+
+    lidt [nullidt]      ; IDTR=real-mode compatible values
 
     mov ecx,0C0000080h  ; EFER MSR
     rdmsr
     and ah,not 1h       ; disable long mode (EFER.LME=0)
     wrmsr
 
-    mov ax,SEL_DATA16   ; set SS,DS and ES to 64k data
-    mov ss,ax
-    mov ds,ax
-    mov es,ax
-
-    mov eax,cr0         ; switch to real mode
-    and al,0FEh
-    mov cr0, eax
-
-    db 0eah             ; clear instruction cache, CS=real-mode seg
-    dw $+4
-    dw _TEXT16
-
-    mov ax,STACK        ; SS=real-mode seg
-    mov ss, ax
-    mov sp,4096
-
-    push cs             ; DS=real-mode _TEXT16 seg
-    pop ds
-
-    lidt [nullidt]      ; IDTR=real-mode compatible values
-
     mov eax,cr4
     and al,not 20h      ; disable physical-address extensions (PAE)
     mov cr4,eax
 
-;--- reprogram PIC: change IRQ 0-7 to INT 08h-0Fh, IRQ 8-15 to INT 70h-77h
+;--- reprogram PIC: change IRQ 0-7 to INT 08h-0Fh
 
-    mov al,10001b       ; begin PIC 1 initialization
+    mov al,10001b       ; ICW1: begin PIC 1 initialization
     out 20h,al
-    mov al,10001b       ; begin PIC 2 initialization
-    out 0A0h,al
-    mov al,08h          ; IRQ 0-7: back to ints 8h-Fh
+    mov al,08h          ; ICW2: IRQ 0-7: back to ints 8h-Fh
     out 21h,al
-    mov al,70h          ; IRQ 8-15: back to ints 70h-77h
-    out 0A1h,al
-    mov al,100b         ; slave connected to IRQ2
+    mov al,100b         ; ICW3: slave connected to IRQ2
     out 21h,al
-    mov al,2
-    out 0A1h,al
-    mov al,1            ; Intel environment, manual EOI
+    mov al,1            ; ICW4: Intel environment, manual EOI
     out 21h,al
-    out 0A1h,al
-    in al,21h
 
     mov ax,[wPICMask]   ; restore PIC masks
     out 21h,al
@@ -322,43 +288,45 @@ backtoreal:
     mov ax,4c00h
     int 21h
 
-_TEXT16 ends
+_TEXT ends
 
 ;--- here's the 64bit code segment.
-;--- since 64bit code is always flat but the DOS mz format is segmented,
-;--- there are restrictions - because the assembler doesn't know the
-;--- linear address where the 64bit segment will be loaded:
-;--- + direct addressing with constants isn't possible (mov [0B8000h],rax)
-;---   since the rip-relative address will be calculated wrong.
-;--- + 64bit offsets (mov rax, offset <var>) must be adjusted by the linear
-;---   address where the 64bit segment was loaded (is in rbx).
-;---
-;--- rbx must preserve linear address of _TEXT
+;--- ebx=flat address of module start.
 
-_TEXT segment para use64 public 'CODE'
+_TEXT64 segment para use64 public 'CODE'
 
     assume ds:FLAT, es:FLAT
 
+bKey db 0           ; 1-byte keyboard "buffer"
+
 long_start:
 
-    xor eax,eax
+    mov ax,SEL_DATA16
     mov ss,eax
-    mov esp,ecx
-    sti             ; now interrupts can be used
+    add esp,ebx
+    sti            ; now interrupts can be used
     call WriteStrX
     db "Hello 64bit",10,0
 nextcmd:
-    mov r8b,0       ; r8b will be filled by the keyboard irq routine
-nocmd:
-    cmp r8b,0
-    jz nocmd
-    cmp r8b,1       ; ESC?
+    call WriteStrX
+    db "press 'r' or ESC to exit: ",0
+    call set_cursor
+    mov bKey,0     ; clear keyboard buffer
+@@:
+    mov al,bKey
+    cmp al,0
+    jnz @F
+    hlt            ; wait 
+    jmp @B
+@@:
+    cmp al,1       ; ESC?
     jz esc_pressed
-    cmp r8b,13h     ; 'r'?
+    cmp al,13h     ; 'r'?
     jz r_pressed
+    push rax
     call WriteStrX
     db "unknown key ",0
-    mov al,r8b
+    pop rax
     call WriteB
     call WriteStrX
     db 10,0
@@ -393,24 +361,50 @@ r_pressed:
 
 ;--- ESC: back to real-mode
 
+bv  label ptr far16
+    dw offset backtoreal
+    dw SEL_CODE16
 esc_pressed:
     jmp [bv]
-bv  label fword
-    dd offset backtoreal
-    dw SEL_CODE16
 
 ;--- screen output helpers
 
+;--- set text mode cursor
+set_cursor proc
+    push rsi
+    push rcx
+    push rdx
+    MOVZX esi, BYTE PTR flat:[462h]       ;page
+    MOVZX ecx, BYTE PTR [esi*2+450h+1]    ;get cursor pos ROW
+    MOVZX eax, WORD PTR flat:[44Ah]       ;cols
+    MUL ecx
+    MOVZX edx, BYTE PTR [esi*2+450h]      ;get cursor pos COL
+    ADD eax, edx
+    movzx ecx,word ptr flat:[44eh]
+    shr ecx,1
+    add ecx, eax
+    mov dx,flat:[463h]
+    mov ah,ch
+    mov al,0Eh
+    out dx,ax
+    inc al
+    mov ah,cl
+    out dx,ax
+    pop rdx
+    pop rcx
+    pop rsi
+    ret
+set_cursor endp
+
 ;--- scroll screen up one line
 ;--- rsi = linear address start of last line
-;--- rbp = linear address of BIOS area (0x400)
 scroll_screen:
     CLD
     mov edi,esi
-    movzx eax,word ptr [rbp+4Ah]
+    movzx eax,word ptr flat:[44Ah]
     push rax
     lea rsi, [rsi+2*rax]
-    MOV CL, [rbp+84h]
+    MOV CL, flat:[484h]
     mul cl
     mov ecx,eax
     rep movsw
@@ -420,7 +414,6 @@ scroll_screen:
     ret
 
 WriteChr:
-    push rbp
     push rdi
     push rsi
     push rbx
@@ -428,19 +421,18 @@ WriteChr:
     push rdx
     push rax
     MOV edi,0B8000h
-    mov ebp,400h
-    CMP BYTE ptr [rbp+63h],0B4h
+    CMP BYTE ptr flat:[463h],0B4h
     JNZ @F
     XOR DI,DI
 @@:
-    movzx ebx, WORD PTR [rbp+4Eh]
+    movzx ebx, WORD PTR flat:[44Eh]
     ADD edi, ebx
-    MOVZX ebx, BYTE PTR [rbp+62h]
+    MOVZX ebx, BYTE PTR flat:[462h]
     mov esi, edi
-    MOVZX ecx, BYTE PTR [rbx*2+rbp+50h+1] ;ROW
-    MOVZX eax, WORD PTR [rbp+4Ah]
+    MOVZX ecx, BYTE PTR [rbx*2+450h+1] ;ROW
+    MOVZX eax, WORD PTR flat:[44Ah]
     MUL ecx
-    MOVZX edx, BYTE PTR [rbx*2+rbp+50h]  ;COL
+    MOVZX edx, BYTE PTR [rbx*2+450h]  ;COL
     ADD eax, edx
     MOV DH,CL
     LEA edi, [rdi+rax*2]
@@ -450,24 +442,23 @@ WriteChr:
     MOV [rdi], AL
     MOV byte ptr [rdi+1], 07
     INC DL
-    CMP DL, BYTE PTR [rbp+4Ah]
+    CMP DL, BYTE PTR flat:[44Ah]
     JB @F
 newline:
     MOV DL, 00
     INC DH
-    CMP DH, BYTE PTR [rbp+84h]
+    CMP DH, BYTE PTR flat:[484h]
     JBE @F
     DEC DH
     CALL scroll_screen
 @@:
-    MOV [rbx*2+rbp+50h],DX
+    MOV [rbx*2+450h],DX
     pop rax
     pop rdx
     pop rcx
     pop rbx
     pop rsi
     pop rdi
-    pop rbp
     RET
 
 WriteStr:   ;write string in rdx
@@ -552,16 +543,12 @@ excno = 0
     call WriteQW
     call WriteStrX
     db 10,0
-@@:
-    jmp $
+    jmp [bv] ;exit
 
 ;--- clock and keyboard interrupts
 
 clock:
-    push rbp
-    mov ebp,400h
-    inc dword ptr [rbp+6Ch]
-    pop rbp
+    inc dword ptr flat:[46Ch]
 interrupt:              ; handler for all other interrupts
     push rax
     mov al,20h
@@ -574,7 +561,7 @@ keyboard:
     in al,60h
     test al,80h
     jnz @F
-    mov r8b, al
+    mov [bKey], al      ; store key in 1-byte keyb buffer
 @@:
     in al,61h           ; give finishing information
     out 61h,al          ; to keyboard...
@@ -583,12 +570,6 @@ keyboard:
     pop rax
     iretq
 
-_TEXT ends
-
-;--- 4k stack, used in both modes
-
-STACK segment use16 para stack 'STACK'
-    db 4096 dup (?)
-STACK ends
+_TEXT64 ends
 
     end start16

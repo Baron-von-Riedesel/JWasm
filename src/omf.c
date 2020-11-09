@@ -1261,6 +1261,9 @@ static uint_16 omf_write_comdef( uint_16 index )
 static time_t GetFileTimeStamp( const char *filename )
 /****************************************************/
 {
+#if defined(__DJGPP__)
+#define _stat stat
+#endif
     struct _stat statbuf;
 
     if( _stat( filename, &statbuf ) != 0 ) {

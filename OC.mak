@@ -6,7 +6,7 @@ name = jwasm
 # directory paths to adjust
 # CCDIR  - root directory for compiler, linker, include and lib files
 !ifndef CCDIR
-CCDIR  = \OC386
+CCDIR  = \orangec
 !endif
 !ifndef DEBUG
 DEBUG=0
@@ -14,13 +14,13 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=OCD
+OUTD=Build\OCD
 !else
-OUTD=OCR
+OUTD=Build\OCR
 !endif
 !endif
 
-inc_dirs  = -IH -I"$(CCDIR)\include"
+inc_dirs  = -Isrc\H -I"$(CCDIR)\include"
 
 linker = $(CCDIR)\bin\olink.exe
 
@@ -43,7 +43,7 @@ lflagsw = $(LOPTD) $(LOPT)
 
 CC=$(CCDIR)\bin\occ.exe /c /C+F -D__OCC__ $(inc_dirs) $(c_flags)
 
-.c{$(OUTD)}.o:
+{src}.c{$(OUTD)}.o:
 	@set ORANGEC=$(CCDIR)
 	@set PATH=$(CCDIR)\bin;%PATH%
 	@$(CC) -o$* $<
@@ -62,15 +62,15 @@ $(OUTD)\$(name).exe : $(OUTD)/main.o $(proj_obj)
 $(lflagsw) /L$(CCDIR)\Lib $(OUTD)\main.o $(proj_obj:/=\) c0xpe.o "clwin.l" "climp.l"
 <<
 
-$(OUTD)/msgtext.o: msgtext.c H/msgdef.h H/globals.h
+$(OUTD)/msgtext.o: src/msgtext.c src/H/msgdef.h src/H/globals.h
 	@set ORANGEC=$(CCDIR)
 	@set PATH=$(CCDIR)\bin;%PATH%
-	@$(CC) -o$* msgtext.c
+	@$(CC) -o$* src/msgtext.c
 
-$(OUTD)/reswords.o: reswords.c H/instruct.h H/special.h H/directve.h
+$(OUTD)/reswords.o: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h
 	@set ORANGEC=$(CCDIR)
 	@set PATH=$(CCDIR)\bin;%PATH%
-	@$(CC) -o$* reswords.c
+	@$(CC) -o$* src/reswords.c
 
 ######
 
