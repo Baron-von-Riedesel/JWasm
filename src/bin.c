@@ -480,7 +480,7 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
     struct dsym *seg;
     uint_32 value;
 #if PE_SUPPORT && AMD64_SUPPORT
-    uint_64 value64;
+    uint_64 value64 = 0;
 #endif
 #ifdef DEBUG_OUT
     uint_32 oldvalue;
@@ -633,6 +633,13 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
             DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_OFF16, value=%" I32_SPEC "Xh, target=%p *target=%Xh\n", curr->sym.name, fixup->locofs, value, codeptr, *codeptr.dw ));
             break;
         case FIX_OFF32:
+#if PE_SUPPORT && AMD64_SUPPORT
+            if ( seg && seg->e.seginfo->Ofssize == USE64 ) {
+                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_OFF32, sym=%s\n", curr->sym.name, fixup->locofs, seg ? seg->sym.name : "NULL" ));
+                if (value64 >= 0x80000000 )
+                    EmitErr( ADDR32_IN64BIT, fixup->sym ? fixup->sym->name : "?", curr->sym.name, fixup->locofs );
+            }
+#endif
             *codeptr.dd = value;
             DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_OFF32, value=%" I32_SPEC "Xh, *target=%Xh\n", curr->sym.name, fixup->locofs, value, *codeptr.dd ));
             break;

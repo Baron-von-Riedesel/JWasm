@@ -359,5 +359,8 @@ pick( EXPORT_MUST_BE_FAR,                "EXPORT must be FAR: %s" )
 #if MZ_SUPPORT
 pick( START_LABEL_NOT_16BIT,             "Start label not in a 16-bit segment" )
 #else
-pick( msg_filler25, "" )
+pick( msg_filler27, "" )
+#endif
+#if AMD64_SUPPORT
+pick( ADDR32_IN64BIT,                    "ADDR32 fixup to '%s' at location %s.%lX" )
 #endif
