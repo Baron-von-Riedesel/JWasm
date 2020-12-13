@@ -1,28 +1,22 @@
 
-# this makefile (NMake) creates the JWasm Win64 binary with MS Visual Studio 2010.
+# this makefile (NMake) creates the JWasm Win64 binary with MS Visual Studio
 
 name = jwasm
 
 # directory paths to adjust
 # VCDIR  - root directory for VC include and lib files.
 # W64LIB - directory for Win64 import library files (kernel32.lib, ...).
-#          Default is WinInc ( may be changed to the MS Platform SDK ).
 
-# PLEASE NOTE: I didn't install the whole MS Visual Studio stuff,
-# just copied the VC branch to \MSVC10. However, some binaries
-# related to MS symbol files ( mspdbsrv.exe, mspdb100.dll, mspdbcore.dll ),
-# which are to be found in \<MSVS root>\Common7\IDE, must then be copied
-# manually to a directory in the path ( here: \msvc10\bin ).
 
 !ifndef VCDIR
-VCDIR  = \msvc10
+VCDIR  = %VCToolsInstallDir%
 !endif
-!ifndef W64LIB
-W64LIB = \WinInc\Lib64
-!endif
+VCBIN=$(VCDIR)\bin\Hostx64\x64
 
-VCBIN  = $(VCDIR)\bin\x86_amd64
-PATH   = $(VCDIR)\bin;$(PATH)
+!ifndef W64LIB
+W64LIB = %WindowsSdkDir%\Lib\%WindowsSdkVersion%\um\x64
+W64LIBU = %WindowsSdkDir%\Lib\%WindowsSdkVersion%\ucrt\x64
+!endif
 
 # use the MS linker or jwlink
 !ifndef MSLINK
@@ -43,8 +37,8 @@ OUTD=build\MSVC64R
 
 inc_dirs  = -Isrc/H -I"$(VCDIR)\include"
 
-linker = $(VCBIN)\link.exe
-lib = $(VCBIN)\lib.exe
+linker = link.exe
+lib = lib.exe
 
 !if $(DEBUG)
 extra_c_flags = -Zd -Od -DDEBUG_OUT -FAa -Fa$* 
@@ -69,7 +63,7 @@ LOPTD = /debug
 
 lflagsw = $(LOPTD) /SUBSYSTEM:CONSOLE $(LOPT) /map:$^*.map
 
-CC=$(VCBIN)\cl.exe -c -nologo $(inc_dirs) $(c_flags)
+CC="$(VCBIN)\cl.exe" -c -nologo $(inc_dirs) $(c_flags)
 
 {src}.c{$(OUTD)}.obj:
 	@$(CC) -Fo$* $<
@@ -77,19 +71,19 @@ CC=$(VCBIN)\cl.exe -c -nologo $(inc_dirs) $(c_flags)
 proj_obj = \
 !include msmod.inc
 
-ALL: $(OUTD) $(OUTD)\$(name).exe
+ALL: build $(OUTD) $(OUTD)\$(name).exe
+
+build:
+	@mkdir build
 
 $(OUTD):
 	@mkdir $(OUTD)
 
 $(OUTD)\$(name).exe : $(OUTD)/main.obj $(OUTD)/$(name).lib
 !if $(MSLINK)
-	@$(linker) @<<
-$(lflagsw) $(OUTD)/main.obj $(OUTD)/$(name).lib
-/LIBPATH:"$(VCDIR)/Lib/amd64" "$(W64LIB)/kernel32.lib" /OUT:$@
-<<
+	@$(linker) $(lflagsw) $(OUTD)/main.obj $(OUTD)/$(name).lib /LIBPATH:"$(VCDIR)/lib/x64" /LIBPATH:"$(W64LIB)" /LIBPATH:"$(W64LIBU)" /OUT:$@
 !else
-	@jwlink.exe format windows pe file $(OUTD)/main.obj name $@ lib $(OUTD)/$(name).lib libpath "$(VCDIR)/Lib/amd64" lib "$(W64LIB)/kernel32.lib" op start=mainCRTStartup, norelocs, eliminate, map=$(OUTD)/$(name).map
+	@jwlink.exe format windows pe file $(OUTD)/main.obj name $@ lib $(OUTD)/$(name).lib libpath "$(VCDIR)/Lib/x64" lib "$(W64LIB)/kernel32.lib" op start=mainCRTStartup, norelocs, eliminate, map=$(OUTD)/$(name).map
 !endif
 
 $(OUTD)\$(name).lib : $(proj_obj)

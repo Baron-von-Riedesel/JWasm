@@ -1,11 +1,5 @@
 
 # this makefile (NMake) creates the JWasm Win32 binary with MS Visual C++.
-# it has been tested with:
-# - VC++ 5
-# - VC++ 6
-# - VC++ Toolkit 2003 ( = VC++ 7.1 )
-# - VC++ 2005 EE ( not recommended; creates slow binary )
-# - VC++ 2008 EE ( not recommended; creates slow binary )
 #
 # optionally, a DOS binary can be created. Then the HXDEV package is needed.
 #
@@ -25,16 +19,19 @@ MSLINK=1
 # directory paths to adjust
 # VCDIR  - root directory for VC compiler, linker, include and lib files
 # W32LIB - directory for Win32 import library files (kernel32.lib).
-#          Default is WinInc ( may be changed to the MS Platform SDK ).
 # HXDIR  - for DOS=1 only: root directory to search for stub LOADPEX.BIN,
 #          libs DKRNL32S.LIB + IMPHLP.LIB and tool PATCHPE.EXE.
 
 !ifndef VCDIR
-VCDIR  = \msvc71
+VCDIR  = %VCToolsInstallDir%
 !endif
+VCBIN=$(VCDIR)\bin\Hostx86\x86
+
 !ifndef W32LIB
-W32LIB = \WinInc\Lib
+W32LIB = %WindowsSdkDir%\Lib\%WindowsSdkVersion%\um\x86
+W32LIBU = %WindowsSdkDir%\Lib\%WindowsSdkVersion%\ucrt\x86
 !endif
+
 !if $(DOS)
 HXDIR  = \HX
 !endif
@@ -45,16 +42,16 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=build/MSVCD
+OUTD=build\MSVCD
 !else
-OUTD=build/MSVCR
+OUTD=build\MSVCR
 !endif
 !endif
 
 inc_dirs  = -Isrc\H -I"$(VCDIR)\include"
 
-linker = $(VCDIR)\Bin\link.exe
-lib = $(VCDIR)\Bin\lib.exe
+linker = link.exe
+lib = lib.exe
 
 !ifndef TRMEM
 TRMEM=0
@@ -82,8 +79,8 @@ c_flags =-D__NT__ $(extra_c_flags)
 #########
 
 # linker option /OPT:NOWIN98 is not accepted by all MS linkers
-#LOPT = /NOLOGO
-LOPT = /NOLOGO /OPT:NOWIN98
+#LOPT = /NOLOGO /OPT:NOWIN98
+LOPT = /NOLOGO
 !if $(DEBUG)
 LOPTD = /debug
 !endif
@@ -91,7 +88,7 @@ LOPTD = /debug
 lflagsd = $(LOPTD) /SUBSYSTEM:CONSOLE $(LOPT) /map:$^*.map /Libpath:$(HXDIR)\lib
 lflagsw = $(LOPTD) /SUBSYSTEM:CONSOLE $(LOPT) /map:$^*.map
 
-CC=$(VCDIR)\bin\cl.exe -c -nologo $(inc_dirs) $(c_flags)
+CC="$(VCBIN)\cl.exe" -c -nologo $(inc_dirs) $(c_flags)
 
 {src}.c{$(OUTD)}.obj:
 	@$(CC) -Fo$* $<
@@ -110,24 +107,21 @@ TARGET1=$(OUTD)\$(name).exe
 TARGET2=$(OUTD)\$(name)d.exe
 !endif
 
-ALL: $(OUTD) $(TARGET1) $(TARGET2)
+ALL: build $(OUTD) $(TARGET1) $(TARGET2)
+
+build:
+	@mkdir build
 
 $(OUTD):
 	@mkdir $(OUTD)
 
 $(OUTD)\$(name).exe : $(OUTD)/main.obj $(OUTD)/$(name).lib
 !if $(MSLINK)
-	@$(linker) @<<
-$(lflagsw) $(OUTD)/main.obj $(OUTD)/$(name).lib
-/LIBPATH:"$(VCDIR)/Lib" "$(W32LIB)/kernel32.lib" /OUT:$@
-<<
+	@$(linker) $(lflagsw) $(OUTD)/main.obj $(OUTD)/$(name).lib /LibPath:"$(VCDIR)\lib\x86" /LibPath:"$(W32LIB)" /LibPath:"$(W32LIBU)" /OUT:$@
 !else
 	@jwlink @<<
-format windows pe file $(OUTD)/main.obj 
-name $@ 
-lib $(OUTD)/$(name).lib 
-libpath "$(VCDIR)/Lib" lib "$(W32LIB)/kernel32.lib" 
-op start=_mainCRTStartup, norelocs, eliminate, map=$(OUTD)/$(name).map
+format windows pe file $(OUTD)/main.obj name $@ 
+lib $(OUTD)/$(name).lib libpath "$(VCDIR)\Lib\x86" libpath "$(W32LIB)" op start=_mainCRTStartup, norelocs, eliminate, map=$(OUTD)/$(name).map
 #sort global op statics
 disable 173
 <<
