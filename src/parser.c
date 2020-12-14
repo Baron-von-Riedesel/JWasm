@@ -1170,6 +1170,10 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
                 } else {
                     DebugMsg1(("idata_fixup, fixup_type=OFF32\n" ));
                     fixup_type = FIX_OFF32;
+#if AMD64_SUPPORT
+					if ( Ofssize == USE64 && Parse_Pass == PASS_2 )
+						EmitWarn( 3, ADDR32_FIXUP_FOR_64BIT_LABEL );
+#endif
                 }
             } else {
                 DebugMsg1(("idata_fixup, fixup_type=OFF16 (1)\n" ));

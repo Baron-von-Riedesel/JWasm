@@ -1254,6 +1254,15 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                             AddLineQueueX( " push %r", T_AX );
                             *r0flags = R0_USED | R0_H_CLEARED | R0_X_CLEARED;
                         }
+#if AMD64_SUPPORT
+                    } else if ( asize <= 4 && ( psize == 8 || pushsize == 8 ) ) { /* v2.14: added */
+                        if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 && asize == psize ) {
+                            switch ( asize ) {
+                            case 2: reg = ( reg >= T_AX && reg <= T_DI ) ? reg - T_AX + T_RAX : reg - T_R8W + T_R8; break;
+                            case 4: reg = ( reg >= T_EAX && reg <= T_EDI ) ? reg - T_EAX + T_RAX : reg - T_R8D + T_R8; break;
+                            }
+                        }
+#endif
                     }
 
                     if ( asize == 1 ) {
@@ -1284,6 +1293,15 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                             if ( (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_386) &&
                                 ( psize == 4 || pushsize == 4 ) ) {
                                 reg = reg - T_AL + T_EAX;
+#if AMD64_SUPPORT
+                            } else if ( pushsize == 8 && ( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 ) {
+                                if ( reg >= T_AL && reg <= T_BL )
+                                    reg = reg - T_AL + T_RAX;
+                                else if ( reg >= T_SPL && reg <= T_DIL )
+                                    reg = reg - T_SPL + T_RSP;
+                                else
+                                    reg = reg - T_R8B + T_R8;
+#endif
                             } else
                                 reg = reg - T_AL + T_AX;
                         }

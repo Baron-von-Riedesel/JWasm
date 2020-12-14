@@ -363,4 +363,5 @@ pick( msg_filler27, "" )
 #endif
 #if AMD64_SUPPORT
 pick( ADDR32_IN64BIT,                    "ADDR32 fixup to '%s' at location %s.%lX" )
+pick( ADDR32_FIXUP_FOR_64BIT_LABEL,      "64-bit label referenced with 32-bit fixup" )
 #endif

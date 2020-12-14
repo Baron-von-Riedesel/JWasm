@@ -32,6 +32,10 @@
       won't run in those systems.
    -  error "ADDR32 fixup to <xxx> at location ..." emitted if 64-bit PE is
       created and 32-bit fixup target address is >= 0x80000000; see pe7.asm.
+   -  warning "64-bit label referenced with 32-bit fixup" ( warning level 3 )
+      emitted if 32-bit address used for 64-bit target.
+   -  translation for 8/16/32-bit register arguments for INVOKE in 64-bit if
+      they are to be pushed; see invok64d.asm.
 
    03/14/2020, v2.13:
 
