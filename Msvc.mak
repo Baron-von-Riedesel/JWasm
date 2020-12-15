@@ -58,11 +58,10 @@ TRMEM=0
 !endif
 
 !if $(DEBUG)
-#extra_c_flags = -Zi -Od -DDEBUG_OUT -FAa -Fa$* 
+#extra_c_flags = -Zi -Od -DDEBUG_OUT -FAa
 extra_c_flags = -Z7 -Od -DDEBUG_OUT
 !else
 extra_c_flags = -O2 -Gs -DNDEBUG
-#extra_c_flags = -Ox -DNDEBUG
 !endif
 
 !if $(TRMEM)
@@ -70,13 +69,6 @@ extra_c_flags = $(extra_c_flags) -DTRMEM -DFASTMEM=0
 !endif
 
 c_flags =-D__NT__ $(extra_c_flags)
-
-# if MSVC++ 2005 EE is used:
-# 1. define __STDC_WANT_SECURE_LIB__=0 to avoid "deprecated" warnings
-# 2. define -GS- to disable security checks
-#c_flags =-D__NT__ $(extra_c_flags) -D__STDC_WANT_SECURE_LIB__=0 -GS-
-
-#########
 
 # linker option /OPT:NOWIN98 is not accepted by all MS linkers
 #LOPT = /NOLOGO /OPT:NOWIN98

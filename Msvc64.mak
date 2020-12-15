@@ -41,18 +41,13 @@ linker = link.exe
 lib = lib.exe
 
 !if $(DEBUG)
-extra_c_flags = -Zd -Od -DDEBUG_OUT -FAa -Fa$* 
+extra_c_flags = -ZI -Od -DDEBUG_OUT -FAa
 !else
 extra_c_flags = -O2 -Ox -GS- -DNDEBUG
 #extra_c_flags = -Ox -DNDEBUG
 !endif
 
 c_flags =-D__NT__ $(extra_c_flags)
-
-# if MSVC++ 2005 EE is used:
-# 1. define __STDC_WANT_SECURE_LIB__=0 to avoid "deprecated" warnings
-# 2. define -GS- to disable security checks
-#c_flags =-D__NT__ $(extra_c_flags) -D__STDC_WANT_SECURE_LIB__=0 -GS-
 
 #lflags stuff
 #########
