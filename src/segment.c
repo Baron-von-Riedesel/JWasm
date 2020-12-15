@@ -597,7 +597,11 @@ void DefineFlatGroup( void )
     if( ModuleInfo.flat_grp == NULL ) {
         /* can't fail because <FLAT> is a reserved word */
         ModuleInfo.flat_grp = CreateGroup( "FLAT" );
-        ModuleInfo.flat_grp->sym.Ofssize = ModuleInfo.defOfssize;
+        /* v2.14: set Ofssize of FLAT to at least USE32.
+         * this will make "assume ds:FLAT" work in 16-bit code ( needed for i.e. INVLPG )
+         */
+        //ModuleInfo.flat_grp->sym.Ofssize = ModuleInfo.defOfssize;
+        ModuleInfo.flat_grp->sym.Ofssize = ( ModuleInfo.defOfssize > USE16 ) ? ModuleInfo.defOfssize : USE32;
         DebugMsg1(("DefineFlatGroup(): Ofssize=%u\n", ModuleInfo.flat_grp->sym.Ofssize ));
     }
     ModuleInfo.flat_grp->sym.isdefined = TRUE; /* v2.09 */

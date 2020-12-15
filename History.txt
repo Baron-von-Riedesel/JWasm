@@ -23,6 +23,8 @@
       LONG_MIN were used inadequately.
    -  DJGPP: djgpp apparently doesn't know "_stat", needs "stat" instead; see
       omf.c
+   -  INVLPG with direct address >= 0x10000 in 16-bit code was rejected, even
+      if preceded by 'assume ds:flat'; see invlpg2.asm.
 
    Other changes:
    -  jfc.asm translated to jfc.c so it can be used in both 32- and 64-bit 
