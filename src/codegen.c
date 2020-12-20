@@ -744,9 +744,14 @@ static ret_code match_phase_3( struct code_info *CodeInfo, enum operand_type opn
                 CodeInfo->token == T_XOR ) )
                 break;
 
+            /* v2.14: ensure that InsFixup->sym is set - it always should, since a fixup is generated,
+             * but obviously there are cases where it is NOT!
+             */
             /* v2.11: skip externals - but don't skip undefines; forward8.asm */
             //if ( CodeInfo->opnd[OPND2].InsFixup != NULL ) /* external? then skip */
-            if ( CodeInfo->opnd[OPND2].InsFixup != NULL && CodeInfo->opnd[OPND2].InsFixup->sym->state != SYM_UNDEFINED ) /* external? then skip */
+            //if ( CodeInfo->opnd[OPND2].InsFixup != NULL && CodeInfo->opnd[OPND2].InsFixup->sym->state != SYM_UNDEFINED ) /* external? then skip */
+            if ( CodeInfo->opnd[OPND2].InsFixup != NULL && CodeInfo->opnd[OPND2].InsFixup->sym &&
+                CodeInfo->opnd[OPND2].InsFixup->sym->state != SYM_UNDEFINED ) /* external? then skip */
                 break;
 
             if ( CodeInfo->const_size_fixed == FALSE )

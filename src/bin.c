@@ -593,6 +593,9 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
             DebugMsg(("DoFixup(%s, %04" I32_SPEC "X, %s): target segment=0, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
                       curr->sym.name, fixup->locofs, fixup->sym ? fixup->sym->name : "", fixup->offset ? offset : 0 ));
             value = 0;
+			/* v2.14: use fixup->offset; see flatgrp2.asm. todo: check if this should be done generally */
+			if ( fixup->sym == NULL )
+				value = fixup->offset;
         }
 
         switch ( fixup->type ) {

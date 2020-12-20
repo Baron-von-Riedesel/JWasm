@@ -15,8 +15,8 @@
       != ES wasn't rejected; see string5.asm.
    -  string operations with symbolic memory operands did ignore assumes, thus
       no segment prefix was created; see string8.asm.
-   -  comment behind MACRO directive was appended to all lines inside the macro;
-      see lst2.asm.
+   -  comment behind MACRO directive was appended to all lines inside the
+      macro; see lst2.asm.
    -  jwasmr.exe: memory corruption may have caused a system crash if pass one
       ended with an error.
    -  some errors occured in LP64 systems (linux, unix) because LONG_MAX and
@@ -25,6 +25,10 @@
       omf.c
    -  INVLPG with direct address >= 0x10000 in 16-bit code was rejected, even
       if preceded by 'assume ds:flat'; see invlpg2.asm.
+   -  using direct addresses without symbol ( i.e. flat:[1234h] ) may have 
+      caused a GPF if used in math opcodes ( CMP, OR, ...); see flatgrp2.asm.
+   -  option -bin: using direct addressing without symbol ( _DATA:1234h )
+      didn't store the offset in the binary; see data1.asm.
 
    Other changes:
    -  jfc.asm translated to jfc.c so it can be used in both 32- and 64-bit 
