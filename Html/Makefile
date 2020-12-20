@@ -9,7 +9,7 @@
 OUTD=Win32
 hc_hh = "\HTMLHelp\hhc.exe"
 
-.EXTENSIONS: .chm .chi
+#.EXTENSIONS: .chm .chi
 
 $(OUTD)\JWasm.chm $(OUTD)\JWasm.chi : $(OUTD)\Jwasm.hhc $(OUTD)\Jwasm.hhk $(OUTD)\Jwasm.hhp
 	@cd $(OUTD)
