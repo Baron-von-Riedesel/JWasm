@@ -593,9 +593,20 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
             DebugMsg(("DoFixup(%s, %04" I32_SPEC "X, %s): target segment=0, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
                       curr->sym.name, fixup->locofs, fixup->sym ? fixup->sym->name : "", fixup->offset ? offset : 0 ));
             value = 0;
-			/* v2.14: use fixup->offset; see flatgrp2.asm. todo: check if this should be done generally */
-			if ( fixup->sym == NULL )
-				value = fixup->offset;
+            /* v2.14: use fixup->offset; see flatgrp2.asm. todo: check if this should be done generally */
+            if ( fixup->sym == NULL )
+                value = fixup->offset;
+            /* v2.14: if a segment is given, find it - we just have the segment index */
+            if ( fixup->frame_type == FRAME_SEG ) {
+                for( seg = SymTables[TAB_SEG].head; seg; seg = seg->next ) {
+                    if ( seg->e.seginfo->seg_idx == fixup->frame_datum ) {
+                        /* if the segment is in a group, add the segment's start offset */
+                        if ( seg->e.seginfo->group )
+                            value += seg->e.seginfo->start_offset;
+                        break;
+                    }
+                }
+            }
         }
 
         switch ( fixup->type ) {

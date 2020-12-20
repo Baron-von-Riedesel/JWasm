@@ -1,7 +1,7 @@
 
    Changelog
 
-   __/__/2020, v2.14:
+   20.12.2020, v2.14:
 
    Bugfixes:
    -  regression in v2.13: if a not yet defined segment was added to a group,
@@ -21,8 +21,6 @@
       ended with an error.
    -  some errors occured in LP64 systems (linux, unix) because LONG_MAX and
       LONG_MIN were used inadequately.
-   -  DJGPP: djgpp apparently doesn't know "_stat", needs "stat" instead; see
-      omf.c
    -  INVLPG with direct address >= 0x10000 in 16-bit code was rejected, even
       if preceded by 'assume ds:flat'; see invlpg2.asm.
    -  using direct addresses without symbol ( i.e. flat:[1234h] ) may have 
@@ -36,6 +34,8 @@
    -  added runtest.sh, clrdir.sh and compress.sh to allow regression test in
       unix systems. A few tests are skipped, since jwasmr.exe and MS link.exe
       won't run in those systems.
+   -  DJGPP: djgpp apparently doesn't know "_stat", needs "stat" instead; see
+      omf.c
    -  error "ADDR32 fixup to <xxx> at location ..." emitted if 64-bit PE is
       created and 32-bit fixup target address is >= 0x80000000; see pe7.asm.
    -  warning "64-bit label referenced with 32-bit fixup" ( warning level 3 )

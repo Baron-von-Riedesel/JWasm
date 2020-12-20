@@ -920,6 +920,10 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
 
     if ( opndx->Ofssize != USE_EMPTY ) {
         Ofssize = opndx->Ofssize;
+    } else if( opndx->sym == NULL ) { /* v2.15: branch added */
+        SetSegOverride( opndx, NULL );
+        if ( SegOverride )
+            Ofssize = GetSymOfssize( SegOverride );
     } else if( ( opndx->sym->state == SYM_SEG )
         || ( opndx->sym->state == SYM_GRP )
         || ( opndx->instr == T_SEG ) ) {
@@ -1071,8 +1075,10 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
             /* anything what might look better at first glance */
             if( opndx->mem_type != MT_EMPTY )
                 CodeInfo->mem_type = opndx->mem_type;
+            /* v2.15: check for sym==NULL */
             /* v2.04: assume BYTE size if symbol is undefined */
-            else if ( opndx->sym->state == SYM_UNDEFINED ) {
+            //else if ( opndx->sym->state == SYM_UNDEFINED ) {
+            else if ( opndx->sym && opndx->sym->state == SYM_UNDEFINED ) {
                 CodeInfo->mem_type = MT_BYTE;
                 fixup_option = OPTJ_PUSH;
             } else
@@ -1830,7 +1836,9 @@ static ret_code process_address( struct code_info *CodeInfo, unsigned CurrOpnd, 
     } else if( opndx->instr != EMPTY ) {
         /* instr is OFFSET | LROFFSET | SEG | LOW | LOWWORD, ... */
         DebugMsg1(("process_address: instr=%s\n", GetResWName( opndx->instr, NULL ) ));
-        if( opndx->sym == NULL ) { /* better to check opndx->type? */
+        /* v2.15 create fixup if override is given */
+        //if( opndx->sym == NULL ) { /* better to check opndx->type? */
+        if( opndx->sym == NULL && ( opndx->override == NULL || opndx->override->token == T_REG )) {
             return( idata_nofixup( CodeInfo, CurrOpnd, opndx ) );
         } else {
             /* allow "lea <reg>, [offset <sym>]" */

@@ -803,7 +803,7 @@ static ret_code match_phase_3( struct code_info *CodeInfo, enum operand_type opn
         CodeInfo->pinstr++;
     } while ( opnd_clstab[CodeInfo->pinstr->opclsidx].opnd_type[OPND1] == determinant && CodeInfo->pinstr->first == FALSE );
     CodeInfo->pinstr--; /* pointer will be increased in codegen() */
-    DebugMsg(("match_phase_3: returns EMPTY\n"));
+    DebugMsg1(("match_phase_3: returns EMPTY\n"));
     return( ERROR );
 }
 
