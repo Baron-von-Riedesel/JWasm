@@ -403,7 +403,15 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
 
     if( CodeInfo->token == T_LEA ) {
         CodeInfo->prefix.RegOverride = ASSUME_NOTHING; /* skip segment override */
-        SetFixupFrame( sym, FALSE );
+        /* v2.15 use SegOverride if set. Without this modification the
+         * fixup created by LEA <reg>,addr is ignored if sym=NULL; see lea2.asm
+         * mz:  ok
+         * omf: ok (also see modification in omffixup.c)
+         * pe:  ok
+         * coff: ignores fixup ( coff relocations have to refer to a symbol )
+         */
+        //SetFixupFrame( sym, FALSE );
+        SetFixupFrame( SegOverride ? SegOverride : sym, FALSE );
         return;
     }
 
@@ -1180,7 +1188,7 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
                     fixup_type = FIX_OFF32;
 #if AMD64_SUPPORT
 					if ( Ofssize == USE64 && Parse_Pass == PASS_2 )
-						EmitWarn( 3, ADDR32_FIXUP_FOR_64BIT_LABEL );
+						EmitWarn( (ModuleInfo.Ofssize == USE64 ? 3 : 4), ADDR32_FIXUP_FOR_64BIT_LABEL );
 #endif
                 }
             } else {

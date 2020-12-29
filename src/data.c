@@ -978,7 +978,7 @@ next_item:  /* <--- continue scan if a comma has been detected */
                      * on the symbol's offset size.
                      */
                     //if ( opndx.sym && ( GetSymOfssize( opndx.sym ) == USE16 ) )
-                    if ( ModuleInfo.Ofssize == USE16 )
+                    if ( ModuleInfo.Ofssize == USE16 ) {
 #if COFF_SUPPORT || ELF_SUPPORT
                         if ( opndx.mem_type == MT_NEAR &&
                             ( Options.output_format == OFORMAT_COFF
@@ -990,8 +990,13 @@ next_item:  /* <--- continue scan if a comma has been detected */
                             EmitErr( SYMBOL_TYPE_CONFLICT, sym->name );
                         } else
 #endif
+                        {
                             fixup_type = FIX_PTR16;
-                    else
+                            /* v2.15: warn if offset is 32-bit */
+                            if ( opndx.sym && ( GetSymOfssize( opndx.sym ) > USE16 && Parse_Pass == PASS_2 ) )
+                                EmitWarn( 3, WORD_FIXUP_FOR_32BIT_LABEL, opndx.sym->name );
+                        }
+                    } else
                         fixup_type = FIX_OFF32;
                 }
                 break;

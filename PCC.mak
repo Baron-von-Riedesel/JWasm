@@ -11,12 +11,12 @@ DEBUG=0
 !endif
 
 !if $(DEBUG)
-OUTD=PCCD
+OUTD=build\PCCD
 !else
-OUTD=PCCR
+OUTD=build\PCCR
 !endif
 
-inc_dirs  = -IH -I"$(PCCROOT)\include"
+inc_dirs  = -Isrc\H -I"$(PCCROOT)\include"
 
 !if $(DEBUG)
 extra_c_flags = -g -DDEBUG_OUT
@@ -31,9 +31,9 @@ ALL: $(OUTD) $(OUTD)\$(name).exe
 $(OUTD):
 	@mkdir $(OUTD)
 
-$(OUTD)\$(name).exe: *.c
+$(OUTD)\$(name).exe: src\*.c
 	set PCCDIR=$(PCCROOT)
-	$(CC) -o $(OUTD)\$(name).exe *.c
+	$(CC) -o $(OUTD)\$(name).exe src\*.c
 
 clean:
 	@erase $(OUTD)\$(name).exe

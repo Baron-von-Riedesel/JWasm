@@ -24,16 +24,16 @@ TARGET=/Tamd64-coff
 !endif
 
 !ifdef DEBUG
-OUTD=POCD
+OUTD=build\POCD
 extra_c_flags = -Zi -DDEBUG_OUT $(TARGET)
 LOPTD = /debug
 !else
-OUTD=POCR
+OUTD=build\POCR
 extra_c_flags = -O2 -DNDEBUG $(TARGET)
 LOPTD =
 !endif
 
-inc_dirs = -IH -I"$(PODIR)\include"
+inc_dirs = -Isrc\H -I"$(PODIR)\include"
 
 LINK = $(PODIR)\Bin\polink.exe
 LIB = $(PODIR)\Bin\polib.exe
@@ -48,7 +48,7 @@ lflagsw = $(LOPTD) /SUBSYSTEM:CONSOLE /map:$*.map
 
 CC=$(PODIR)\bin\pocc.exe $(inc_dirs) $(c_flags)
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	$(CC) -Fo$*.obj $<
 
 proj_obj = \

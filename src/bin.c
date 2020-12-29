@@ -601,8 +601,19 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                 for( seg = SymTables[TAB_SEG].head; seg; seg = seg->next ) {
                     if ( seg->e.seginfo->seg_idx == fixup->frame_datum ) {
                         /* if the segment is in a group, add the segment's start offset */
-                        if ( seg->e.seginfo->group )
+                        if ( seg->e.seginfo->group ) {
                             value += seg->e.seginfo->start_offset;
+#if PE_SUPPORT
+                            /* v2.15: add imagebase. see lea3.asm */
+                            if ( ModuleInfo.sub_format == SFORMAT_PE ) {
+#if AMD64_SUPPORT
+                                if ( curr->e.seginfo->Ofssize == USE64 )
+                                    value64 = value + cp->imagebase64;
+#endif
+                                value += cp->imagebase;
+                            }
+#endif
+                        }
                         break;
                     }
                 }

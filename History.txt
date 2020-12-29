@@ -1,6 +1,22 @@
 
    Changelog
 
+   __.__.____, v2.15:
+
+   Bugfixes:
+   -  format bin, mz, omf, pe: fixup created by direct addressing without
+      symbol ( _DATA:1234h ) was still not always correct if segment was in a
+      group; see lea2.asm.
+
+   Other changes:
+   -  error "too many segments/sections defined..." emitted for omf and coff
+      if the number of segments/sections cannot be handled by those formats.
+   -  warning "64-bit label referenced with 32-bit fixup", introduced in v2.14,
+      will be emitted at level 4 only if the code referencing the label isn't
+      64-bit.
+   -  format coff: warning "Output format doesn't support anonymous fixups..."
+      displayed if a segment override other than FLAT: is used without symbol.
+
    20.12.2020, v2.14:
 
    Bugfixes:

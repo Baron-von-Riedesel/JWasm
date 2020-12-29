@@ -360,7 +360,8 @@ static ret_code WriteModule( struct module_info *modinfo )
         }
     }
 
-    modinfo->g.WriteModule( modinfo );
+    if ( modinfo->g.WriteModule( modinfo ) == ERROR )
+        return( ERROR );
 
 #if DLLIMPORT
     /* is the -Fd option given with a file name? */

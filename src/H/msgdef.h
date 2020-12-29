@@ -229,7 +229,7 @@ pick( EXPR_TOO_COMPLEX_FOR_UNTILCXZ,     "Expression too complex for UNTILCXZ" )
 pick( OPERANDS_MUST_BE_IN_SAME_SEGMENT,  "Operands must be in same segment" )
 pick( INVALID_USE_OF_EXTERNAL_SYMBOL,    "Invalid use of external symbol: %s" )
 #if COFF_SUPPORT
-pick( LEADING_UNDERSCORE_REQUIRED_FOR_START_LABEL, "For -coff leading underscore required for start label: %s" )
+pick( LEADING_UNDERSCORE_REQUIRED_FOR_START_LABEL, "For -coff, leading underscore required for start label: %s" )
 #else
 pick( msg_filler2, "" )
 #endif
@@ -364,4 +364,13 @@ pick( msg_filler27, "" )
 #if AMD64_SUPPORT
 pick( ADDR32_IN64BIT,                    "ADDR32 fixup to '%s' at location %s.%lX" )
 pick( ADDR32_FIXUP_FOR_64BIT_LABEL,      "64-bit label referenced with 32-bit fixup" )
+#else
+pick( msg_filler28, "" )
+pick( msg_filler29, "" )
+#endif
+pick( TOO_MANY_SEGMENTS_DEFINED,         "Too many segments/sections defined for output format" )
+#if COFF_SUPPORT
+pick( ANONYMOUS_FIXUP,                   "Output format doesn't support anonymous fixups, location: %s.%Xh" )
+#else
+pick( msg_filler30, "" )
 #endif

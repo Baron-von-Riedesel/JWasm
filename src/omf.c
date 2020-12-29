@@ -402,6 +402,10 @@ static void omf_write_fixupp( struct dsym *seg, char is32 )
                 break;
             data += OmfFixGenFix( fix, seg->e.seginfo->start_loc, data, type );
             size = (char *)data - StringBufferEnd;
+#ifdef DEBUG_OUT
+            if (!size)
+                DebugMsg1(( "omf_write_fixupp: size=0, no fixup to write\n" ));
+#endif
         }
         if ( size ) {
             omf_InitRec( &obj, CMD_FIXUPP );
@@ -1485,7 +1489,7 @@ static void omf_write_modend( struct fixup *fixup, uint_32 displ )
     struct omf_rec  obj;
     uint_8 buffer[FIX_GEN_MODEND_MAX];
 
-    DebugMsg(("omf_write_modend( fixup=%p, displ=%" I32_SPEC "X)\n", fixup, displ ));
+    DebugMsg1(("omf_write_modend( fixup=%p, displ=%" I32_SPEC "X)\n", fixup, displ ));
 
     omf_InitRec( &obj, CMD_MODEND );
 
@@ -1624,6 +1628,12 @@ static ret_code omf_write_header_initial( struct module_info *modinfo )
 
     if ( write_to_file == FALSE )
         return( NOT_ERROR );
+
+    /* v2.15: check added */
+    if ( modinfo->g.num_segs > 0x7fff ) {
+        DebugMsg(("omf_write_header_initial: too many sections defined: %u\n", modinfo->g.num_segs));
+        return ( EmitErr( TOO_MANY_SEGMENTS_DEFINED ) );
+    }
 
     omf_write_theadr( CurrFName[ASM] ); /* write THEADR record, main src filename */
     /* v2.11: coment record "ms extensions present" now written here */

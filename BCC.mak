@@ -3,20 +3,17 @@
 
 name = jwasm
 
-!ifndef BCDIR
-BCDIR = \bcc55
-!endif
 !ifndef DEBUG
 DEBUG=0
 !endif
 
 !if $(DEBUG)
-OUTD=BCC32D
+OUTD=build\BCC32D
 !else
-OUTD=BCC32R
+OUTD=build\BCC32R
 !endif
 
-inc_dirs  = /IH /I"$(BCDIR)\include"
+inc_dirs  = /Isrc\H
 
 !if $(DEBUG)
 extra_c_flags = -v -y -DDEBUG_OUT
@@ -26,10 +23,10 @@ extra_c_flags = -O2 /DNDEBUG
 
 c_flags =-q -WC -K -D__NT__ -w-8012 -w-8057 -w-8060 $(extra_c_flags)
 
-CC = $(BCDIR)\bin\bcc32.exe -c $(inc_dirs) $(c_flags)
-LINK = $(BCDIR)\Bin\ilink32.exe -s -Tpe -ap -Gn -c -L$(BCDIR)\Lib 
+CC = bcc32.exe -c $(inc_dirs) $(c_flags)
+LINK = ilink32.exe -s -Tpe -ap -Gn -c -L$(BCDIR)\Lib 
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	@$(CC) -o$* $<
 
 proj_obj = \
@@ -44,24 +41,24 @@ $(OUTD):
 
 $(OUTD)\$(name).exe : $(OUTD)/main.obj $(OUTD)/$(name).lib
 	@cd $(OUTD)
-	$(LINK) $(BCDIR)\Lib\c0x32.obj +main.obj, $(name).exe, $(name).map, $(name).lib import32.lib cw32.lib
+	$(LINK) c0x32.obj +main.obj, $(name).exe, $(name).map, $(name).lib import32.lib cw32.lib
 	@cd ..
 
-$(OUTD)/$(name).lib: $(proj_obj)
+$(OUTD)\$(name).lib: $(proj_obj)
 	@cd $(OUTD)
 	@erase $(name).lib
 !if $(DEBUG)
-	$(BCDIR)\bin\tlib $(name).lib /C $(proj_obj:BCC32D/=+)
+	tlib $(name).lib /C $(proj_obj:BCC32D/=+)
 !else
-	$(BCDIR)\bin\tlib $(name).lib /C $(proj_obj:BCC32R/=+)
+	tlib $(name).lib /C $(proj_obj:BCC32R/=+)
 !endif
 	@cd ..
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h
-	@$(CC) /o$* msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h
+	@$(CC) /o$* src/msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	@$(CC) /o$* reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h
+	@$(CC) /o$* src/reswords.c
 
 ######
 

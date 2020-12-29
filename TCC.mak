@@ -18,7 +18,7 @@ OUTD=TCCR
 
 !include gccmod.inc
 
-inc_dirs  = -IH -I"$(TCCDIR)\include"
+inc_dirs  = -Isrc\H -I"$(TCCDIR)\include"
 
 !if $(DEBUG)
 extra_c_flags = -g -DDEBUG_OUT
@@ -28,7 +28,7 @@ extra_c_flags = -DNDEBUG
 
 CC=@$(TCCDIR)\tcc.exe -c $(inc_dirs) -D__NT__ $(extra_c_flags)
 
-.c{$(OUTD)}.o:
+{src}.c{$(OUTD)}.o:
 	@$(CC) -o$*.o $<
 
 ALL: $(OUTD) $(OUTD)\$(name).exe

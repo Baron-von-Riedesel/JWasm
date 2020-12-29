@@ -16,9 +16,9 @@ DEBUG=0
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=OWWinDllD
+OUTD=build\OWWinDllD
 !else
-OUTD=OWWinDll
+OUTD=build\OWWinDll
 !endif
 !endif
 
@@ -26,7 +26,7 @@ OUTD=OWWinDll
 # r will create a slightly smaller binary
 CCV=r
 
-inc_dirs  = -IH -I$(WATCOM)\H
+inc_dirs  = -Isrc\H -I$(WATCOM)\H
 
 LINK = $(WATCOM)\binnt\wlink.exe
 
@@ -52,7 +52,7 @@ lflagsw = $(LOPTD) format windows pe dll $(LOPT) op map=$^*, offset=0x5000000 ex
 
 CC=$(WATCOM)\binnt\wcc386 -q -3$(CCV) -bd -zc -bt=nt $(inc_dirs) $(extra_c_flags) -fo$@
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	$(CC) $<
 
 proj_obj = &
@@ -71,11 +71,11 @@ Libpath $(WATCOM)\lib386\nt
 Library kernel32, user32
 <<
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/usage.h H/globals.h
-	$(CC) msgtext.c
+$(OUTD)/msgtext.obj: src\msgtext.c src\H/msgdef.h src\H/usage.h src\H/globals.h
+	$(CC) src\msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	$(CC) reswords.c
+$(OUTD)/reswords.obj: src\reswords.c src\H/instruct.h src\H/special.h src\H/directve.h
+	$(CC) src\reswords.c
 
 ######
 

@@ -579,7 +579,9 @@ static struct cmdloption const cmdl_options[] = {
     { "Gd",     LANG_C,       Set_G },
     { "Gr",     LANG_FASTCALL,Set_G },
     { "Gz",     LANG_STDCALL, Set_G },
+#ifndef __SW_BD
     { "h",      0,        Set_h },
+#endif
     { "I=^@",   0,        Set_I },
 #ifdef DEBUG_OUT
 #if FASTPASS

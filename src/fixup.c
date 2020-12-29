@@ -38,7 +38,7 @@
 
 #define GNURELOCS 1
 
-extern struct asym *SegOverride;
+//extern struct asym *SegOverride;
 
 int_8   Frame_Type;   /* curr fixup frame type: SEG|GRP|EXT|ABS|NONE; see omfspec.h */
 uint_16 Frame_Datum;  /* curr fixup frame value */
@@ -313,8 +313,8 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
         }
 #if 0   /* fixup without symbol: this is to be resolved internally! */
         else if ( fixup->sym == NULL && fixup->frame == EMPTY ) {
-            DebugMsg(("store_fixup: fixup skipped, symbol=0, no frame\n" ));
-            return( NOT_ERROR );
+            DebugMsg(("store_fixup: fixup skipped, symbol=NULL, no frame\n" ));
+            return;
         }
 #endif
     }

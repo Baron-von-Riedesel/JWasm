@@ -5,31 +5,23 @@
 
 name = jwasm
 
-# directory paths to adjust
-# VCDIR  - root directory for VC compiler, linker, include and lib files
-# W32LIB - directory for Win32 import library files (kernel32.lib)
-!ifndef VCDIR
-VCDIR  = \msvc71
-!endif
-!ifndef W32LIB
-W32LIB = \wininc\lib
-!endif
+
 !ifndef DEBUG
 DEBUG=0
 !endif
 
 !ifndef OUTD
 !if $(DEBUG)
-OUTD=MsvcDllD
+OUTD=build\MsvcDllD
 !else
-OUTD=MsvcDllR
+OUTD=build\MsvcDllR
 !endif
 !endif
 
-inc_dirs  = -IH -I"$(VCDIR)\include"
+inc_dirs  = -Isrc\H
 
-linker = $(VCDIR)\Bin\link.exe
-lib = $(VCDIR)\Bin\lib.exe
+linker = link.exe
+lib = lib.exe
 
 !if $(DEBUG)
 extra_c_flags = -Zd -Od -DDEBUG_OUT
@@ -40,13 +32,6 @@ extra_c_flags = -O2 -Gs -DNDEBUG
 
 c_flags =-D__NT__ -D__SW_BD $(extra_c_flags) $(c_flags64)
 
-# if MSVC++ 2005 EE is used:
-# 1. define __STDC_WANT_SECURE_LIB__=0 to avoid "deprecated" warnings
-# 2. define -GS- to disable security checks
-#c_flags =-D__NT__ $(extra_c_flags) -D__STDC_WANT_SECURE_LIB__=0 -GS-
-
-#lflags stuff
-#########
 LOPT = /NOLOGO
 !if $(DEBUG)
 LOPTD = /debug
@@ -54,9 +39,9 @@ LOPTD = /debug
 
 lflagsw = $(LOPTD) $(LOPT) /map:$^*.map /OPT:NOWIN98
 
-CC=@$(VCDIR)\bin\cl.exe -c -nologo $(inc_dirs) $(c_flags)
+CC=@cl.exe -c -nologo $(inc_dirs) $(c_flags)
 
-.c{$(OUTD)}.obj:
+{src}.c{$(OUTD)}.obj:
 	$(CC) -Fo$* $<
 
 proj_obj = \
@@ -77,11 +62,11 @@ $(lflagsw) $(OUTD)/$(name)s.lib
 $(OUTD)\$(name)s.lib : $(proj_obj)
 	@$(lib) /out:$(OUTD)\$(name)s.lib $(proj_obj)
 
-$(OUTD)/msgtext.obj: msgtext.c H/msgdef.h H/globals.h
-	$(CC) -Fo$* msgtext.c
+$(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
+	$(CC) -Fo$* src/msgtext.c
 
-$(OUTD)/reswords.obj: reswords.c H/instruct.h H/special.h H/directve.h
-	$(CC) -Fo$* reswords.c
+$(OUTD)/reswords.obj: src/reswords.c src/H/instruct.h src/H/special.h src/H/directve.h
+	$(CC) -Fo$* src/reswords.c
 
 ######
 

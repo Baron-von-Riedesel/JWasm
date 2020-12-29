@@ -250,6 +250,11 @@ static ret_code coff_write_section_table( struct module_info *modinfo, struct co
             for ( fix = curr->e.seginfo->FixupList.head; fix ; fix = fix->nextrlc ) {
                 //printf("segment %s, reloc.sym=%s\n", curr->sym.name, fix->sym ? fix->sym : "NULL" );
                 if ( fix->sym == NULL ) {
+                    DebugMsg(( "coff_write_section_table(%s): fixup (type=%u, loc=0x%" I32_SPEC "X) without symbol, skipped!\n", curr->sym.name, fix->type, fix->locofs ));
+                    /* display a warning if fixup doesn't refer to FLAT group */
+                    if ( fix->frame_type != FRAME_GRP || ModuleInfo.flat_grp == NULL ||
+                        fix->frame_datum != ModuleInfo.flat_grp->e.grpinfo->grp_idx )
+                        EmitWarn( 2, ANONYMOUS_FIXUP, curr->sym.name, fix->locofs );
 #if AMD64_SUPPORT
                     if ( fix->type == FIX_RELOFF32 ) {
                         uint_32 *cp = (uint_32 *)( curr->e.seginfo->CodeBuffer + (fix->locofs - curr->e.seginfo->start_loc ));
@@ -1446,7 +1451,14 @@ static ret_code coff_write_module( struct module_info *modinfo )
     else
 #endif
         ifh.Machine = IMAGE_FILE_MACHINE_I386;
+
+    /* v2.15: check added */
+    if ( modinfo->g.num_segs > 0xffff ) {
+        DebugMsg(("coff_write_module: too many sections defined: %u\n", modinfo->g.num_segs));
+        return( EmitErr( TOO_MANY_SEGMENTS_DEFINED ) );
+    }
     ifh.NumberOfSections = modinfo->g.num_segs;
+
 #if 0 //def __UNIX__
     time((int_32 *)&ifh.TimeDateStamp);
 #else

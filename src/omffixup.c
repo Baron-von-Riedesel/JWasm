@@ -204,7 +204,7 @@ unsigned OmfFixGenFixModend( const struct fixup *fixup, uint_8 *buf, uint_32 dis
     /* now set Target and Frame */
 
     if( sym->state == SYM_EXTERNAL ) {
-        DebugMsg(("omf_write_modend(%p): fixup->frame_type/datum=%u/%u, EXTERNAL sym=%s\n",
+        DebugMsg1(("omf_write_modend(%p): fixup->frame_type/datum=%u/%u, EXTERNAL sym=%s\n",
                   fixup, fixup->frame_type, fixup->frame_datum, sym->name));
 
         lr.target_meth = TARGET_EXT & TARGET_WITH_DISPL;
@@ -215,7 +215,7 @@ unsigned OmfFixGenFixModend( const struct fixup *fixup, uint_8 *buf, uint_32 dis
             lr.frame_datum = omf_GetGrpIdx( sym );
         }
     } else { /* SYM_INTERNAL */
-        DebugMsg(("OmfFixGenFixModend(%p): fixup->frame_type/datum=%u/%u sym->name=%s state=%X segm=%s\n",
+        DebugMsg1(("OmfFixGenFixModend(%p): fixup->frame_type/datum=%u/%u sym->name=%s state=%X segm=%s\n",
                   fixup, fixup->frame_type, fixup->frame_datum, sym->name, sym->state, sym->segment ? sym->segment->name : "NULL" ));
         /**/myassert( sym->state == SYM_INTERNAL );
 
@@ -249,13 +249,35 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
 
     if( sym == NULL ) {
 
-        DebugMsg(("omf_set_logref: sym is NULL, frame_type=%u\n", fixup->frame_type ));
+        DebugMsg1(("omf_set_logref: sym=NULL, frame_type=%u\n", fixup->frame_type ));
         if ( fixup->frame_type == FRAME_NONE ) /* v1.96: nothing to do without a frame */
+            return( 0 );
+        /* v2.15: do NOT create fixups for FLAT group frame.
+         * Perhaps never create fixups for GROUP frames? It's useless
+         * unless the linker does pack groups. And, last but not least, jwlink crashes
+         * if target datum contains FLAT group index.
+         */
+        if ( ModuleInfo.flat_grp && fixup->frame_type == FRAME_GRP &&
+            fixup->frame_datum == ModuleInfo.flat_grp->e.grpinfo->grp_idx )
             return( 0 );
         lr->target_meth = fixup->frame_type;
         lr->target_datum = fixup->frame_datum;
         lr->frame_meth = FRAME_TARG;
-
+#if 1
+        /* v2.15: modify frame if segment (used in override) is in a group; see lea2.asm */
+        if ( fixup->frame_type == FRAME_SEG ) {
+            struct dsym *seg;
+            for( seg = SymTables[TAB_SEG].head; seg; seg = seg->next ) {
+                if ( seg->e.seginfo->seg_idx == fixup->frame_datum ) {
+                    if ( seg->e.seginfo->group ) {
+                        lr->frame_meth = FRAME_GRP;
+                        lr->frame_datum = ((struct dsym *)(seg->e.seginfo->group))->e.grpinfo->grp_idx;
+                    }
+                    break;
+                }
+            }
+        }
+#endif
     } else if( sym->state == SYM_UNDEFINED ) { /* shouldn't happen */
 
         DebugMsg(("omf_set_logref: sym->state is SYM_UNDEFINED\n" ));
