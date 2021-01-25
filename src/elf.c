@@ -804,7 +804,7 @@ static int elf_write_section_table32( struct module_info *modinfo, struct elfmod
 
         shdr32.sh_name = p - (uint_8 *)em->internal_segs[SHSTRTAB_IDX].data;
         p += strlen( (char *)p ) + 1;
-        if ( curr->e.seginfo->info == TRUE ) { /* v2.07:added; v2.12: highest priority */
+        if ( curr->e.seginfo->information == TRUE ) { /* v2.07:added; v2.12: highest priority */
             shdr32.sh_type = SHT_NOTE;
             shdr32.sh_flags = 0;
         } else {
@@ -959,7 +959,7 @@ static int elf_write_section_table64( struct module_info *modinfo, struct elfmod
 
         shdr64.sh_name = p - (uint_8 *)em->internal_segs[SHSTRTAB_IDX].data;
         p += strlen( (char *)p ) + 1;
-        if ( curr->e.seginfo->info == TRUE ) { /* v2.07:added; v2.12: highest priority */
+        if ( curr->e.seginfo->information == TRUE ) { /* v2.07:added; v2.12: highest priority */
             shdr64.sh_type = SHT_NOTE;
             shdr64.sh_flags = 0;
         } else {

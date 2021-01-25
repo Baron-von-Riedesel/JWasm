@@ -684,7 +684,7 @@ static const char *GetNameToken( char *dst, const char *str, int max, char type 
 {
     bool equatefound = FALSE;
 
-    DebugMsg(("GetNameToken( %s, %u, '%c' ) enter, rspidx=%u\n", str, max, type, rspidx ));
+    DebugMsg(("GetNameToken( %.*s, %u, '%c' ) enter, rspidx=%u\n", max, str, max, type, rspidx ));
     //while( isspace( *str ) ) ++str;  /* no spaces allowed! */
 is_quote:
     if( *str == '"' ) {

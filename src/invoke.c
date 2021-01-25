@@ -906,6 +906,11 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
             /* for a simple register, get its size */
             if ( opnd.kind == EXPR_REG && opnd.indirect == FALSE ) {
                 asize = SizeFromRegister( opnd.base_reg->tokval );
+                /* v2.15: check if there's nothing behind the register.
+                 * because if "indirect" is false, the checks may be too simple.
+                 */
+                if ( j < Token_Count && tokenarray[j].token != T_COMMA )
+                    opnd.indirect = TRUE;
             //} else if ( opnd.mem_type == MT_EMPTY ) { /* v2.10: a TYPE may return mem_type != MT_EMPTY! */
             } else if ( opnd.kind == EXPR_CONST || opnd.mem_type == MT_EMPTY ) {
                 asize = psize;

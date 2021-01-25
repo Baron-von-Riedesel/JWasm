@@ -1244,7 +1244,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
             break;
 #if COFF_SUPPORT || ELF_SUPPORT || PE_SUPPORT
         case INIT_CHAR_INFO:
-            dir->e.seginfo->info = TRUE; /* fixme: check that this flag isn't changed */
+            dir->e.seginfo->information = TRUE; /* fixme: check that this flag isn't changed */
             break;
         case INIT_CHAR:
             DebugMsg1(("SegmentDir(%s): characteristics found\n", name ));

@@ -220,7 +220,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
         DebugMsg(("CalcOffset(%s): abs seg, offset=%" I32_SPEC "Xh\n",
                   curr->sym.name, curr->e.seginfo->start_offset ));
         return;
-    } else if ( curr->e.seginfo->info )
+    } else if ( curr->e.seginfo->information )
         return;
 
     grp = (struct dsym *)curr->e.seginfo->group;
@@ -432,7 +432,7 @@ static uint_32 GetImageSize( bool memimage )
 
     for( curr = SymTables[TAB_SEG].head, first = TRUE; curr; curr = curr->next ) {
         uint_32 tmp;
-        if ( curr->e.seginfo->segtype == SEGTYPE_ABS || curr->e.seginfo->info )
+        if ( curr->e.seginfo->segtype == SEGTYPE_ABS || curr->e.seginfo->information )
             continue;
         if ( memimage == FALSE ) {
             if ( curr->e.seginfo->bytes_written == 0 ) {
@@ -1504,7 +1504,8 @@ static void pe_set_values( struct calc_param *cp )
             DebugMsg(("pe_set_values: skip %s - max_offset=0\n", curr->sym.name ));
             continue;
         }
-        if ( curr->e.seginfo->info ) {/* v2.13: ignore 'info' sections (linker directives) */
+        if ( curr->e.seginfo->information ) {/* v2.13: ignore 'info' sections (linker directives) */
+            EmitWarn( 2, INFO_SECTION_IGNORED, curr->sym.name ); /* v2.15: emit warning */
             DebugMsg(("pe_set_values: skip %s - info\n", curr->sym.name ));
             continue;
         }
@@ -1898,7 +1899,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
         }
 #if PE_SUPPORT
         if ( ModuleInfo.sub_format == SFORMAT_PE &&
-            ( curr->e.seginfo->segtype == SEGTYPE_BSS || curr->e.seginfo->info ) )
+            ( curr->e.seginfo->segtype == SEGTYPE_BSS || curr->e.seginfo->information ) )
             size = 0;
         else
 #endif

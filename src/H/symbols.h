@@ -330,7 +330,7 @@ struct seg_info {
     unsigned char       alignment;      /* is value 2^x */
 
     unsigned char       readonly:1;     /* if segment is readonly */
-    unsigned char       info:1;         /* if segment is info only (COFF/ELF) */
+    unsigned char       information:1;  /* if segment is info only (COFF/ELF) */
     unsigned char       force32:1;      /* force 32bit segdef (OMF only) */
     unsigned char       data_in_code:1; /* data items in code segm (OMF only) */
     unsigned char       internal:1;     /* internal segment with private buffer */

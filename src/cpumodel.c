@@ -147,13 +147,17 @@ static void SetModel( void )
          * This is rather hackish, but currently there's no other possibility
          * to enable the win64 ABI from the source.
          */
-        if ( ( ModuleInfo.curr_cpu & P_CPU_MASK ) == P_64 )
+        if ( ( ModuleInfo.curr_cpu & P_CPU_MASK ) == P_64 ) {
+            /* v2.15: reject 64-bit in OMF */
+            if ( Options.output_format == OFORMAT_OMF )
+                EmitErr( NOT_SUPPORTED_WITH_OMF_FORMAT, "64-bit flat model" );
             if ( ModuleInfo.langtype == LANG_FASTCALL ) {
                 if ( Options.output_format != OFORMAT_ELF ) {
                     DebugMsg(("SetModel: FASTCALL type set to WIN64\n"));
                     ModuleInfo.fctype = FCT_WIN64;
                 }
             }
+        }
 #else
         SetDefaultOfssize( USE32 );
 #endif

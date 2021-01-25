@@ -370,8 +370,10 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
             if ( tokenarray[i].string_delim == NULLC &&
                 ( *tokenarray[i].string_ptr == '"' || *tokenarray[i].string_ptr == '\'' ))
                 fnEmitErr( MISSING_QUOTATION_MARK_IN_STRING );
-            else
+            else {
+                /* v2.15: perhaps better use MISSING_ANGLE_BRACKET_OR_BRACE_IN_LITERAL */
                 fnEmitErr( UNEXPECTED_LITERAL_FOUND_IN_EXPRESSION, tokenarray[i].tokpos );
+            }
             return( ERROR );
         }
         opnd->kind = EXPR_CONST;

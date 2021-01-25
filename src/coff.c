@@ -194,7 +194,7 @@ static ret_code coff_write_section_table( struct module_info *modinfo, struct co
         ish.Characteristics = 0;
 
         /* set field Characteristics; optionally reset PointerToRawData/SizeOfRawData */
-        if ( curr->e.seginfo->info ) {
+        if ( curr->e.seginfo->information ) {
             /* v2.09: set "remove" flag for .drectve section, as it was done in v2.06 and earlier */
             if ( curr == cm->directives )
                 ish.Characteristics = ( IMAGE_SCN_LNK_INFO | IMAGE_SCN_LNK_REMOVE );
@@ -1262,7 +1262,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             int size = 0;
             struct qitem *q;
             uint_8 *p;
-            cm->directives->e.seginfo->info = TRUE;
+            cm->directives->e.seginfo->information = TRUE;
             DebugMsg(("coff_create_drectve: %s section added\n", szdrectve));
 
             /* calc the size for this segment */
@@ -1429,7 +1429,7 @@ static ret_code coff_write_module( struct module_info *modinfo )
         struct qnode *sehp;
         unsigned cnt = 0;
         if ( cm.sxdata = (struct dsym *)CreateIntSegment( ".sxdata", "", MAX_SEGALIGNMENT, modinfo->Ofssize, FALSE ) ) {
-            cm.sxdata->e.seginfo->info = TRUE;
+            cm.sxdata->e.seginfo->information = TRUE;
             /* calc the size for this segment */
             for( sehp = modinfo->g.SafeSEHQueue.head; sehp ; sehp = sehp->next, cnt++ );
             cm.sxdata->sym.max_offset = cnt*4;

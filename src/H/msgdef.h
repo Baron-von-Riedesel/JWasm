@@ -374,3 +374,8 @@ pick( ANONYMOUS_FIXUP,                   "Output format doesn't support anonymou
 #else
 pick( msg_filler30, "" )
 #endif
+#if BIN_SUPPORT
+pick( INFO_SECTION_IGNORED,              "Segment/Section ignored in binary formats: %s" )
+#else
+pick( msg_filler31, "" )
+#endif
