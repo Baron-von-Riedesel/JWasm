@@ -2924,6 +2924,7 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
               Token_Count, GetCurrOffset() ));
 
     i = 0;
+    oldofs = 0;
 
     /* Does line start with a code label? */
     if ( tokenarray[0].token == T_ID && ( tokenarray[1].token == T_COLON || tokenarray[1].token == T_DBL_COLON ) ) {
