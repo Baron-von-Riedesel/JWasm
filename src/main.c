@@ -9,6 +9,7 @@
 ****************************************************************************/
 
 #include <signal.h>
+#include <stddef.h> /* v2.15: added, since type intptr_t is used here */
 
 #include "globals.h"
 #include "msgtext.h"
@@ -69,7 +70,8 @@ int main( int argc, char **argv )
     /* v2.11: _findfirst/next/close() handle, should be of type intptr_t.
      * since this type isn't necessarily defined, type long is used as substitute.
      */
-    long    fh;
+    //long    fh;
+    intptr_t  fh;
     const char *pfn;
     int     dirsize;
     struct  _finddata_t finfo;

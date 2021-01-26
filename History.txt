@@ -10,6 +10,8 @@
    -  invoke directive: a missing left square bracket for indirect addressing
       may have been accepted if the size of the register matched the expected
       size; see invoke4.asm.
+   -  using long instead of intptr_t to hold result of _findfirst() caused a
+      GPF in Win64 version; see main.c.
 
    Other changes:
    -  error "too many segments/sections defined..." emitted for omf and coff
