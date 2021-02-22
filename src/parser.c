@@ -751,7 +751,16 @@ ret_code SetSegOverride( const struct expr *opndx, struct code_info *CodeInfo )
                 CodeInfo->prefix.RegOverride = temp;
             }
         } else {
+            DebugMsg1(("SetSegOverride: opndx->override=%s\n", opndx->override->string_ptr ? opndx->override->string_ptr : "NULL" ));
             sym = SymSearch( opndx->override->string_ptr );
+#if COFF_SUPPORT || ELF_SUPPORT
+            /* v2.15: the FLAT group symbol is defined uppercase, but symbols are or may be case-sensitive -
+             * so ensure that FLAT is found. This didn't matter before v2.15, but this version got
+             * a new warning for -coff : ANONYMOUS_FIXUP
+             */
+            if ( sym == NULL && (_stricmp(opndx->override->string_ptr, "FLAT" ) == 0 ) )
+                sym = (struct asym *)ModuleInfo.flat_grp;
+#endif
         }
         DebugMsg1(("SetSegOverride: sym=%s, type=%u\n", sym ? sym->name : "NULL", sym ? sym->state : 0 ));
         if ( sym && ( sym->state == SYM_GRP || sym->state == SYM_SEG ))
