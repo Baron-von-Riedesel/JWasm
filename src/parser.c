@@ -457,8 +457,10 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
                     CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, ModuleInfo.Ofssize );
                 else {
                     /* v2.12: see comment above */
-                    CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize > USE16, ModuleInfo.defOfssize > USE16 );
                     //CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, ModuleInfo.defOfssize );
+                    /* v2.15: value of ModuleInfo.defOfssize shouldn't matter; see offset14.asm */
+                    //CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize > USE16, ModuleInfo.defOfssize > USE16 );
+                    CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize > USE16, ModuleInfo.Ofssize > USE16 );
                 }
             }
         }
