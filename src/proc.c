@@ -1163,8 +1163,10 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
 #endif
                         if ( ModuleInfo.model == MODEL_FLAT ) {
                             EmitWarn( 2, LOADDS_IGNORED_IN_FLAT_MODEL );
-                        } else
+                        } else {
+                            DebugMsg1(("ParseProc(%s): <LOADDS> prologue/epilogue param detected\n", proc->sym.name ));
                             proc->e.procinfo->loadds = TRUE;
+                        }
                     } else {
                         return( EmitErr( UNKNOWN_DEFAULT_PROLOGUE_ARGUMENT, tokenarray[idx].string_ptr ) );
                     }
@@ -2335,6 +2337,7 @@ static ret_code write_default_prologue( void )
     /* default processing. if no params/locals are defined, continue */
     if( info->forceframe == FALSE &&
        info->localsize == 0 &&
+       info->loadds == FALSE && /* v2.15: added */
        info->stackparam == FALSE &&
        info->has_vararg == FALSE &&
 #if AMD64_SUPPORT

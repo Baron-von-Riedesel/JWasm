@@ -15,7 +15,8 @@
    -  erroneously emitted error 'Magnitude of offset exceeds 16-bit' in direct
       addressing mode without symbol if segment register had no assume, segment
       was 32-bit and default word size was 16-bit only; see offset14.asm.
-   
+   -  <loadds> prologue argument was ignored if procedure had no parameters and
+      locals; see loadds.asm.
 
    Other changes:
    -  error "too many segments/sections defined..." emitted for omf and coff
@@ -28,6 +29,9 @@
    -  .model flat directive in 64-bit is now rejected in omf format.
    -  warning displayed in binary formats if a linker directive section is
       detected.
+   -  warning displayed for PUSHW/PUSHD if operand is a segment register and
+      the size suffix doesn't match the current mode; see pushwsr.asm and
+      pushdsr.asm
 
    20.12.2020, v2.14:
 

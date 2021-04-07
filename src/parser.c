@@ -2075,6 +2075,16 @@ static ret_code process_register( struct code_info *CodeInfo, unsigned CurrOpnd,
                 return( EmitError( POP_CS_IS_NOT_ALLOWED ) );
             }
         }
+#if 1
+        /* v2.15: emit warning if PUSHD/PUSHW are used and size doesn't match current mode.
+         * emitting a size prefix (0x66) silently would break masm compatibility.
+         */
+        if ( Parse_Pass == PASS_2 )
+            if( CodeInfo->token == T_PUSHD && CodeInfo->Ofssize == USE16 ||
+               CodeInfo->token == T_PUSHW && CodeInfo->Ofssize > USE16 ) {
+                EmitWarn( 2, OPCODE_SIZE_SUFFIX_IGNORED_FOR_SR );
+        }
+#endif
     } else if ( flags & OP_ST ) {
 
         regno = opndx[CurrOpnd].st_idx;

@@ -379,3 +379,4 @@ pick( INFO_SECTION_IGNORED,              "Segment/Section ignored in binary form
 #else
 pick( msg_filler31, "" )
 #endif
+pick( OPCODE_SIZE_SUFFIX_IGNORED_FOR_SR, "Opcode size suffix ignored for segment registers" )
