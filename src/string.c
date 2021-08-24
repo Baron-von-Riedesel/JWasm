@@ -238,7 +238,7 @@ struct asym *SetTextMacro( struct asm_tok tokenarray[], struct asym *sym, const 
     memcpy( sym->string_ptr, value, count );
     *(sym->string_ptr + count) = NULLC;
 
-    DebugMsg1(( "SetTextMacro(%s): value is >%s<, exit\n", sym->name, sym->string_ptr ));
+    DebugMsg1(( "SetTextMacro(%s) exit: value is >%s<, length=%u\n", sym->name, sym->string_ptr, count ));
     return( sym );
 }
 

@@ -988,7 +988,7 @@ static ret_code ExpandTMacro( char * const outbuf, struct asm_tok tokenarray[], 
     //char lvalue[MAX_LINE_LEN];    /* holds literal value */
     char buffer[MAX_LINE_LEN];
 
-    DebugMsg1(("ExpandTMacro(text=>%s< equm=%u lvl=%u) enter\n", outbuf, equmode, level ));
+    DebugMsg1(("ExpandTMacro(%u) enter, text=>%s< equmode=%u )\n", level, outbuf, equmode ));
 
     if ( level >= MAX_TEXTMACRO_NESTING ) {
         return( EmitError( MACRO_NESTING_LEVEL_TOO_DEEP ) );
@@ -1021,21 +1021,29 @@ static ret_code ExpandTMacro( char * const outbuf, struct asm_tok tokenarray[], 
                 } else if ( sym && sym->state == SYM_TMACRO && sym->isdefined == TRUE ) {
                     char *p;
                     len = tokenarray[i].tokpos - outbuf;
-                    memcpy( buffer, outbuf, len );
+                    /* v2.15: don't copy the chars BEFORE the symbol that is to be expanded */
+                    //memcpy( buffer, outbuf, len );
                     //GetLiteralValue( buffer+len, sym->string_ptr );
-                    strcpy( buffer+len, sym->string_ptr );
-                    DebugMsg1(("ExpandTMacro(>%s<, %u): calling ExpandTMacro, value >%s<\n", sym->name, level, buffer+len ));
-                    if ( ERROR == ExpandTMacro( buffer + len, tokenarray, equmode, level+1 ) ) {
+                    //strcpy( buffer+len, sym->string_ptr );
+                    strcpy( buffer, sym->string_ptr );
+                    DebugMsg1(("ExpandTMacro(%u) sym-name=>%s<: calling ExpandTMacro( sym-value >%s< )\n", level, sym->name, sym->string_ptr ));
+                    if ( ERROR == ExpandTMacro( buffer, tokenarray, equmode, level+1 ) ) {
                         Token_Count = old_tokencount;
                         return( ERROR );
                     }
                     DebugMsg1(("ExpandTMacro(%u): repl >%s< by >%s<\n", level, sym->name, buffer+len ));
                     //if ( level || ( tokenarray[i+1].token != T_FINAL && tokenarray[i+1].token != T_COMMA ))
-                        p = tokenarray[i].tokpos + sym->name_size;
+                    p = tokenarray[i].tokpos + sym->name_size;
                     //else
                     //    p = tokenarray[i+1].tokpos;
-                    strcat( buffer+len, p );
-                    strcpy( outbuf, buffer );
+                    /* v2.15: check for buffer overflow */
+                    if ( strlen( buffer ) + strlen( p ) + len >= MAX_LINE_LEN ) {
+                        EmitErr( EXPANDED_LINE_TOO_LONG, tokenarray[0].tokpos );
+                        Token_Count = old_tokencount;
+                        return( ERROR );
+                    }
+                    strcat( buffer, p );
+                    strcpy( outbuf + len, buffer );
                     expanded = TRUE;
                     break;
                 }

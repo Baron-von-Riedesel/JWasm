@@ -17,6 +17,8 @@
       was 32-bit and default word size was 16-bit only; see offset14.asm.
    -  <loadds> prologue argument was ignored if procedure had no parameters and
       locals; see loadds.asm.
+   -  text macro expansion might have caused a buffer overflow if expanded line
+      got too long.
 
    Other changes:
    -  error "too many segments/sections defined..." emitted for omf and coff
