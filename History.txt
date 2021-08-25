@@ -18,7 +18,10 @@
    -  <loadds> prologue argument was ignored if procedure had no parameters and
       locals; see loadds.asm.
    -  text macro expansion might have caused a buffer overflow if expanded line
-      got too long.
+      got too long; see expans42.asm.
+   -  macro function expansion inside text macros had swallowed trailing white
+      spaces behind the macro invokation, sometimes resulting in errors; see 
+      expans43.asm.
 
    Other changes:
    -  error "too many segments/sections defined..." emitted for omf and coff
@@ -33,7 +36,7 @@
       detected.
    -  warning displayed for PUSHW/PUSHD if operand is a segment register and
       the size suffix doesn't match the current mode; see pushwsr.asm and
-      pushdsr.asm
+      pushdsr.asm.
 
    20.12.2020, v2.14:
 

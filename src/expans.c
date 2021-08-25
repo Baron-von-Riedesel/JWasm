@@ -984,6 +984,7 @@ static ret_code ExpandTMacro( char * const outbuf, struct asm_tok tokenarray[], 
     char expanded = TRUE;
     int len;
     bool is_exitm;
+    char *p;
     struct asym *sym;
     //char lvalue[MAX_LINE_LEN];    /* holds literal value */
     char buffer[MAX_LINE_LEN];
@@ -1013,25 +1014,31 @@ static ret_code ExpandTMacro( char * const outbuf, struct asm_tok tokenarray[], 
                         return( ERROR );
                     }
                     DebugMsg1(("ExpandTMacro(%u): repl >%s()< by >%s<\n", level, sym->name, buffer+len ));
-                    strcat( buffer+len, tokenarray[i].tokpos );
+
+                    /* v2.15: don't skip white space(s) behind closing ) ; see expans43.asm. */
+                    p = tokenarray[i].tokpos;
+                    while ( isspace(*(p-1)) )
+                        p--;
+
+                    strcat( buffer+len, p );
                     strcpy( outbuf, buffer );
                     expanded = TRUE;
+                    //DebugMsg1(("ExpandTMacro(%u): new source >%s<\n", level, outbuf ));
                     /* is i to be decremented here? */
                     break;
                 } else if ( sym && sym->state == SYM_TMACRO && sym->isdefined == TRUE ) {
-                    char *p;
                     len = tokenarray[i].tokpos - outbuf;
                     /* v2.15: don't copy the chars BEFORE the symbol that is to be expanded */
                     //memcpy( buffer, outbuf, len );
                     //GetLiteralValue( buffer+len, sym->string_ptr );
                     //strcpy( buffer+len, sym->string_ptr );
                     strcpy( buffer, sym->string_ptr );
-                    DebugMsg1(("ExpandTMacro(%u) sym-name=>%s<: calling ExpandTMacro( sym-value >%s< )\n", level, sym->name, sym->string_ptr ));
+                    DebugMsg1(("ExpandTMacro(%u) sym-name=>%s<: calling ExpandTMacro( sym-value=>%s< )\n", level, sym->name, sym->string_ptr ));
                     if ( ERROR == ExpandTMacro( buffer, tokenarray, equmode, level+1 ) ) {
                         Token_Count = old_tokencount;
                         return( ERROR );
                     }
-                    DebugMsg1(("ExpandTMacro(%u): repl >%s< by >%s<\n", level, sym->name, buffer+len ));
+                    DebugMsg1(("ExpandTMacro(%u): repl >%s< by >%s<\n", level, sym->name, buffer ));
                     //if ( level || ( tokenarray[i+1].token != T_FINAL && tokenarray[i+1].token != T_COMMA ))
                     p = tokenarray[i].tokpos + sym->name_size;
                     //else
@@ -1072,6 +1079,7 @@ static ret_code RebuildLine( const char *newstring, int i, struct asm_tok tokena
     unsigned  rest = strlen( tokenarray[i].tokpos + oldlen ) + 1;
     char buffer[MAX_LINE_LEN];
 
+    DebugMsg1(("RebuildLine( new=%s i=%u, oldlen=%u, pos_line=%u, addbrackets=%u\n", newstring, i, oldlen, pos_line, addbrackets ));
     dest = tokenarray[i].tokpos;
     memcpy( buffer, dest + oldlen, rest ); /* save content of line behind item */
     newlen = strlen( newstring );
