@@ -18,7 +18,7 @@
    -  <loadds> prologue argument was ignored if procedure had no parameters and
       locals; see loadds.asm.
    -  text macro expansion might have caused a buffer overflow if expanded line
-      got too long; see expans42.asm.
+      got too long; see expans42.asm & expans44.asm.
    -  macro function expansion inside text macros had swallowed trailing white
       spaces behind the macro invokation, sometimes resulting in errors; see 
       expans43.asm.

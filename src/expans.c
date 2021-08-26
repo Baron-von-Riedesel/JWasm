@@ -984,7 +984,6 @@ static ret_code ExpandTMacro( char * const outbuf, struct asm_tok tokenarray[], 
     char expanded = TRUE;
     int len;
     bool is_exitm;
-    char *p;
     struct asym *sym;
     //char lvalue[MAX_LINE_LEN];    /* holds literal value */
     char buffer[MAX_LINE_LEN];
@@ -1007,26 +1006,30 @@ static ret_code ExpandTMacro( char * const outbuf, struct asm_tok tokenarray[], 
                     sym->isdefined == TRUE && sym->isfunc == TRUE &&
                     tokenarray[i+1].token == T_OP_BRACKET && equmode == FALSE ) {
                     len = tokenarray[i].tokpos - outbuf;
-                    memcpy( buffer, outbuf, len );
-                    i = RunMacro( (struct dsym *)sym, i+1, tokenarray, buffer+len, 0, &is_exitm );
+                    /* v2.15: don't copy the chars BEFORE the symbol that is to be expanded */
+                    //memcpy( buffer, outbuf, len );
+                    i = RunMacro( (struct dsym *)sym, i+1, tokenarray, buffer, 0, &is_exitm );
                     if ( i < 0 ) {
                         Token_Count = old_tokencount;
                         return( ERROR );
                     }
-                    DebugMsg1(("ExpandTMacro(%u): repl >%s()< by >%s<\n", level, sym->name, buffer+len ));
+                    DebugMsg1(("ExpandTMacro(%u): repl >%s()< by >%s<\n", level, sym->name, buffer ));
 
-                    /* v2.15: don't skip white space(s) behind closing ) ; see expans43.asm. */
-                    p = tokenarray[i].tokpos;
-                    while ( isspace(*(p-1)) )
-                        p--;
-
-                    strcat( buffer+len, p );
-                    strcpy( outbuf, buffer );
+                    /* v2.15: check for buffer overflow */
+                    if ( strlen( buffer ) + strlen( tokenarray[i-1].tokpos+1 ) + len >= MAX_LINE_LEN ) {
+                        EmitErr( EXPANDED_LINE_TOO_LONG, outbuf );
+                        Token_Count = old_tokencount;
+                        return( ERROR );
+                    }
+                    /* v2.15: don't ignore white space(s) behind closing ')' ; see expans43.asm. */
+                    //strcat( buffer+len, tokenarray[i].tokpos );
+                    strcat( buffer, tokenarray[i-1].tokpos+1 );
+                    strcpy( outbuf + len, buffer );
                     expanded = TRUE;
                     //DebugMsg1(("ExpandTMacro(%u): new source >%s<\n", level, outbuf ));
-                    /* is i to be decremented here? */
                     break;
                 } else if ( sym && sym->state == SYM_TMACRO && sym->isdefined == TRUE ) {
+                    char *p;
                     len = tokenarray[i].tokpos - outbuf;
                     /* v2.15: don't copy the chars BEFORE the symbol that is to be expanded */
                     //memcpy( buffer, outbuf, len );
