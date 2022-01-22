@@ -17,8 +17,8 @@
       was 32-bit and default word size was 16-bit only; see offset14.asm.
    -  <loadds> prologue argument was ignored if procedure had no parameters and
       locals; see loadds.asm.
-   -  text macro expansion might have caused a buffer overflow if expanded line
-      got too long; see expans42.asm & expans44.asm.
+   -  text macro and macro function expansion might have caused a buffer
+      overflow if expanded line got too long; see expans42.asm & expans44.asm.
    -  macro function expansion inside text macros had swallowed trailing white
       spaces behind the macro invokation, sometimes resulting in errors; see 
       expans43.asm.

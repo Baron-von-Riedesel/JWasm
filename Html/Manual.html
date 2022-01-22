@@ -4237,24 +4237,28 @@ In 32-bit mode, all general-purpose registers except ESP can be index registers.
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x061</b></TD>
 <TD>Line too long</TD>
-<TD>Size of a line ( after concatenation) is restricted to 600.</TD>
+<TD>Size of a line ( after concatenation) is restricted to 600.
+Note that Masm's line limit is 512; however, that limit is for 'original' lines only -
+due to macro expansion, the 'expanded' line size may exceed the limit.
+</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x062</b></TD>
 <TD>Too many tokens in a line</TD>
-<TD>The number of tokens in a line is restricted to 150.</TD>
+<TD>The number of tokens in a line is restricted to 150.
+Note that the corresponding Masm error message is 'statement too complex'.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x063</b></TD>
-<TD></TD>
+<TD>Symbol not defined: &lt;struct/union&gt;.&lt;member&gt;</TD>
 <TD></TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x064</b></TD>
-<TD>Operand is expected</TD>
+<TD>Expression expected: &lt;token&gt;</TD>
 <TD></TD>
 </TR>
 
@@ -4293,8 +4297,8 @@ the final value is calculated by the linker ( or the OS loader ) only.</TD>
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x070</b></TD>
 <TD>Identifier too long</TD>
-<TD>Identifer names are restricted to 247. This is a hard limit for OMF output format. For other formats,
-the limit may be extended by adjusting and recompiling the source code.</TD>
+<TD>Length of identifers is restricted to 247. This is a hard limit for OMF output format, and it's also
+Masm's limit. For other formats, the limit may be extended by adjusting and recompiling the source code.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -4820,7 +4824,7 @@ initialize "structured" data items. If they're used otherwise, this error will o
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x155</b></TD>
 <TD>String or text literal too long</TD>
-<TD></TD>
+<TD>Length of text literals is limited to 568. Note that this differs from Masm's limit of 255.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -5565,7 +5569,8 @@ symbolic constant - 32 bits.</TD>
 <TD><b>x275</b></TD>
 <TD>Group exceeds 64K: &lt;group&gt;</TD>
 <TD>MZ format only: a group that contains 16-bit segments cannot be larger than 64 kB, because the 
-group must fit into a physical segment.</TD>
+group must fit into a physical segment. Also, due to how a group is located in the binary, the max.
+size may be even up to 15 bytes smaller than 64 kB!</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -5585,6 +5590,20 @@ The resulting MZ binary won't run without further modification, i.e. adding a DO
 <TD><b>x278</b></TD>
 <TD>ADDR32 fixup to '&lt;symbol&gt;' at location &lt;segment&gt;.&lt;offset&gt;</TD>
 <TD>64-bit PE format only: a 32-bit fixup was detected, but base address is above or equal 0x80000000.
+</TD>
+</TR>
+
+<TR BGCOLOR="#F0F0F0">
+<TD><b>x279</b></TD>
+<TD>64-bit label referenced with 32-bit fixup</TD>
+<TD>
+</TD>
+</TR>
+
+<TR BGCOLOR="#F0F0F0">
+<TD><b>x280</b></TD>
+<TD>Too many segments/sections defined for output format</TD>
+<TD>For OMF, max. number of segments is 32767. For COFF, max. number of sections is 65535.
 </TD>
 </TR>
 

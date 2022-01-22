@@ -256,6 +256,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
                 grp->sym.offset = cp->fileoffset - cp->sizehdr;
                 grp->sym.included = TRUE;
                 offset = 0;
+                DebugMsg(("CalcOffset(%s): first segment of group, grp.ofs initialized\n", curr->sym.name ));
             } else {
                 /* v2.12: the old way wasn't correct. if there's a segment between the
                  * segments of a group, it affects the offset as well ( if it
@@ -318,7 +319,12 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
         /* changed in v1.96 */
         //grp->sym.max_offset = offset + curr->e.seginfo->start_loc;
         /* v2.07: for 16-bit groups, ensure that it fits in 64 kB */
+        /* v2.15: note that due to how a group is located in file/memory, the warning may be emitted
+         * if the group size is > 65520, but <= 65536.
+         */
         if ( grp->sym.Ofssize == USE16 && ( offset + curr->sym.max_offset ) > 0x10000 ) {
+            DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh + max_ofs=%" I32_SPEC "Xh > 64 kB\n",
+                      curr->sym.name, offset, curr->sym.max_offset ));
             EmitWarn( 2, GROUP_EXCEEDS_64K, grp->sym.name );
         }
         /* v2.13: if the segment contains just an ORG (BIN only)

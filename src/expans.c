@@ -104,7 +104,7 @@ static void SkipMacro( struct asm_tok tokenarray[] )
     char buffer[MAX_LINE_LEN];
 
     /* The queue isn't just thrown away, because any
-     * coditional assembly directives found in the source
+     * conditional assembly directives found in the source
      * must be executed.
      */
      while ( GetTextLine( buffer ) ) {
@@ -842,12 +842,11 @@ ret_code ExpandText( char *line, struct asm_tok tokenarray[], unsigned int subst
     struct asym *sym;
     char *sp[MAX_TEXTMACRO_NESTING];
 
-        DebugMsg1(("ExpandText(line=>%s<, subst=%u ) enter\n", line, substitute ));
     sp[0] = line;
     pDst = StringBufferEnd;
     StringBufferEnd += MAX_LINE_LEN;
     rc = NOT_ERROR;
-    for ( lvl = 0; lvl >= 0; lvl-- ) {
+    for ( lvl = 0; lvl >= 0 && rc != ERROR; lvl-- ) { /* v2.15: stop if rc == ERROR */
         pSrc = sp[lvl];
         while ( *pSrc ) {
             if( is_valid_id_first_char( *pSrc ) && ( substitute != 0 || quoted_string == 0 ) ) {
@@ -920,7 +919,10 @@ ret_code ExpandText( char *line, struct asm_tok tokenarray[], unsigned int subst
                             Token_Count = old_tokencount;
                             DebugMsg1(( "ExpandText: back from RunMacro(%s), rc=%u, text returned=>%s<, rest=>%s<\n", sym->name, i, pDst, i >= 0 ? tokenarray[i].tokpos : "" ));
                             if ( i == -1 ) {
-                                return( ERROR );
+                                /* v2.15: don't return here, StringBufferEnd must be restored */
+                                //return( ERROR );
+                                rc = ERROR;
+                                break;
                             }
                             pSrc = tokenarray[i-1].tokpos + strlen( tokenarray[i-1].string_ptr );
                             if ( substitute && *pSrc == '&' )
@@ -937,8 +939,9 @@ ret_code ExpandText( char *line, struct asm_tok tokenarray[], unsigned int subst
                         macro_proc = TRUE;
                     }
                     if ( lvl == MAX_TEXTMACRO_NESTING ) {
-                        DebugMsg(("ExpandText(line=>%s<) error exit\n", line));
+                        DebugMsg(("ExpandText(line=>%s<) error lvl==MAX_TEXTMACRO_NESTING\n", line));
                         EmitError( MACRO_NESTING_LEVEL_TOO_DEEP );
+                        rc = ERROR; /* v2.15: added */
                         break;
                     }
                 }
@@ -952,7 +955,7 @@ ret_code ExpandText( char *line, struct asm_tok tokenarray[], unsigned int subst
                 *pDst++ = *pSrc++;
             }
         } /* end while */
-    }
+    } /* end for */
     *pDst++ = NULLC;
 
     StringBufferEnd = old_stringbufferend;
