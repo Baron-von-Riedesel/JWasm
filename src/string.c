@@ -622,10 +622,11 @@ static ret_code CatStrFunc( struct macro_instance *mi, char *buffer, struct asm_
 /* convert string to a number.
  * used by @SubStr() for arguments 2 and 3 (start and size),
  * and by @InStr() for argument 1 ( start )
+ * v2.15: also used to convert return value of user-defined prologue.
  */
 
-static ret_code GetNumber( char *string, int *pi, struct asm_tok tokenarray[] )
-/*****************************************************************************/
+ret_code GetNumber( char *string, int *pi, struct asm_tok tokenarray[] )
+/**********************************************************************/
 {
     struct expr opndx;
     int i;

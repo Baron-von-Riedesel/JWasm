@@ -37,6 +37,8 @@
    -  warning displayed for PUSHW/PUSHD if operand is a segment register and
       the size suffix doesn't match the current mode; see pushwsr.asm and
       pushdsr.asm.
+   -  if user-defined prologue returns 0, offsets of local variables are no
+      longer "adjusted". This is undocumented Masm behavior; see prolog3.asm.
 
    20.12.2020, v2.14:
 

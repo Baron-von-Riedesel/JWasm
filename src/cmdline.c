@@ -808,8 +808,8 @@ static const char *getnextcmdstring( const char **cmdline )
     return( *cmdline );
 }
 
-static const char *GetNumber( const char *p )
-/*******************************************/
+static const char *GetNumberArg( const char *p )
+/**********************************************/
 {
     OptValue = 0;
     for( ;*p >= '0' && *p <= '9'; p++ )
@@ -840,7 +840,7 @@ static void ProcessOption( const char **cmdline, char *buffer )
      * the value can be >= 10.
      */
     if ( *p >= '0' && *p <= '9' ) {
-        p = GetNumber( p );
+        p = GetNumberArg( p );
         if ( OptValue < sizeof(cpuoption)/sizeof(cpuoption[0]) ) {
             p = GetNameToken( buffer, p, 16, 0 ); /* get optional 'p' */
             *cmdline = p;
@@ -871,7 +871,7 @@ static void ProcessOption( const char **cmdline, char *buffer )
                     break;
                 case '#':             /* collect a number */
                     if( *p >= '0' && *p <= '9' )
-                        p = GetNumber( p );
+                        p = GetNumberArg( p );
                     break;
                 case '$':      /* collect an identifer+value */
                 case '@':      /* collect a filename */

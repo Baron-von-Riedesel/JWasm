@@ -49,6 +49,8 @@
  */
 #define STACKPROBE 0
 
+ret_code GetNumber( char *string, int *pi, struct asm_tok tokenarray[] );
+
 extern const char szDgroup[];
 extern uint_32 list_pos;  /* current LST file position */
 
@@ -2135,9 +2137,17 @@ static ret_code write_userdef_prologue( struct asm_tok tokenarray[] )
 
     if ( Parse_Pass == PASS_1 ) {
         struct dsym *curr;
-        len = atoi( buffer ) - info->localsize;
-        for ( curr = info->locallist; curr; curr = curr->nextlocal ) {
-            curr->sym.offset -= len;
+        /* v2.15: if 0 is returned, no offset adjustments for locals.
+         * also, allow to use expressions as a return value.
+         */
+        //len = atoi( buffer ) - info->localsize;
+        if ( NOT_ERROR == GetNumber( buffer, &len, tokenarray ) ) {
+            if ( len ) {
+                len = len - info->localsize;
+                for ( curr = info->locallist; curr; curr = curr->nextlocal ) {
+                    curr->sym.offset -= len;
+                }
+            }
         }
     }
 
