@@ -222,6 +222,11 @@ static struct asym *CreateAssemblyTimeVariable( struct asm_tok tokenarray[] )
             EmitErr( SYMBOL_REDEFINITION, sym->name );
             return( NULL );
         }
+        /* v2.15: "redefinition" of EQU by '='? Then leave it as EQU! */
+        if ( sym->variable == FALSE ) {
+            DebugMsg1(( "CreateAssemblyTimeVariable(%s): exit, EQU variable, unchanged value=%d\n", name, sym->uvalue ));
+            return( sym );
+        }
 #if FASTPASS
         /* v2.04a regression in v2.04. Do not save the variable when it
          * is defined the first time

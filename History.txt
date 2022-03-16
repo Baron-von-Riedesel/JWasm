@@ -22,6 +22,8 @@
    -  macro function expansion inside text macros had swallowed trailing white
       spaces behind the macro invokation, sometimes resulting in errors; see 
       expans43.asm.
+   -  a constant defined via EQU could have been changed to an assembly-time
+      variable if the value didn't change; see equate30.asm.
 
    Other changes:
    -  error "too many segments/sections defined..." emitted for omf and coff
