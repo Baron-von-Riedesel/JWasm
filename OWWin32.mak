@@ -132,11 +132,6 @@ segment CONST readonly
 segment CONST2 readonly
 !endif
 <<
-!if $(DEBUG)
-	@if not exist TEST mkdir TEST
-	copy $(OUTD)\$(name).exe TEST\*.* >NUL
-	copy $(OUTD)\$(name).sym TEST\*.* >NUL
-!endif
 
 $(OUTD)/$(name)d.exe: $(OUTD)/main.obj $(proj_obj)
 	$(LINK) @<<

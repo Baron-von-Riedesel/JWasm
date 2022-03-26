@@ -41,6 +41,8 @@
       pushdsr.asm.
    -  if user-defined prologue returns 0, offsets of local variables are no
       longer "adjusted". This is undocumented Masm behavior; see prolog3.asm.
+   -  directive OPTION READONLY will no longer cause an error, just a warning
+      that it's ignored.
 
    20.12.2020, v2.14:
 

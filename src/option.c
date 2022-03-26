@@ -169,6 +169,17 @@ OPTFUNC( SetNoLJmp )
     return( NOT_ERROR );
 }
 
+/* OPTION READONLY */
+
+OPTFUNC( SetReadonly )
+/**********************/
+{
+    /* not implemented yet, display a warning */
+    if ( Parse_Pass == PASS_1)
+         EmitWarn( 2, DIRECTIVE_IGNORED, "option readonly" );
+    return( NOT_ERROR );
+}
+
 /* OPTION NOREADONLY */
 
 OPTFUNC( SetNoReadonly )
@@ -829,7 +840,7 @@ static const struct asm_option optiontab[] = {
     { "NOEMULATOR",   SetNoEmulator  },
     { "LJMP",         SetLJmp        },
     { "NOLJMP",       SetNoLJmp      },
-    { "READONLY",     Unsupported    },
+    { "READONLY",     SetReadonly    },
     { "NOREADONLY",   SetNoReadonly  },
     { "OLDMACROS",    Unsupported    },
     { "NOOLDMACROS",  SetNoOldmacros },
