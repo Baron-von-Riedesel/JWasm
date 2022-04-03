@@ -1896,6 +1896,12 @@ static ret_code minus_op( struct expr *opnd1, struct expr *opnd2 )
                     DebugMsg(("minus_op error, sym.segm=%X opnd1->sym.segm=%X\n", sym->segment, opnd1->sym->segment ));
                     return( fnEmitErr( OPERANDS_MUST_BE_IN_SAME_SEGMENT ) );
                 }
+            } else if ( fnEmitErr == noEmitErr ) { /* this is to find out we're in EQU-mode */
+                /* v2.15: for EQU, check segments in pass 1 so the EQU-symbol won't become a constant */
+                if ( sym->segment != opnd1->sym->segment ) {
+                    DebugMsg1(("minus_op, EQU mode, sym.segm=%s != opnd1->sym.segm=%s\n", sym->segment ? sym->segment->name : "NULL", opnd1->sym->segment ? opnd1->sym->segment->name : "NULL" ));
+                    return( ERROR );
+                }
             }
 
             /* the type changes from address to constant.

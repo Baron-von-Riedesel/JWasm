@@ -24,6 +24,10 @@
       expans43.asm.
    -  a constant defined via EQU could have been changed to an assembly-time
       variable if the value didn't change; see equate30.asm.
+   -  if two relocatable items belonging to different segments were 
+      subtracted in an expression on the right side of EQU, strange error 
+      "symbol redefinition" was emitted when that symbol was used later; see
+      equate31.asm.
 
    Other changes:
    -  error "too many segments/sections defined..." emitted for omf and coff
