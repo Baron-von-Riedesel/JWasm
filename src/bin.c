@@ -803,11 +803,11 @@ static void pe_create_MZ_header( struct module_info *modinfo )
     const char *p;
     struct asym *sym;
 
-    DebugMsg(("pe_create_MZ_header enter\n" ));
+    DebugMsg1(("pe_create_MZ_header enter\n" ));
     if ( Parse_Pass == PASS_1 && SymSearch( hdrname "1" ) == NULL )
         modinfo->g.pe_flags |= PEF_MZHDR;
     if ( modinfo->g.pe_flags & PEF_MZHDR ) {
-        DebugMsg(("pe_create_MZ_header: generate code\n" ));
+        DebugMsg1(("pe_create_MZ_header: generate code\n" ));
         AddLineQueueX("%r DOTNAME", T_OPTION );
         AddLineQueueX("%s1 %r USE16 %r %s", hdrname, T_SEGMENT, T_WORD, hdrattr );
         for( p = mzcode; p < mzcode + sizeof( mzcode ); p += strlen( p ) + 1 )
@@ -852,7 +852,7 @@ void pe_create_PE_header( void )
     int size;
     void *p;
 
-    DebugMsg(("pe_create_PE_header enter\n" ));
+    DebugMsg1(("pe_create_PE_header enter\n" ));
     if ( Parse_Pass == PASS_1 ) {
         if ( ModuleInfo.model != MODEL_FLAT ) {
             EmitError( MODEL_MUST_BE_FLAT );
@@ -893,7 +893,7 @@ void pe_create_PE_header( void )
 #endif
         sym = CreateVariable( "@pe_file_flags", ((struct IMAGE_PE_HEADER32 *)p)->FileHeader.Characteristics );
         if ( sym ) {
-            DebugMsg(("pe_create_PE_header: CreateVariable(@pe_file_flags)=%X [value=%X]\n", sym, sym ? sym->value : 0 ));
+            DebugMsg1(("pe_create_PE_header: CreateVariable(@pe_file_flags)=%X [value=%X]\n", sym, sym ? sym->value : 0 ));
             sym->predefined = TRUE;
             sym->sfunc_ptr = (internal_func)&set_file_flags;
         }

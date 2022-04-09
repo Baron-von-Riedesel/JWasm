@@ -28,8 +28,9 @@
       subtracted in an expression on the right side of EQU, strange error 
       "symbol redefinition" was emitted when that symbol was used later; see
       equate31.asm.
-   -  -pe option: when setting internal variable @pe_file_flags, undefined
-      symbols might have been accepted.
+   -  assembly-time variables: if the expression on the right side of the
+      equal sign contained an undefined symbol, it might have been ignored;
+      see expr7.asm.
    -  -pe option: the name in the export directory may have started with a
       slash/backslash.
 

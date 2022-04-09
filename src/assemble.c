@@ -784,10 +784,14 @@ static void PassOneChecks( void )
      *
      * v2.13: if the undefined symbol occurs in a macro, there's
      * still a problem, since macro names aren't stored in the
-     * line store. So the block is activated again.
-     * v2.15: activated (else @pe_file_flags will accept an invalid expression )
+     * line store. So the block is activated again (actually it was NOT in v2.13!).
+     *
+     * v2.15: still not activated; actually it's deactivated since at least v2.04.
+     * There were problems related to assembly-time variables, but this should
+     * now be fixed in expreval.c, calculate() (undefined symbol in expression will
+     * no longer "get lost"); see expr7.asm.
      */
-#if 1
+#if 0
     if ( SymTables[TAB_UNDEF].head ) {
         DebugMsg(("PassOneChecks: undefined symbols exist, first=%s\n", SymTables[TAB_UNDEF].head->sym.name ));
         SkipSavedState();

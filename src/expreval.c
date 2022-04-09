@@ -3072,6 +3072,12 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
         return( fnEmitErr( SYNTAX_ERROR_EX, oper->string_ptr ) );
     } /* end switch( oper->token ) */
 
+    /* v2.15 ensure that any undefined symbol finds its way into the expression.
+     * this is for assembly-time variables.
+     */
+    if ( Parse_Pass == PASS_1 && opnd2->sym && opnd2->sym->state == SYM_UNDEFINED )
+        opnd1->sym = opnd2->sym;
+
 #ifdef DEBUG_OUT
     if ( opnd1->hlvalue ) {
         DebugMsg1(("%u calculate(%s) exit, ok kind=%d value=0x%" I64_SPEC "X_%016" I64_SPEC "X memtype=0x%X indirect=%u type=>%s<\n",
@@ -3090,7 +3096,7 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
                    opnd1->mem_type,
                    opnd1->indirect, opnd1->type ? opnd1->type->name : "NULL" ));
     } else {
-        DebugMsg1(("%u calculate(%s) exit, ok kind=%d value=%d(0x%X) memtype=0x%X ind=%u exp=%u type=%s mbr=%s\n",
+        DebugMsg1(("%u calculate(%s) exit, ok kind=%d value=%d(0x%X) memtype=0x%X ind=%u exp=%u type=%s mbr=%s sym=%s\n",
                    evallvl,
                    oper->string_ptr,
                    opnd1->kind,
@@ -3098,7 +3104,8 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
                    opnd1->mem_type,
                    opnd1->indirect, opnd1->explicit,
                    opnd1->type ? opnd1->type->name : "NULL",
-                   opnd1->mbr ? opnd1->mbr->name : "NULL" ));
+                   opnd1->mbr ? opnd1->mbr->name : "NULL",
+                   opnd1->sym ? opnd1->sym->name : "NULL" ));
     }
 #endif
     return( NOT_ERROR );
