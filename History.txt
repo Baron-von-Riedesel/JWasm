@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.____, v2.15:
+   09.04.2022, v2.15:
 
    Bugfixes:
    -  format bin, mz, omf, pe: fixup created by direct addressing without

@@ -264,7 +264,9 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
         lr->target_datum = fixup->frame_datum;
         lr->frame_meth = FRAME_TARG;
 #if 1
-        /* v2.15: modify frame if segment (used in override) is in a group; see lea2.asm */
+        /* v2.15: modify frame if segment (used in override) is in a group; see lea2.asm.
+         *       note that this mod also affects test offset12.asm!
+         */
         if ( fixup->frame_type == FRAME_SEG ) {
             struct dsym *seg;
             for( seg = SymTables[TAB_SEG].head; seg; seg = seg->next ) {

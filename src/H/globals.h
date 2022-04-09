@@ -186,7 +186,7 @@ char *strupr(char *);
 /* JWasm version info */
 #define _JWASM_VERSION_STR_ "2.15"
 #define _JWASM_VERSION_INT_ 215
-#define _JWASM_VERSION_SUFFIX_ "pre2"
+#define _JWASM_VERSION_SUFFIX_ ""
 #define _JWASM_VERSION_ _JWASM_VERSION_STR_ _JWASM_VERSION_SUFFIX_
 
 #define NULLC  '\0'
