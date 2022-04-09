@@ -28,6 +28,10 @@
       subtracted in an expression on the right side of EQU, strange error 
       "symbol redefinition" was emitted when that symbol was used later; see
       equate31.asm.
+   -  -pe option: when setting internal variable @pe_file_flags, undefined
+      symbols might have been accepted.
+   -  -pe option: the name in the export directory may have started with a
+      slash/backslash.
 
    Other changes:
    -  error "too many segments/sections defined..." emitted for omf and coff

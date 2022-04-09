@@ -836,11 +836,12 @@ static void set_file_flags( struct asym *sym, struct expr *opnd )
         return;
     pe = (struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer;
 
-    if ( opnd ) /* set the value? */
+    if ( opnd ) { /* set the value? */
         pe->FileHeader.Characteristics = opnd->value;
+    }
 
     sym->value = pe->FileHeader.Characteristics;
-    DebugMsg(("set_file_flags(%s, %X): value=%X\n", sym->name, opnd, sym->value ));
+    DebugMsg1(("set_file_flags(%s, %X): value=%X\n", sym->name, opnd, sym->value ));
 }
 
 void pe_create_PE_header( void )
@@ -1014,7 +1015,7 @@ static void pe_emit_export_data( void )
     struct expitem *pitems;
     struct expitem *pexp;
 
-    DebugMsg(("pe_emit_export_data enter\n" ));
+    DebugMsg1(("pe_emit_export_data enter\n" ));
     for( curr = SymTables[TAB_PROC].head, cnt = 0; curr; curr = curr->nextproc ) {
         if( curr->e.procinfo->isexport )
             cnt++;
@@ -1039,6 +1040,7 @@ static void pe_emit_export_data( void )
         pitems = (struct expitem *)myalloca( cnt * sizeof( struct expitem ) );
         for( curr = SymTables[TAB_PROC].head, pexp = pitems, i = 0; curr; curr = curr->nextproc ) {
             if( curr->e.procinfo->isexport ) {
+                DebugMsg1(("pe_emit_export_data: export proc >%s<\n", curr->sym.name ));
                 pexp->name = curr->sym.name;
                 pexp->idx  = i++;
                 pexp++;
@@ -1069,8 +1071,10 @@ static void pe_emit_export_data( void )
         /* v2.10: name+ext of dll */
         //AddLineQueueX( "@%s_name DB '%s',0", name, name );
         for ( fname = CurrFName[OBJ] + strlen( CurrFName[OBJ] ); fname > CurrFName[OBJ]; fname-- )
-            if ( *fname == '/' || *fname == '\\' || *fname == ':' )
+            if ( *fname == '/' || *fname == '\\' || *fname == ':' ) {
+                fname++; /* v2.15: skip the char that terminated the scan */
                 break;
+            }
         AddLineQueueX( "@%s_name DB '%s',0", name, fname );
 
         for( curr = SymTables[TAB_PROC].head; curr; curr = curr->nextproc ) {

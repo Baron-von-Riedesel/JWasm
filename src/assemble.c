@@ -785,8 +785,9 @@ static void PassOneChecks( void )
      * v2.13: if the undefined symbol occurs in a macro, there's
      * still a problem, since macro names aren't stored in the
      * line store. So the block is activated again.
+     * v2.15: activated (else @pe_file_flags will accept an invalid expression )
      */
-#if 0
+#if 1
     if ( SymTables[TAB_UNDEF].head ) {
         DebugMsg(("PassOneChecks: undefined symbols exist, first=%s\n", SymTables[TAB_UNDEF].head->sym.name ));
         SkipSavedState();
