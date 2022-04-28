@@ -1938,8 +1938,18 @@ static ret_code bin_write_module( struct module_info *modinfo )
         //LstPrintf( szSegLine, curr->sym.name, curr->e.seginfo->fileoffset, curr->e.seginfo->start_offset + curr->e.seginfo->start_loc, size, sizemem );
         LstPrintf( szSegLine, curr->sym.name,
                   curr->e.seginfo->fileoffset,
-                  bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
+                  /* v2.16 RVA of mz binary was wrong if segment was part of a group.
+                   * now it's better, but a bit too complicated, actually it's pretty "undocumented"
+                   * what all those offsets are good for.
+                   * Its a listing problem only, the binary is correct!!!
+                   */
+                  //bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
+                  bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset + ( curr->e.seginfo->group ? curr->e.seginfo->group->offset : 0 ),
                   size, sizemem );
+#if 0
+        DebugMsg(("bin_write_module(%s): binary map. start_ofs=%X grpofs=%X\n",  curr->sym.name,
+                  curr->e.seginfo->start_offset, curr->e.seginfo->group ? curr->e.seginfo->group->offset : 0 ));
+#endif
         LstNL();
 #endif
         if ( size ) { /* v2.13: write in any case, even if bss segment */

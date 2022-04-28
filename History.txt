@@ -1,6 +1,13 @@
 
    Changelog
 
+   __.__.2022, v2.16:
+
+   Bugfixes:
+   -  format mz: in the binary map of listings, the RVA of segments belonging
+      to a group may have been incorrect, since the group's align adjustment 
+      was ignored; see grpalign.asm;
+
    09.04.2022, v2.15:
 
    Bugfixes:

@@ -184,8 +184,8 @@ char *strupr(char *);
 #include "queue.h"
 
 /* JWasm version info */
-#define _JWASM_VERSION_STR_ "2.15"
-#define _JWASM_VERSION_INT_ 215
+#define _JWASM_VERSION_STR_ "2.16"
+#define _JWASM_VERSION_INT_ 216
 #define _JWASM_VERSION_SUFFIX_ ""
 #define _JWASM_VERSION_ _JWASM_VERSION_STR_ _JWASM_VERSION_SUFFIX_
 
