@@ -1021,9 +1021,17 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
             //proc->e.procinfo->pe_type = ( ( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_286 );
             proc->e.procinfo->pe_type = ( ModuleInfo.Ofssize > USE16 ||
                                          ( ModuleInfo.curr_cpu & P_CPU_MASK ) == P_286 ||
+#if AMD64_SUPPORT
+                                         ( ModuleInfo.curr_cpu & P_CPU_MASK ) == P_64 ||
+#endif
                                          ( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_586 ) ? 1 : 0;
         } else {
             /* use LEAVE for 286, 386 (and x64) */
+            /* v2.16: code generation of jwasm is a bit problematic:
+             * LEAVE is a problem if code is 16-bit, but stack segment is 32-bit!
+             * so it would be better if LEAVE isn't generated if cpu is .386!
+             * Since it's a problem to change this now, use option -Zg (or .486) in relevant cases!
+             */
             proc->e.procinfo->pe_type = ( ( ModuleInfo.curr_cpu & P_CPU_MASK ) == P_286 ||
 #if AMD64_SUPPORT
                                          ( ModuleInfo.curr_cpu & P_CPU_MASK ) == P_64 ||

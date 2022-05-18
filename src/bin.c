@@ -53,6 +53,8 @@
 
 extern void SortSegments( int );
 
+extern void myatoi128( const char *, uint_64[], int, int );
+
 #if MZ_SUPPORT
 /* default values for OPTION MZ */
 static const struct MZDATA mzdata = {0x1E, 0x10, 0, 0xFFFF };
@@ -1103,6 +1105,8 @@ static void pe_emit_import_data( void )
 {
     struct dll_desc *p;
     int type = 0;
+    char *pp;
+    uint_64 num[2];
 #if AMD64_SUPPORT
     int ptrtype = ( ModuleInfo.defOfssize == USE64 ? T_QWORD : T_DWORD );
     char *align = ( ModuleInfo.defOfssize == USE64 ? "ALIGN(8)" : "ALIGN(4)" );
@@ -1111,7 +1115,7 @@ static void pe_emit_import_data( void )
     char *align = "DWORD";
 #endif
 
-    DebugMsg(("pe_emit_import_data enter\n" ));
+    DebugMsg1(("pe_emit_import_data enter\n" ));
     for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
         if ( p->cnt ) {
             struct dsym *curr;
@@ -1136,6 +1140,15 @@ static void pe_emit_import_data( void )
             AddLineQueueX( "@%s_ilt label %r", p->name, ptrtype );
             for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
                 if ( curr->sym.iat_used && curr->sym.dll == p ) {
+                    /* v2.16: allow imports by number */
+                    if ( curr->sym.name[0] == '@' && isdigit( curr->sym.name[1] ) ) {
+                        for (pp = curr->sym.name+1; isdigit(*pp); pp++ );
+                        if ( *pp == '@' ) {
+                            myatoi128( curr->sym.name+1, &num, 10, pp - ( curr->sym.name + 1 ) );
+                            AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
+                            continue;
+                        }
+                    }
                     AddLineQueueX( "@LPPROC %r @%s_name", T_IMAGEREL, curr->sym.name );
                 }
             }
@@ -1150,6 +1163,16 @@ static void pe_emit_import_data( void )
             for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
                 if ( curr->sym.iat_used && curr->sym.dll == p ) {
                     Mangle( &curr->sym, StringBufferEnd );
+                    /* v2.16: allow imports by number */
+                    if ( curr->sym.name[0] == '@' && isdigit( curr->sym.name[1] ) ) {
+                        for (pp = curr->sym.name+1; isdigit(*pp); pp++ );
+                        if ( *pp == '@' ) {
+                            myatoi128( curr->sym.name+1, &num, 10, pp - (curr->sym.name + 1) );
+                            DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
+                            AddLineQueueX( "%s%s @LPPROC 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, (uint_32)num[0] );
+                            continue;
+                        }
+                    }
                     AddLineQueueX( "%s%s @LPPROC %r @%s_name", ModuleInfo.g.imp_prefix, StringBufferEnd, T_IMAGEREL, curr->sym.name );
                 }
             }
@@ -1161,6 +1184,14 @@ static void pe_emit_import_data( void )
             AddLineQueueX( "%s" IMPSTRSUF " %r %r %s", idataname, T_SEGMENT, T_WORD, idataattr );
             for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
                 if ( curr->sym.iat_used && curr->sym.dll == p ) {
+                    /* v2.16: allow imports by number */
+                    if ( curr->sym.name[0] == '@' && isdigit( curr->sym.name[1] ) ) {
+                        for (pp = curr->sym.name+1; isdigit(*pp); pp++ );
+                        if ( *pp == '@' ) {
+                            DebugMsg1(("pe_emit_import_data: import by number: %s, nothing written to name table\n", curr->sym.name ));
+                            continue;
+                        }
+                    }
                     AddLineQueueX( "@%s_name dw 0", curr->sym.name );
                     AddLineQueueX( "db '%s',0", curr->sym.name );
                     AddLineQueue( "even" );
@@ -1944,12 +1975,12 @@ static ret_code bin_write_module( struct module_info *modinfo )
                    * Its a listing problem only, the binary is correct!!!
                    */
                   //bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
-                  bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset + ( curr->e.seginfo->group ? curr->e.seginfo->group->offset : 0 ),
+                  bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset + ( curr->e.seginfo->group ? curr->e.seginfo->group->offset & 0xf : 0 ),
                   size, sizemem );
-#if 0
+ #if 1
         DebugMsg(("bin_write_module(%s): binary map. start_ofs=%X grpofs=%X\n",  curr->sym.name,
                   curr->e.seginfo->start_offset, curr->e.seginfo->group ? curr->e.seginfo->group->offset : 0 ));
-#endif
+ #endif
         LstNL();
 #endif
         if ( size ) { /* v2.13: write in any case, even if bss segment */

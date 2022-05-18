@@ -1660,6 +1660,7 @@ ret_code InvokeDirective( int i, struct asm_tok tokenarray[] )
             p += strlen( p );
             p += Mangle( sym, p );
             namepos++;
+            DebugMsg1(("InvokeDir: externdef, iatname=%s\n", iatname ));
             if ( sym->iat_used == FALSE ) {
                 sym->iat_used = TRUE;
                 sym->dll->cnt++;

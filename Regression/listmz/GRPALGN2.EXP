@@ -1,0 +1,65 @@
+JWasm v2.16, Apr 28 2022
+GRPALGN2.ASM
+
+                                    .286
+                                    .MODEL small
+                                    option casemap:none
+                                    .dosseg
+                                    .stack 2048
+                                    .386
+
+                                ;--- this is derived from GRPALIGN.ASM, but this time
+                                ;--- there's a second group, where the code segments
+                                ;--- are packed. The binary map should be:
+                                ;                    size   RVA
+                                ;-------------------------------
+                                ;--- header:          20h
+                                ;--- CGROUP._TEXT      8h     0h
+                                ;--- CGROUP._TEXT2    10h     8h
+                                ;--- DGROUP._DATA      4h     8h
+                                ;--- DGROUP._BSS     200h    10h
+                                ;--- DGROUP.STACK    800h   210h
+                                ;--- that is, _DATA starts at RVA 8, because the
+                                ;--- groups are packed and DGROUP addresses the last
+                                ;--- 8 bytes of CGROUP at offset 0-7.
+
+
+00000000                        _TEXT2 segment word public 'CODE'
+00000000  909090909090909090        db 10h dup (90h)
+00000010                        _TEXT2 ends
+
+                                    .data
+
+00000000  00000000              var1 dd 0
+
+00000000                        _BSS segment para public 'BSS'
+
+                                DGROUP group _BSS
+
+00000000  000000000000000000    buffer  db 200h dup (?)
+
+00000200                        _BSS ends
+
+00000000                            .code
+
+00000000                        start proc c public
+00000000  BA0000                    mov dx, offset buffer
+00000003  B8004C                    mov ax, 4C00h
+00000006  CD21                      int 21h
+00000008                        start endp
+
+                                    END start
+
+
+Binary Map:
+
+Segment                  Pos(file)     RVA  Size(fil) Size(mem)
+---------------------------------------------------------------
+<header>                        0        0        20         0
+_TEXT                          20        0         8         8
+_TEXT2                         28        8        10        10
+_DATA                          38        8         4         4
+_BSS                            0       10         0       200
+STACK                           0      210         0       800
+---------------------------------------------------------------
+                                                  3C       A20
