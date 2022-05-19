@@ -1118,7 +1118,8 @@ static void pe_emit_import_data( void )
     DebugMsg1(("pe_emit_import_data enter\n" ));
     for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
         if ( p->cnt ) {
-            struct dsym *curr;
+			struct dsym *curr;
+            struct dsym *alias;
             char *pdot;
             if ( !type ) {
                 type = 1;
@@ -1141,13 +1142,12 @@ static void pe_emit_import_data( void )
             for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
                 if ( curr->sym.iat_used && curr->sym.dll == p ) {
                     /* v2.16: allow imports by number */
-                    if ( curr->sym.name[0] == '@' && isdigit( curr->sym.name[1] ) ) {
-                        for (pp = curr->sym.name+1; isdigit(*pp); pp++ );
-                        if ( *pp == '@' ) {
-                            myatoi128( curr->sym.name+1, &num, 10, pp - ( curr->sym.name + 1 ) );
-                            AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
-                            continue;
-                        }
+                    for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                    if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                        pp++;
+                        myatoi128( pp, &num, 10, strlen( pp ) );
+                        AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
+                        continue;
                     }
                     AddLineQueueX( "@LPPROC %r @%s_name", T_IMAGEREL, curr->sym.name );
                 }
@@ -1164,14 +1164,13 @@ static void pe_emit_import_data( void )
                 if ( curr->sym.iat_used && curr->sym.dll == p ) {
                     Mangle( &curr->sym, StringBufferEnd );
                     /* v2.16: allow imports by number */
-                    if ( curr->sym.name[0] == '@' && isdigit( curr->sym.name[1] ) ) {
-                        for (pp = curr->sym.name+1; isdigit(*pp); pp++ );
-                        if ( *pp == '@' ) {
-                            myatoi128( curr->sym.name+1, &num, 10, pp - (curr->sym.name + 1) );
-                            DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
-                            AddLineQueueX( "%s%s @LPPROC 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, (uint_32)num[0] );
-                            continue;
-                        }
+                    for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                    if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                        pp++;
+                        myatoi128( pp, &num, 10, strlen( pp ) );
+                        DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
+                        AddLineQueueX( "%s%s @LPPROC 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, (uint_32)num[0] );
+                        continue;
                     }
                     AddLineQueueX( "%s%s @LPPROC %r @%s_name", ModuleInfo.g.imp_prefix, StringBufferEnd, T_IMAGEREL, curr->sym.name );
                 }
@@ -1185,12 +1184,10 @@ static void pe_emit_import_data( void )
             for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
                 if ( curr->sym.iat_used && curr->sym.dll == p ) {
                     /* v2.16: allow imports by number */
-                    if ( curr->sym.name[0] == '@' && isdigit( curr->sym.name[1] ) ) {
-                        for (pp = curr->sym.name+1; isdigit(*pp); pp++ );
-                        if ( *pp == '@' ) {
-                            DebugMsg1(("pe_emit_import_data: import by number: %s, nothing written to name table\n", curr->sym.name ));
-                            continue;
-                        }
+                    for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                    if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                        DebugMsg1(("pe_emit_import_data: import by number: %s, nothing written to name table\n", curr->sym.name ));
+                        continue;
                     }
                     AddLineQueueX( "@%s_name dw 0", curr->sym.name );
                     AddLineQueueX( "db '%s',0", curr->sym.name );
