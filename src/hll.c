@@ -420,7 +420,9 @@ static ret_code GetSimpleExpression( struct hll_item *hll, int *i, struct asm_to
         switch ( op1.kind ) {
         case EXPR_REG:
             if ( op1.indirect == FALSE ) {
-                p = RenderInstr( buffer, "and", op1_pos, op1_end, op1_pos, op1_end, tokenarray );
+                /* v2.16: more Masm compatibility with -Zg */
+                //p = RenderInstr( buffer, "and", op1_pos, op1_end, op1_pos, op1_end, tokenarray );
+                p = RenderInstr( buffer, Options.masm_compat_gencode ? "or" : "and", op1_pos, op1_end, op1_pos, op1_end, tokenarray );
                 hllop->lastjmp = p;
                 RenderJcc( p, 'z', is_true, label );
                 break;

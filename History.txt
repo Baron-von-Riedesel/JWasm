@@ -10,6 +10,8 @@
 
    Other changes:
    -  format pe: allow imports by number; see pe10.asm.
+   -  option -Zg: increased Masm compatible codegen for hll expressions; see
+      hll4.asm.
 
    09.04.2022, v2.15:
 
