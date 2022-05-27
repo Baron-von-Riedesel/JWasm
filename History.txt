@@ -7,6 +7,8 @@
    -  format mz: in the binary map of listings, the RVA of segments belonging
       to a group may have been incorrect, since the group's align adjustment 
       was ignored; see grpalign.asm.
+   -  symbol $ is internally marked as assembly-time variable - this caused
+      fixup problems in OMF format; see fixup6.asm.
 
    Other changes:
    -  format pe: allow imports by number; see pe10.asm.

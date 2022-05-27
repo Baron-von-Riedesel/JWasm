@@ -231,6 +231,8 @@ unsigned OmfFixGenFixModend( const struct fixup *fixup, uint_8 *buf, uint_32 dis
     return( TranslateLogref( &lr, buf, type ) );
 }
 
+#define IsPC( sym ) ( sym->name_size == 1  && sym->name[0] == '$' )
+
 /* translate a fixup to a logref */
 
 static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
@@ -240,8 +242,8 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
 
     sym = fixup->sym; /* may be NULL! */
 
-    DebugMsg1(("omf_set_logref: sym=%s, state=%d, fixup->type=%u, fixup->frame_type=%u\n",
-               sym ? sym->name : "NULL", sym ? sym->state : -1, fixup->type, fixup->frame_type ));
+    DebugMsg1(("omf_set_logref: sym=%s, state=%d, fixup->type=%u, fixup->frame_type/datum=%u/%u\n",
+               sym ? sym->name : "NULL", sym ? sym->state : -1, fixup->type, fixup->frame_type, fixup->frame_datum ));
 
     /*------------------------------------*/
     /* Determine the Target and the Frame */
@@ -330,17 +332,25 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
         } else {
             /* must be SYM_INTERNAL */
             /**/myassert( sym->state == SYM_INTERNAL );
-            DebugMsg1(("omf_set_logref: sym->state is SYM_INTERNAL, sym->segment=%s, fixup->frame/datum=%u/%u\n",
-                       sym->segment ? sym->segment->name : "NULL", fixup->frame_type, fixup->frame_datum ));
+            DebugMsg1(("omf_set_logref: sym->state is SYM_INTERNAL, sym->segment=%s\n",
+                       sym->segment ? sym->segment->name : "NULL" ));
+#ifdef DEBUG_OUT
+            if ( sym->segment && ((struct dsym *)sym->segment)->e.seginfo->group )
+                DebugMsg1(("omf_seg_logref: group=%s\n", ((struct dsym *)sym->segment)->e.seginfo->group->name ));
+#endif
             /* v2.08: don't use info from assembly-time variables */
-            if ( sym->variable ) {
+            /* v2.16: the '$' is NO assembly-time variable; however, flag "variable" is TRUE! to be fixed ... */
+            //if ( sym->variable ) {
+            if ( sym->variable && ( FALSE == IsPC( sym ) ) ) {
                 lr->target_meth = ( fixup->frame_type == FRAME_GRP ? TARGET_GRP : TARGET_SEG );
                 lr->target_datum = fixup->frame_datum;
+                DebugMsg1(("omf_seg_logref: assembly-time variable branch\n" ));
             } else if ( sym->segment == NULL ) { /* shouldn't happen */
                 EmitErr( SEGMENT_MISSING_FOR_FIXUP, sym->name );
                 return ( 0 );
 #if COMDATSUPP
             } else if ( ( (struct dsym *)sym->segment)->e.seginfo->comdat_selection ) {
+                DebugMsg1(("omf_set_logref: comdat selection\n" ));
                 lr->target_meth = TARGET_EXT;
                 lr->target_datum = ((struct dsym *)sym->segment)->e.seginfo->seg_idx;
                 lr->frame_meth = FRAME_TARG;
@@ -352,7 +362,7 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
             }
         }
 
-        if( fixup->frame_type != FRAME_NONE ) {
+        if( fixup->frame_type != FRAME_NONE ) {  /* types: 0=SEG,1=GRP ..., 6=NONE [internal only] */
             lr->frame_meth = (uint_8)fixup->frame_type;
         } else {
             lr->frame_meth = FRAME_TARG;
