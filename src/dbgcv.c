@@ -1076,7 +1076,7 @@ void cv_write_debug_tables( struct dsym *symbols, struct dsym *types, void *pv )
             if (
 #if EQUATESYMS
                 /* emit constants if -Zi3 */
-                ( Options.debug_ext < CVEX_MAX ? sym->isequate : sym->variable )
+                ( Options.debug_ext < CVEX_MAX ? sym->isequate : sym->isvariable )
 #else
                 sym->isequate
 #endif

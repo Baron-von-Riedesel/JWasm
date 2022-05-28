@@ -603,7 +603,7 @@ struct asym *CreateStructField( int loc, struct asm_tok tokenarray[], const char
         for ( i = loc+1; tokenarray[i].token != T_FINAL; i++ ) {
             if ( tokenarray[i].token == T_ID ) {
                 struct asym *sym2 = SymSearch( tokenarray[i].string_ptr );
-                if ( sym2 && sym2->variable ) {
+                if ( sym2 && sym2->isvariable ) {
                     if ( sym2->predefined && sym2->sfunc_ptr )
                         sym2->sfunc_ptr( sym2, NULL );
                     myltoa( sym2->uvalue, init, ModuleInfo.radix, sym2->value3264 < 0, TRUE );

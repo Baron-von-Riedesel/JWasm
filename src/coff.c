@@ -1007,7 +1007,7 @@ static void coff_write_fixups( struct dsym *section, uint_32 *poffset, uint_32 *
             }
         /* if it's not EXTERNAL/PUBLIC, add symbol */
         /* if it's an assembly time variable, create helper symbol */
-        if ( fix->sym->variable == TRUE ) {
+        if ( fix->sym->isvariable == TRUE ) {
 #if HELPSYMS
             struct asym *sym;
             char buffer[12];

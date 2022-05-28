@@ -95,7 +95,7 @@ static void SetValue( struct asym *sym, struct expr *opndx )
          * consequently, if the alias was forward referenced, ensure that a third pass
          * will be done! regression test forward5.asm.
          */
-        if ( sym->variable ) {
+        if ( sym->isvariable ) {
             sym->offset = opndx->sym->offset + opndx->value;
             if ( Parse_Pass == PASS_2 && sym->fwdref ) {
 #ifdef DEBUG_OUT
@@ -204,26 +204,26 @@ static struct asym *CreateAssemblyTimeVariable( struct asm_tok tokenarray[] )
             sym_remove_table( &SymTables[TAB_UNDEF], (struct dsym *)sym );
             sym->fwdref = TRUE;
         }
-        //sym->variable  = TRUE;
+        //sym->isvariable  = TRUE;
 #if FASTPASS
         sym->issaved = StoreState; /* v2.10: added */
 #endif
     //} else if ( sym->state == SYM_EXTERNAL && sym->weak == TRUE && sym->mem_type == MT_ABS ) {
     } else if ( sym->state == SYM_EXTERNAL && sym->weak == TRUE && sym->mem_type == MT_EMPTY ) {
         sym_ext2int( sym );
-        //sym->variable  = TRUE;
+        //sym->isvariable  = TRUE;
 #if FASTPASS
         sym->issaved = StoreState; /* v2.10: added */
 #endif
     } else {
         if ( sym->state != SYM_INTERNAL ||
-            ( sym->variable == FALSE &&
+            ( sym->isvariable == FALSE &&
              ( opnd.uvalue != sym->uvalue || opnd.hvalue != sym->value3264 ) ) ) {
             EmitErr( SYMBOL_REDEFINITION, sym->name );
             return( NULL );
         }
         /* v2.15: "redefinition" of EQU by '='? Then leave it as EQU! */
-        if ( sym->variable == FALSE ) {
+        if ( sym->isvariable == FALSE ) {
             DebugMsg1(( "CreateAssemblyTimeVariable(%s): exit, EQU variable, unchanged value=%d\n", name, sym->uvalue ));
             return( sym );
         }
@@ -239,7 +239,7 @@ static struct asym *CreateAssemblyTimeVariable( struct asm_tok tokenarray[] )
         }
 #endif
     }
-    sym->variable = TRUE;
+    sym->isvariable = TRUE;
 #ifdef DEBUG_OUT
     if ( Parse_Pass > PASS_1 ) {
         if ( opnd.kind == EXPR_CONST && sym->uvalue != opnd.uvalue )
@@ -321,7 +321,7 @@ struct asym *CreateVariable( const char *name, int value )
     sym->isdefined  = TRUE;
     sym->state    = SYM_INTERNAL;
     //sym->mem_type = MT_ABS;
-    sym->variable = TRUE;
+    sym->isvariable = TRUE;
     sym->value    = value;
     sym->value3264 = (value >= 0 ? 0 : -1); /* v2.13: added: see equate29.asm */
     sym->isequate = TRUE;
@@ -493,10 +493,10 @@ struct asym *CreateConstant( struct asm_tok tokenarray[] )
         //        return( NULL );
         //    }
         //}
-        sym->variable = FALSE;
+        sym->isvariable = FALSE;
         SetValue( sym, &opnd );
         DebugMsg1(("CreateConstant(%s): memtype=%Xh value=%" I64_SPEC "X isproc=%u variable=%u type=%s\n",
-            name, sym->mem_type, (uint_64)sym->value + ( (uint_64)sym->value3264 << 32), sym->isproc, sym->variable, sym->type ? sym->type->name : "NULL" ));
+            name, sym->mem_type, (uint_64)sym->value + ( (uint_64)sym->value3264 << 32), sym->isproc, sym->isvariable, sym->type ? sym->type->name : "NULL" ));
         return( sym );
     }
     DebugMsg1(("CreateConstant(%s): calling SetTextMacro() [MI.Ofssize=%u]\n", name, ModuleInfo.Ofssize ));

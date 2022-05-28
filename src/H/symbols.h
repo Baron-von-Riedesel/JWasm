@@ -144,7 +144,7 @@ struct asym {
 #endif
                     isequate:1,   /* symbol has been defined with EQU */
                     predefined:1, /* symbol is predefined */
-                    variable:1,   /* symbol is variable (defined by '=' directive) */
+                    isvariable:1, /* symbol is variable (defined by '=' directive) */
                     ispublic:1;   /* symbol has been added to the publics queue */
     unsigned char   list:1,       /* symbol is to be listed */
                     isarray:1,    /* symbol is an array (total_length is valid) */

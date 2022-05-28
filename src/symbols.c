@@ -641,7 +641,7 @@ void SymInit( void )
     }
     sym->list   = FALSE; /* @WordSize should not be listed */
     /* $ is an address (usually). Also, don't add it to the list */
-    symPC->variable = TRUE;
+    symPC->isvariable = TRUE;
     symPC->list     = FALSE;
     LineCur->list   = FALSE;
 

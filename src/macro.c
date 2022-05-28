@@ -702,7 +702,7 @@ ret_code MacroDir( int i, struct asm_tok tokenarray[] )
     }
     macro->e.macroinfo->srcfile = get_curr_srcfile();
 
-    if ( ( Parse_Pass == PASS_1 ) || ( macro->sym.variable ) ) {
+    if ( ( Parse_Pass == PASS_1 ) || ( macro->sym.isvariable ) ) {
         /* is the macro redefined? */
         if ( macro->e.macroinfo->data != NULL ) {
             DebugMsg(("MacroDir(%s): macro already defined\n", name));
@@ -714,7 +714,7 @@ ret_code MacroDir( int i, struct asm_tok tokenarray[] )
             ReleaseMacroData( macro );
             /* v2.07: isfunc isn't reset anymore in ReleaseMacroData() */
             macro->sym.isfunc = FALSE;
-            macro->sym.variable = TRUE;
+            macro->sym.isvariable = TRUE;
         }
         store_data = TRUE;
     } else
@@ -761,7 +761,7 @@ ret_code PurgeDirective( int i, struct asm_tok tokenarray[] )
         }
 #endif
         ReleaseMacroData( (struct dsym *)sym );
-        sym->variable = TRUE;
+        sym->isvariable = TRUE;
         sym->purged = TRUE;
 #endif
         i++;

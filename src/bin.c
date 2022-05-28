@@ -506,10 +506,10 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
             ( fixup->locofs - curr->e.seginfo->start_loc );
 
         //if ( fixup->sym && fixup->sym->segment ) { /* v2.08: changed */
-        if ( fixup->sym && ( fixup->sym->segment || fixup->sym->variable ) ) {
+        if ( fixup->sym && ( fixup->sym->segment || fixup->sym->isvariable ) ) {
             /* assembly time variable (also $ symbol) in reloc? */
             /* v2.07: moved inside if-block, using new local var "offset" */
-            if ( fixup->sym->variable ) {
+            if ( fixup->sym->isvariable ) {
                 seg = (struct dsym *)fixup->segment_var;
                 offset = 0;
                 DebugMsg(("DoFixup(%s, %04" I32_SPEC "X, %s): variable, fixup->segment=%Xh fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",

@@ -231,7 +231,7 @@ unsigned OmfFixGenFixModend( const struct fixup *fixup, uint_8 *buf, uint_32 dis
     return( TranslateLogref( &lr, buf, type ) );
 }
 
-#define IsPC( sym ) ( sym->name_size == 1  && sym->name[0] == '$' )
+//#define IsPC( sym ) ( sym->name_size == 1  && sym->name[0] == '$' )
 
 /* translate a fixup to a logref */
 
@@ -339,9 +339,12 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
                 DebugMsg1(("omf_seg_logref: group=%s\n", ((struct dsym *)sym->segment)->e.seginfo->group->name ));
 #endif
             /* v2.08: don't use info from assembly-time variables */
-            /* v2.16: the '$' is NO assembly-time variable; however, flag "variable" is TRUE! to be fixed ... */
-            //if ( sym->variable ) {
-            if ( sym->variable && ( FALSE == IsPC( sym ) ) ) {
+            /* v2.16: the '$' is NO assembly-time variable; however, flag "isvariable" is TRUE!
+             *        Are assembly-time variables defined by '=' supposed to create a fixup at all???
+             *        Why should their (final) value be defined at link time???
+             */
+            //if ( sym->isvariable ) {
+            if ( sym->isvariable && sym->isequate ) {
                 lr->target_meth = ( fixup->frame_type == FRAME_GRP ? TARGET_GRP : TARGET_SEG );
                 lr->target_datum = fixup->frame_datum;
                 DebugMsg1(("omf_seg_logref: assembly-time variable branch\n" ));

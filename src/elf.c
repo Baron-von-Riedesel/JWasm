@@ -573,7 +573,7 @@ static void set_symtab_values( struct elfmod *em )
                 /* if it's not EXTERNAL/PUBLIC, add symbol. */
                 /* however, if it's an assembly time variable */
                 /* use a raw section reference */
-                if ( fix->sym->variable ) {
+                if ( fix->sym->isvariable ) {
                     fix->sym = fix->segment_var;
                 } else if ( ( fix->sym->state == SYM_INTERNAL ) &&
                     fix->sym->included == FALSE &&

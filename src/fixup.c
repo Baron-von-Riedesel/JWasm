@@ -304,7 +304,7 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
         } else
 #endif
         /* special handling for assembly time variables needed */
-        if ( fixup->sym && fixup->sym->variable ) {
+        if ( fixup->sym && fixup->sym->isvariable ) {
             /* add symbol's offset to the fixup location and fixup's offset */
             *pdata += fixup->sym->offset;
             fixup->offset         += fixup->sym->offset;
