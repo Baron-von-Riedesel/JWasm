@@ -9,6 +9,12 @@
       was ignored; see grpalign.asm.
    -  symbol $ is internally marked as assembly-time variable - this caused
       fixup problems in OMF format; see fixup6.asm.
+   -  invoke directive, 32-bit code, "ADDR": if the address of a symbol
+      in a 16-bit segment was to be pushed, just a WORD was pushed ( Masm is
+      buggy, pushes a DWORD, then a WORD ); see invoke41.asm.
+   -  invoke directive, 32-bit code, "OFFSET": if the address of a symbol
+      in a 16-bit segment was to be pushed, just a WORD was pushed ( Masm emits
+      an error in this case - this is now done as well ); see invoke42.asm.
 
    Other changes:
    -  format pe: allow imports by number; see pe10.asm.

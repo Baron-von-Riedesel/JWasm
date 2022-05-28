@@ -1370,7 +1370,7 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
     if ( ModuleInfo.list )
         LstWrite( CurrStruct ? LSTTYPE_STRUCT : LSTTYPE_DATA, currofs, sym );
 
-    DebugMsg1(("data_dir: exit, no error, label=%s, is_array=%u Curr%s.ofs=%X\n",
+    DebugMsg1(("data_dir: exit, no error, label=%s, is_array=%u, Curr%s.ofs=%X\n",
                sym ? sym->name : "NULL",
                sym ? sym->isarray : 0,
                CurrStruct ? "Struct" : "Seg",

@@ -833,8 +833,20 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 AddLineQueueX( " push %r", T_AX );
                 *r0flags |= R0_USED;
             } else {
-                if ( curr->sym.is_vararg && opnd.Ofssize == USE_EMPTY && opnd.sym )
-                    opnd.Ofssize = GetSymOfssize( opnd.sym );
+                if (  opnd.Ofssize == USE_EMPTY && opnd.sym )
+                    if ( curr->sym.is_vararg )
+                        opnd.Ofssize = GetSymOfssize( opnd.sym );
+                    else {
+                        /* v2.16: opnd.Ofssize is set - by the evaluator - only in a few cases (not clear when exactly),
+                         * but here it might be needed.
+                         * Either display an error or make jwasm extend the offset size.
+                         */
+                        if ( CurrWordSize > 2 && ( USE16 == GetSymOfssize( opnd.sym ) ) )
+                            opnd.Ofssize = USE16;
+                            //EmitErr( INVOKE_ARGUMENT_TYPE_MISMATCH, reqParam+1 );
+
+                    }
+                DebugMsg1(("PushInvokeParm(%u), address param: CurrWordSize=%u Ofssize=%d opnd.Ofssize=%d, psize=%u\n", reqParam, CurrWordSize, Ofssize, opnd.Ofssize, psize ));
                 /* v2.04: expand 16-bit offset to 32
                  * v2.11: also expand if there's an explicit near32 ptr requested in 16-bit
                  */
@@ -913,7 +925,13 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     opnd.indirect = TRUE;
             //} else if ( opnd.mem_type == MT_EMPTY ) { /* v2.10: a TYPE may return mem_type != MT_EMPTY! */
             } else if ( opnd.kind == EXPR_CONST || opnd.mem_type == MT_EMPTY ) {
-                asize = psize;
+                /* v2.16: don't set asize = psize if argument is an address */
+				if ( opnd.kind == EXPR_ADDR && opnd.instr == T_OFFSET && opnd.sym ) {
+                    asize = 2 << GetSymOfssize( opnd.sym );
+					DebugMsg1(("PushInvokeParm(%u): sym=%s, Ofssize=%d\n", reqParam, opnd.sym->name, GetSymOfssize( opnd.sym ) ));
+				} else
+                    asize = psize;
+                DebugMsg1(("PushInvokeParm(%u): opnd.kind=%u opnd.instr=%u asize=%u psize=%u\n", reqParam, opnd.kind, opnd.instr, asize, psize ));
                 /* v2.04: added, to catch 0-size params ( STRUCT without members ) */
                 if ( psize == 0 ) {
                     if ( curr->sym.is_vararg == FALSE ) {
