@@ -12,9 +12,14 @@
    -  invoke directive, 32-bit code, "ADDR": if the address of a symbol
       in a 16-bit segment was to be pushed, just a WORD was pushed ( Masm is
       buggy, pushes a DWORD, then a WORD ); see invoke41.asm.
+      In the "reverse" case, that is, if the address of a symbol in a 32-bit
+      segment was to be pushed as a WORD in a 16-bit code segment, a DWORD
+      was pushed instead; see invoke43.asm.
    -  invoke directive, 32-bit code, "OFFSET": if the address of a symbol
       in a 16-bit segment was to be pushed, just a WORD was pushed ( Masm emits
       an error in this case - this is now done as well ); see invoke42.asm.
+      The "reverse" case ( 16-bit code, address of a symbol in a 32-bit
+      segment to be pushed ) must also be rejected; see invoke44.asm.
 
    Other changes:
    -  format pe: allow imports by number; see pe10.asm.

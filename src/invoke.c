@@ -841,8 +841,9 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                          * but here it might be needed.
                          * Either display an error or make jwasm extend the offset size.
                          */
-                        if ( CurrWordSize > 2 && ( USE16 == GetSymOfssize( opnd.sym ) ) )
-                            opnd.Ofssize = USE16;
+                        char tmp = GetSymOfssize( opnd.sym );
+                        if ( CurrWordSize != ( 2 << tmp ) )
+                            opnd.Ofssize = tmp;
                             //EmitErr( INVOKE_ARGUMENT_TYPE_MISMATCH, reqParam+1 );
 
                     }
@@ -856,6 +857,8 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     AddLineQueueX( " pushd %r %s", T_OFFSET, fullparam );
                 } else if ( CurrWordSize > 2 && curr->sym.Ofssize == USE16 &&
                            ( curr->sym.isfar || Ofssize == USE16 ) ) { /* v2.11: added */
+                    AddLineQueueX( " pushw %r %s", T_OFFSET, fullparam );
+                } else if ( CurrWordSize == 2 && opnd.Ofssize == USE32 && (!curr->sym.is_vararg) ) { /* v2.16: added */
                     AddLineQueueX( " pushw %r %s", T_OFFSET, fullparam );
                 } else {
 #if AMD64_SUPPORT
