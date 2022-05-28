@@ -1145,7 +1145,7 @@ static void pe_emit_import_data( void )
                     for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
                     if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
                         pp++;
-                        myatoi128( pp, &num, 10, strlen( pp ) );
+                        myatoi128( pp, num, 10, strlen( pp ) );
                         AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
                         continue;
                     }
@@ -1167,7 +1167,7 @@ static void pe_emit_import_data( void )
                     for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
                     if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
                         pp++;
-                        myatoi128( pp, &num, 10, strlen( pp ) );
+                        myatoi128( pp, num, 10, strlen( pp ) );
                         DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
                         AddLineQueueX( "%s%s @LPPROC 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, (uint_32)num[0] );
                         continue;
