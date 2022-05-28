@@ -2747,7 +2747,7 @@ static ret_code check_size( struct code_info *CodeInfo, const struct expr opndx[
                 CodeInfo->opnd[OPND2].type &= ~OP_A;
                 DebugMsg1(("check_size: OP_A flag reset, new op2=%X\n", CodeInfo->opnd[OPND2].type ));
 #if AMD64_SUPPORT
-            } else if ( CodeInfo->Ofssize == USE64 && ( CodeInfo->opnd[OPND1].data64 < 0x80000000 || CodeInfo->opnd[OPND1].data64 >= 0xffffffff80000000 ) ) {
+            } else if ( CodeInfo->Ofssize == USE64 && ( CodeInfo->opnd[OPND1].data64 < 0x80000000 || CodeInfo->opnd[OPND1].data64 >= 0xffffffff80000000ULL ) ) {
                 /* for 64bit, opcodes A0-A3 ( direct memory addressing with AL/AX/EAX/RAX )
                  * are followed by a full 64-bit moffs. This is only used if the offset won't fit
                  * in a 32-bit signed value.
@@ -2763,7 +2763,7 @@ static ret_code check_size( struct code_info *CodeInfo, const struct expr opndx[
                 CodeInfo->opnd[OPND1].type &= ~OP_A;
                 DebugMsg1(("check_size: OP_A flag reset, new op1=%X\n", CodeInfo->opnd[OPND1].type ));
 #if AMD64_SUPPORT
-            } else if ( CodeInfo->Ofssize == USE64 && ( CodeInfo->opnd[OPND2].data64 < 0x80000000 || CodeInfo->opnd[OPND2].data64 >= 0xffffffff80000000 ) ) {
+            } else if ( CodeInfo->Ofssize == USE64 && ( CodeInfo->opnd[OPND2].data64 < 0x80000000 || CodeInfo->opnd[OPND2].data64 >= 0xffffffff80000000ULL ) ) {
                 CodeInfo->opnd[OPND1].type &= ~OP_A;
                 DebugMsg1(("check_size: OP_A flag reset, new op2=%X\n", CodeInfo->opnd[OPND1].type ));
 #endif
