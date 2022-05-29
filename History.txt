@@ -20,6 +20,9 @@
       an error in this case - this is now done as well ); see invoke42.asm.
       The "reverse" case ( 16-bit code, address of a symbol in a 32-bit
       segment to be pushed ) must also be rejected; see invoke44.asm.
+   -  invoke directive, "ADDR", "far ptr" modifier for vararg arguments: the
+      modifier was ignored, so that no segment part was pushed; see
+      invoke45.asm & invoke46.asm.
 
    Other changes:
    -  format pe: allow imports by number; see pe10.asm.

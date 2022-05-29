@@ -811,9 +811,12 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
             /* push segment part of address?
              * v2.11: do not assume a far pointer if psize == fptrsize
              * ( parameter might be near32 in a 16-bit environment )
+             * v2.16: also include far overrides in vararg arguments.
              */
             //if ( curr->sym.isfar || psize == fptrsize ) {
-            if ( curr->sym.isfar || psize > ( 2 << curr->sym.Ofssize ) ) {
+            //if ( curr->sym.isfar || psize > ( 2 << curr->sym.Ofssize ) ) {
+            if ( curr->sym.isfar || psize > ( 2 << curr->sym.Ofssize ) ||
+                ( curr->sym.is_vararg && opnd.mem_type == MT_FAR ) ) {
 
                 short sreg;
                 sreg = GetSegmentPart( &opnd, buffer, fullparam );
@@ -878,7 +881,9 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
             }
         }
         if ( curr->sym.is_vararg ) {
-            size_vararg += CurrWordSize + ( curr->sym.isfar ? CurrWordSize : 0 );
+            /* v2.16: include "far ptr" override for vararg arguments */
+            //size_vararg += CurrWordSize + ( curr->sym.isfar ? CurrWordSize : 0 );
+            size_vararg += CurrWordSize + ( ( curr->sym.isfar || opnd.mem_type == MT_FAR ) ? CurrWordSize : 0 );
             DebugMsg1(("PushInvokeParm(%u): new value of size_vararg=%u [CurrWordSize=%u]\n", reqParam, size_vararg, CurrWordSize ));
         }
     } else { /* ! ADDR branch */
@@ -929,10 +934,10 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
             //} else if ( opnd.mem_type == MT_EMPTY ) { /* v2.10: a TYPE may return mem_type != MT_EMPTY! */
             } else if ( opnd.kind == EXPR_CONST || opnd.mem_type == MT_EMPTY ) {
                 /* v2.16: don't set asize = psize if argument is an address */
-				if ( opnd.kind == EXPR_ADDR && opnd.instr == T_OFFSET && opnd.sym ) {
+                if ( opnd.kind == EXPR_ADDR && opnd.instr == T_OFFSET && opnd.sym ) {
                     asize = 2 << GetSymOfssize( opnd.sym );
-					DebugMsg1(("PushInvokeParm(%u): sym=%s, Ofssize=%d\n", reqParam, opnd.sym->name, GetSymOfssize( opnd.sym ) ));
-				} else
+                    DebugMsg1(("PushInvokeParm(%u): sym=%s, Ofssize=%d\n", reqParam, opnd.sym->name, GetSymOfssize( opnd.sym ) ));
+                } else
                     asize = psize;
                 DebugMsg1(("PushInvokeParm(%u): opnd.kind=%u opnd.instr=%u asize=%u psize=%u\n", reqParam, opnd.kind, opnd.instr, asize, psize ));
                 /* v2.04: added, to catch 0-size params ( STRUCT without members ) */
