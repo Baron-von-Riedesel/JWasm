@@ -792,8 +792,12 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 return( NOT_ERROR );
 
         if ( opnd.kind == EXPR_REG || opnd.indirect ) {
-            if ( curr->sym.isfar || psize == fptrsize ) {
-                DebugMsg1(("PushInvokeParam: far ptr, %s isfar=%u, psize=%u, fptrsize=%u\n", curr->sym.name, curr->sym.isfar, psize, fptrsize ));
+            /* v2.16: also include far overrides in vararg arguments. */
+            //if ( curr->sym.isfar || psize == fptrsize ) {
+            if ( curr->sym.isfar || psize == fptrsize ||
+                ( curr->sym.is_vararg && opnd.mem_type == MT_FAR ) ) {
+                DebugMsg1(("PushInvokeParam: ADDR operand is FAR, %s isfar=%u, psize=%u, fptrsize=%u, opnd.mem_type=%X\n",
+                        curr->sym.name, curr->sym.isfar, psize, fptrsize, opnd.mem_type ));
                 if ( opnd.sym && opnd.sym->state == SYM_STACK )
                     GetResWName( T_SS, buffer );
                 else if ( opnd.override != NULL )
@@ -820,6 +824,7 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
 
                 short sreg;
                 sreg = GetSegmentPart( &opnd, buffer, fullparam );
+                DebugMsg1(("PushInvokeParm(%u): ADDR operand is FAR, sreg=%u\n", reqParam, sreg ));
                 if ( sreg ) {
                     /* v2.11: push segment part as WORD or DWORD depending on target's offset size
                      * problem: "pushw ds" is not accepted, so just emit a size prefix.
