@@ -792,12 +792,18 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 return( NOT_ERROR );
 
         if ( opnd.kind == EXPR_REG || opnd.indirect ) {
-            /* v2.16: also include far overrides in vararg arguments. */
+            /* v2.16: also include far overrides in vararg arguments.
+             */
             //if ( curr->sym.isfar || psize == fptrsize ) {
             if ( curr->sym.isfar || psize == fptrsize ||
                 ( curr->sym.is_vararg && opnd.mem_type == MT_FAR ) ) {
-                DebugMsg1(("PushInvokeParam: ADDR operand is FAR, %s isfar=%u, psize=%u, fptrsize=%u, opnd.mem_type=%X\n",
-                        curr->sym.name, curr->sym.isfar, psize, fptrsize, opnd.mem_type ));
+#ifdef DEBUG_OUT
+                /* consider to emit a warning if a "near ptr" coercion for vararg arguments is detected (Masm ignores it as well ). */
+                if ( curr->sym.is_vararg && opnd.mem_type == MT_NEAR )
+                    DebugMsg(("PushInvokeParam(%u): WARNING: NEAR PTR coercion ignored (%s)\n", reqParam, opnd.sym ? opnd.sym->name : "NULL" ));
+#endif
+                DebugMsg1(("PushInvokeParam(%u): ADDR operand is FAR, %s, isfar=%u, psize=%u, fptrsize=%u, opnd.mem_type=%X\n",
+                        reqParam, curr->sym.name, curr->sym.isfar, psize, fptrsize, opnd.mem_type ));
                 if ( opnd.sym && opnd.sym->state == SYM_STACK )
                     GetResWName( T_SS, buffer );
                 else if ( opnd.override != NULL )
@@ -805,6 +811,8 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 else
                     GetResWName( T_DS, buffer );
                 AddLineQueueX( " push %s", buffer );
+                if ( curr->sym.is_vararg )
+                    size_vararg += CurrWordSize;
             }
             AddLineQueueX( " lea %r, %s", regax[ModuleInfo.Ofssize], fullparam );
             *r0flags |= R0_USED;
@@ -823,6 +831,11 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 ( curr->sym.is_vararg && opnd.mem_type == MT_FAR ) ) {
 
                 short sreg;
+#ifdef DEBUG_OUT
+                /* consider to emit a warning if a "near ptr" coercion for vararg arguments is detected (Masm ignores it as well ). */
+                if ( curr->sym.is_vararg && opnd.mem_type == MT_NEAR )
+                    DebugMsg(("PushInvokeParam(%u): WARNING: NEAR PTR coercion ignored (%s)\n", reqParam, opnd.sym ? opnd.sym->name : "NULL" ));
+#endif
                 sreg = GetSegmentPart( &opnd, buffer, fullparam );
                 DebugMsg1(("PushInvokeParm(%u): ADDR operand is FAR, sreg=%u\n", reqParam, sreg ));
                 if ( sreg ) {
@@ -834,6 +847,8 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     AddLineQueueX( " push %r", sreg );
                 } else
                     AddLineQueueX( " push %s", buffer );
+                if ( curr->sym.is_vararg )
+                    size_vararg += CurrWordSize;
             }
             /* push offset part of address */
             if ( (ModuleInfo.curr_cpu & P_CPU_MASK ) < P_186 ) {
@@ -886,9 +901,9 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
             }
         }
         if ( curr->sym.is_vararg ) {
-            /* v2.16: include "far ptr" override for vararg arguments */
+            /* v2.16: size_vararg now already adjusted if a segment part was pushed */
             //size_vararg += CurrWordSize + ( curr->sym.isfar ? CurrWordSize : 0 );
-            size_vararg += CurrWordSize + ( ( curr->sym.isfar || opnd.mem_type == MT_FAR ) ? CurrWordSize : 0 );
+            size_vararg += CurrWordSize;
             DebugMsg1(("PushInvokeParm(%u): new value of size_vararg=%u [CurrWordSize=%u]\n", reqParam, size_vararg, CurrWordSize ));
         }
     } else { /* ! ADDR branch */
