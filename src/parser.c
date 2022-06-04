@@ -2763,7 +2763,11 @@ static ret_code check_size( struct code_info *CodeInfo, const struct expr opndx[
                 CodeInfo->opnd[OPND1].type &= ~OP_A;
                 DebugMsg1(("check_size: OP_A flag reset, new op1=%X\n", CodeInfo->opnd[OPND1].type ));
 #if AMD64_SUPPORT
-            } else if ( CodeInfo->Ofssize == USE64 && ( CodeInfo->opnd[OPND2].data64 < 0x80000000 || CodeInfo->opnd[OPND2].data64 >= 0xffffffff80000000 ) ) {
+#if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
+            } else if ( CodeInfo->Ofssize == USE64 && ( CodeInfo->opnd[OPND2].data64 < 0x80000000 || CodeInfo->opnd[OPND2].data64 >= 0xffffffff80000000ULL ) ) {
+#else
+            } else if ( CodeInfo->Ofssize == USE64 && ( CodeInfo->opnd[OPND2].data64 < 0x80000000 || CodeInfo->opnd[OPND2].data64 >= 0xffffffff80000000ui64 ) ) {
+#endif
                 CodeInfo->opnd[OPND1].type &= ~OP_A;
                 DebugMsg1(("check_size: OP_A flag reset, new op2=%X\n", CodeInfo->opnd[OPND1].type ));
 #endif

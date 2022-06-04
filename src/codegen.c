@@ -469,7 +469,11 @@ static void output_data( const struct code_info *CodeInfo, enum operand_type det
                     size = 4; /* = size of displacement */
 #if AMD64_SUPPORT
                     /* v2.11: overflow check for 64-bit added */
-                    if ( CodeInfo->Ofssize == USE64 && CodeInfo->opnd[index].data64 >= 0x80000000 && CodeInfo->opnd[index].data64 < 0xffffffff80000000 )
+#if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
+                    if ( CodeInfo->Ofssize == USE64 && CodeInfo->opnd[index].data64 >= 0x80000000 && CodeInfo->opnd[index].data64 < 0xffffffff80000000ULL )
+#else
+                    if ( CodeInfo->Ofssize == USE64 && CodeInfo->opnd[index].data64 >= 0x80000000 && CodeInfo->opnd[index].data64 < 0xffffffff80000000ui64 )
+#endif
                         EmitErr( INVALID_INSTRUCTION_OPERANDS );
 #endif
                 }

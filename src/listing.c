@@ -269,7 +269,11 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         if ( sym->value3264 != 0 && ( sym->value3264 != -1 || sym->value >= 0 ) )
             /* v2.13: the addition & shift did not work. */
             //sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value + ( (uint_64)sym->value3264 << 32 ) );
+#if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
             sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
+#else
+            sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
+#endif
         else
 #endif
             sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I32_SPEC "X", sym->value );
