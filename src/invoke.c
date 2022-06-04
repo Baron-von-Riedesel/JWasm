@@ -980,7 +980,17 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     goto push_address;
                 if ( opnd.Ofssize == USE_EMPTY )
                     opnd.Ofssize = ModuleInfo.Ofssize;
-                asize = SizeFromMemtype( opnd.mem_type, opnd.Ofssize, opnd.type );
+
+                /* v2.16: if type is MT_PTR, use symbol's total size;
+                 * SizeFromMemtype() cannot decide if pointer is near or far; see invoke47.asm
+                 */
+                if ( opnd.kind == EXPR_ADDR && opnd.mem_type == MT_PTR && opnd.sym ) {
+                    DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, opnd.sym->total_size ));
+                    asize = opnd.sym->total_size;
+                } else
+                    asize = SizeFromMemtype( opnd.mem_type, opnd.Ofssize, opnd.type );
+
+
             } else {
                 if ( opnd.sym != NULL )
                     asize = opnd.sym->type->total_size;

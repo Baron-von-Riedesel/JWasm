@@ -247,13 +247,14 @@ int SizeFromMemtype( enum memtype mem_type, int Ofssize, struct asym *type )
         //return( ( 2 << Ofssize ) + ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) );
         return( ( 2 << Ofssize ) + ( type->isfar ? 2 : 0 ) );
     case MT_PTR:
-        DebugMsg1(("SizeFromMemtype( MT_PTR, Ofssize=%u )=%u\n", Ofssize, ( 2 << Ofssize ) + ( ( SIZE_DATAPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) ));
+        DebugMsg1(("SizeFromMemtype( MT_PTR, Ofssize=%u, type=%s )=%u\n",
+                   Ofssize, type ? type->name : "NULL", ( 2 << Ofssize ) + ( ( SIZE_DATAPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) ));
         return( ( 2 << Ofssize ) + ( ( SIZE_DATAPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) );
     case MT_TYPE:
         if ( type )
             return( type->total_size );
     default:
-        DebugMsg1(("SizeFromMemtype( memtype=%Xh, Ofssize=%u )=%u\n", mem_type, Ofssize, 0 ));
+        DebugMsg1(("SizeFromMemtype( memtype=%Xh, Ofssize=%u, type=%s )=%u\n", mem_type, Ofssize, type ? type->name : "NULL", 0 ));
         return( 0 );
     }
 }

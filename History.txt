@@ -23,6 +23,9 @@
    -  invoke directive, "ADDR", "far ptr" modifier for vararg arguments: the
       modifier was ignored, so that no segment part was pushed; see
       invoke45.asm & invoke46.asm.
+   -  invoke directive, ptr types: invoke might have emitted error "argument
+      type mismatch" for arguments of type MT_PTR if their distance didn't
+      match the one from the memory model; see invoke47.asm.
 
    Other changes:
    -  format pe: allow imports by number; see pe10.asm.
