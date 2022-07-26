@@ -41,6 +41,15 @@
  */
 #define MASM_EXTCOND 1  /* 1 is Masm compatible */
 
+/* There's a deliberate Masm incompatibility in JWasm's implementation of
+ * EXTERN(DEF): the current segment is stored in the definition, making the
+ * assembler assume that, in case the symbol's distance is FAR, that it's
+ * in the current segment ( thus allowing some code optimisation ).
+ * To behave exactly like Masm in this regard option -Zg has to be set - or
+ * enable the switch below.
+ */
+#define MASM_NOSEGSTORE 0  /* 1 is Masm compatible */
+
 static const char szCOMM[] = "COMM";
 
 #if MANGLERSUPP
@@ -277,7 +286,9 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
                 /* v2.04: don't inherit current segment for FAR externals
                  * if -Zg is set.
                  */
+#if MASM_NOSEGSTORE
                 if ( Options.masm_compat_gencode )
+#endif
                     break; 
                 /* fall through */
             default:
