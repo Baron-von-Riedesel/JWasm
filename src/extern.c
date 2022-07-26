@@ -261,6 +261,9 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
         if ( sym == NULL || sym->state == SYM_UNDEFINED ) {
             sym = CreateExternal( sym, token, TRUE );
             isnew = TRUE;
+        } else if ( sym->state != SYM_INTERNAL && sym->state != SYM_EXTERNAL ) {
+            /* v2.16: externdef must be intern or extern */
+            return( EmitErr( CANNOT_DEFINE_AS_PUBLIC_OR_EXTERNAL, sym->name ));
         }
 
         /* new symbol? */

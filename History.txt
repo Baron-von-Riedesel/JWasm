@@ -27,6 +27,8 @@
       type mismatch" for arguments of type MT_PTR if their distance didn't
       match the one from the memory model; see invoke47.asm, invoke49.asm
       and invoke50.asm.
+   -  externdef directive: if the symbol was already defined but neither
+      internal nor external, no error was emitted; see extern16.asm.
 
    Other changes:
    -  format pe: allow imports by number; see pe10.asm.
