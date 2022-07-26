@@ -982,11 +982,19 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     opnd.Ofssize = ModuleInfo.Ofssize;
 
                 /* v2.16: if type is MT_PTR, use symbol's total size;
-                 * SizeFromMemtype() cannot decide if pointer is near or far; see invoke47.asm
+                 * SizeFromMemtype() cannot decide if pointer is near or far; see invoke47/49/50.asm
                  */
                 if ( opnd.kind == EXPR_ADDR && opnd.mem_type == MT_PTR && opnd.sym ) {
-                    DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, opnd.sym->total_size ));
-                    asize = opnd.sym->total_size;
+                    if ( opnd.sym->state == SYM_EXTERNAL ) { /* external symbol: see invoke50.asm */
+                        asize = SizeFromMemtype( opnd.sym->isfar ? MT_FAR : MT_NEAR, opnd.Ofssize == USE_EMPTY ? opnd.sym->Ofssize : opnd.Ofssize, NULL );
+                        DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, asize ));
+                    } else if ( opnd.mbr ) {
+                        asize = opnd.mbr->total_size;
+                        DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, mbr=%s, size=%u\n", reqParam, opnd.sym->name, opnd.mbr->name, asize ));
+                    } else {
+                        asize = opnd.sym->total_size;
+                        DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, asize ));
+                    }
                 } else
                     asize = SizeFromMemtype( opnd.mem_type, opnd.Ofssize, opnd.type );
 
