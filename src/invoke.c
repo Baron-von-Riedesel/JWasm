@@ -989,10 +989,10 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                         asize = SizeFromMemtype( opnd.sym->isfar ? MT_FAR : MT_NEAR, opnd.Ofssize == USE_EMPTY ? opnd.sym->Ofssize : opnd.Ofssize, NULL );
                         DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, asize ));
                     } else if ( opnd.mbr ) {
-                        asize = opnd.mbr->total_size;
+                        asize = opnd.mbr->isarray ? opnd.mbr->total_size / opnd.mbr->total_length : opnd.mbr->total_size ;
                         DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, mbr=%s, size=%u\n", reqParam, opnd.sym->name, opnd.mbr->name, asize ));
                     } else {
-                        asize = opnd.sym->total_size;
+                        asize = opnd.sym->isarray ? opnd.sym->total_size / opnd.sym->total_length : opnd.sym->total_size;
                         DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, asize ));
                     }
                 } else
