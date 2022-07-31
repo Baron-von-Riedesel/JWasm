@@ -623,7 +623,9 @@ ret_code ExternDirective( int i, struct asm_tok tokenarray[] )
 #endif
             if ( sym->state != SYM_EXTERNAL ) {
                 DebugMsg(("ExternDirective: symbol %s redefinition, state=%u\n", token, sym->state ));
-                return( EmitErr( SYMBOL_REDEFINITION, token ) );
+                /* v2.16: change error msg to what masm displays */
+                //return( EmitErr( SYMBOL_REDEFINITION, token ) );
+                return( EmitErr( CANNOT_DEFINE_AS_PUBLIC_OR_EXTERNAL, token ) );
             }
             /* v2.05: added to accept type prototypes */
             if ( ti.is_ptr == 0 && ti.symtype && ti.symtype->isproc ) {

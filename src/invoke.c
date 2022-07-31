@@ -978,15 +978,16 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                      opnd.instr == EMPTY &&
                      ( opnd.mem_type == MT_NEAR || opnd.mem_type == MT_FAR ) )
                     goto push_address;
-                if ( opnd.Ofssize == USE_EMPTY )
-                    opnd.Ofssize = ModuleInfo.Ofssize;
+                /* v2.16: do this below, and NOT for MT_PTR! */
+                //if ( opnd.Ofssize == USE_EMPTY )
+                //    opnd.Ofssize = ModuleInfo.Ofssize;
 
                 /* v2.16: if type is MT_PTR, use symbol's total size;
                  * SizeFromMemtype() cannot decide if pointer is near or far; see invoke47/49/50.asm
                  */
                 if ( opnd.kind == EXPR_ADDR && opnd.mem_type == MT_PTR && opnd.sym ) {
                     if ( opnd.sym->state == SYM_EXTERNAL ) { /* external symbol: see invoke50.asm */
-                        asize = SizeFromMemtype( opnd.sym->isfar ? MT_FAR : MT_NEAR, opnd.Ofssize == USE_EMPTY ? opnd.sym->Ofssize : opnd.Ofssize, NULL );
+                        asize = SizeFromMemtype( opnd.sym->isfar ? MT_FAR : MT_NEAR, opnd.Ofssize != USE_EMPTY ? opnd.Ofssize : opnd.sym->Ofssize, NULL );
                         DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, asize ));
                     } else if ( opnd.mbr ) {
                         asize = opnd.mbr->isarray ? opnd.mbr->total_size / opnd.mbr->total_length : opnd.mbr->total_size ;
@@ -995,8 +996,12 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                         asize = opnd.sym->isarray ? opnd.sym->total_size / opnd.sym->total_length : opnd.sym->total_size;
                         DebugMsg1(("PushInvokeParm(%u): memtype MT_PTR, symbol=%s, size=%u\n", reqParam, opnd.sym->name, asize ));
                     }
-                } else
+                } else {
+                    /* v2.16: init opnd.Ofssize only if NOT MT_PTR! */
+                    if ( opnd.Ofssize == USE_EMPTY )
+                        opnd.Ofssize = ModuleInfo.Ofssize;
                     asize = SizeFromMemtype( opnd.mem_type, opnd.Ofssize, opnd.type );
+                }
 
 
             } else {
