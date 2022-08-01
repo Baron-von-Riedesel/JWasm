@@ -247,8 +247,12 @@ int SizeFromMemtype( enum memtype mem_type, int Ofssize, struct asym *type )
         //return( ( 2 << Ofssize ) + ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) );
         return( ( 2 << Ofssize ) + ( type->isfar ? 2 : 0 ) );
     case MT_PTR:
-        DebugMsg1(("SizeFromMemtype( MT_PTR, Ofssize=%u, type=%s )=%u\n",
-                   Ofssize, type ? type->name : "NULL", ( 2 << Ofssize ) + ( ( SIZE_DATAPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) ));
+        /* v2.16: check type; might be called so by idata_nofixup; see invoke52.asm */
+        if ( type ) {
+            DebugMsg1(("SizeFromMemtype( MT_PTR, type=%s, Ofssize=%u, isfar=%u )=%u\n", type->name, type->Ofssize, type->isfar, ( 2 << type->Ofssize ) + ( type->isfar ? 2 : 0 ) ));
+            return( ( 2 << type->Ofssize ) + ( type->isfar ? 2 : 0 ) );
+        }
+        DebugMsg1(("SizeFromMemtype( MT_PTR, Ofssize=%u, type=NULL )=%u )\n", Ofssize, ( 2 << Ofssize ) + ( ( SIZE_DATAPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) ));
         return( ( 2 << Ofssize ) + ( ( SIZE_DATAPTR & ( 1 << ModuleInfo.model ) ) ? 2 : 0 ) );
     case MT_TYPE:
         if ( type )

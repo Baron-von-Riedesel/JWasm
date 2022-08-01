@@ -982,8 +982,9 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 //if ( opnd.Ofssize == USE_EMPTY )
                 //    opnd.Ofssize = ModuleInfo.Ofssize;
 
-                /* v2.16: if type is MT_PTR, use symbol's total size;
-                 * SizeFromMemtype() cannot decide if pointer is near or far; see invoke47/49/50.asm
+                /* v2.16: if type is MT_PTR, then SizeFromMemtype() cannot decide if pointer is near or far;
+                 * see invoke47/49/50.asm;
+                 * sym.isfar and sym.Ofssize are NOT set if state is SYM_INTERNAL ( fields overlapp with first_size )!
                  */
                 if ( opnd.kind == EXPR_ADDR && opnd.mem_type == MT_PTR && opnd.sym ) {
                     if ( opnd.sym->state == SYM_EXTERNAL ) { /* external symbol: see invoke50.asm */
