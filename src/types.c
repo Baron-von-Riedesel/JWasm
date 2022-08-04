@@ -943,9 +943,12 @@ ret_code GetQualifiedType( int *pi, struct asm_tok tokenarray[], struct qualifie
             pti->mem_type = MT_PTR;
         else
             pti->mem_type = GetMemtypeSp( type );
-        if ( pti->mem_type == MT_PTR )
+        if ( pti->mem_type == MT_PTR ) {
+            /* v2.16: if pointer to data and no distance entered, use memory model to set pointer distance */
+            if ( distance == FALSE && !(pti->ptr_memtype &  MT_SPECIAL_MASK ) )
+                pti->is_far = ( SIZE_DATAPTR & ( 1 << ModuleInfo.model ) ) ? 1 : 0;
             pti->size = SizeFromMemtype( pti->is_far ? MT_FAR : MT_NEAR, pti->Ofssize, NULL );
-        else
+        } else
             pti->size = SizeFromMemtype( pti->mem_type, pti->Ofssize, NULL );
     }
     *pi = i;

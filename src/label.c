@@ -212,6 +212,8 @@ ret_code LabelDirective( int i, struct asm_tok tokenarray[] )
     uint_32 length;
 #endif
 
+    DebugMsg1(("LabelDirective( i=%u ) enter\n", i ));
+
     if( i != 1 ) {  /* LABEL must be preceded by an ID */
         return( EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr ) );
     }
