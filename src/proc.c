@@ -1481,7 +1481,7 @@ ret_code ProcDir( int i, struct asm_tok tokenarray[] )
             //           sym->offset != GetCurrOffset() || sym->segment != &CurrSeg->sym ) {
             return( EmitErr( SYMBOL_REDEFINITION, sym->name ) );
         }
-        SetSymSegOfs( sym );
+        SetSymSegOfs( sym ); /* set segment/offset of the proc symbol */
 
         SymClearLocal();
 
@@ -2367,6 +2367,15 @@ static ret_code write_default_prologue( void )
     /* v2.11: now done in write_prologue() */
     //info->localsize = ROUND_UP( info->localsize, CurrWordSize );
     regist = info->regslist;
+
+#if 1
+    /* v2.16: emit a warning (level 3) if prologue is NOT at the very beginning of the procedure.
+     * may happen if data definition directives are placed behind the PROC directive.
+     * it's actually a rather severe thing, but Masm accepts it without complaints.
+     */
+    if ( Parse_Pass == PASS_1 && GetCurrOffset() > CurrProc->sym.offset )
+        EmitWarn( 3, PROLOGUE_NOT_AT_PROC_START );
+#endif
 
 #if AMD64_SUPPORT
     /* initialize shadow space for register params */
