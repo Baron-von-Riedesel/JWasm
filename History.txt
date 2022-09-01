@@ -30,6 +30,11 @@
       internal nor external, no error was emitted; see extern16.asm.
    -  pointer to data did ignore default distance of memory model; see
       dsize.asm.
+   -  option -pe: .data and .data? sections weren't merged; see pe11.asm.
+   -  option -pe: if a section with initialized data (.reloc) followed a .data?
+      section, space for the .data? section was reserved in the binary; see
+      pe11.asm.
+
 
    Other changes:
    -  option -pe: allow imports by number; see pe10.asm.

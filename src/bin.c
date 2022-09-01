@@ -73,6 +73,7 @@ static const char szTotal[]    = { "%-42s %9" I32_SPEC "X %9" I32_SPEC "X" };
 struct calc_param {
     uint_8 first;          /* 1=first call of CalcOffset() */
     uint_8 alignment;      /* current aligment */
+    uint_8 isPE;           /* 1=binary format is PE */
     uint_32 fileoffset;    /* current file offset */
     uint_32 sizehdr;       /* -mz: size of MZ header, else 0 */
     //uint_32 sizebss;     /* v2.12: -mz: size of BSS segments. v2.13: removed */
@@ -215,7 +216,9 @@ uint_32 hfwrite( uint_8 huge *pBuffer, int size, uint_32 count, FILE *file )
 }
 #endif
 
-/* calculate starting offset of segments and groups */
+/* calculate starting offset ( both memory and file ) of segments 
+ * and groups
+ */
 
 static void CalcOffset( struct dsym *curr, struct calc_param *cp )
 /****************************************************************/
@@ -312,7 +315,14 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     curr->e.seginfo->fileoffset = cp->fileoffset;
     curr->e.seginfo->start_offset = offset;
 
-    cp->fileoffset += curr->sym.max_offset - curr->e.seginfo->start_loc;
+    /* v2.16: don't update fileoffset for BSS segments in PE, no matter what segments
+     * might follow.
+     */
+    if ( cp->isPE && curr->e.seginfo->segtype == SEGTYPE_BSS )
+        ;
+    else
+        cp->fileoffset += curr->sym.max_offset - curr->e.seginfo->start_loc;
+
     //if ( cp->first && ModuleInfo.sub_format == SFORMAT_NONE ) {
     if ( ModuleInfo.sub_format == SFORMAT_NONE ) {
         if ( cp->first )
@@ -433,7 +443,7 @@ static int GetSegRelocs( uint_16 *pDst )
 
 #endif
 
-/* get image size.
+/* get image size - doesn't modify fields in segment table.
  * memimage=FALSE: get size without uninitialized segments (BSS and STACK)
  * memimage=TRUE: get full size
  */
@@ -1386,9 +1396,11 @@ struct codedata {
     uint_32 datasize;
 };
 
-/* finish a section in a PE */
+/* finish a section in a PE.
+ */
 
 void pe_finish_section( struct IMAGE_SECTION_HEADER *section, struct calc_param *cp, struct codedata *cd )
+/********************************************************************************************************/
 {
 #if RAWSIZE_ROUND /* AntiVir TR/Crypt.XPACK Gen */
     section->SizeOfRawData += cp->rawpagesize - 1;
@@ -1417,7 +1429,9 @@ void pe_finish_section( struct IMAGE_SECTION_HEADER *section, struct calc_param 
 }
 
 /* pe_set_values() - called by bin_write_module()
- * create object table.
+ * - create object table
+ * - sort segments
+ * - assign RVAs
  */
 
 static void pe_set_values( struct calc_param *cp )
@@ -1503,6 +1517,16 @@ static void pe_set_values( struct calc_param *cp )
     falign = get_bit( GHF( OptionalHeader.FileAlignment ) );
     malign = GHF( OptionalHeader.SectionAlignment );
 
+	/* v2.16: merge .data and .data? sections */
+	for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
+		if ( curr->e.seginfo->segtype == SEGTYPE_DATA )
+			i = curr->e.seginfo->lname_idx;
+		else if ( curr->e.seginfo->segtype == SEGTYPE_BSS && i != -1 )
+			curr->e.seginfo->lname_idx = i;
+	}
+
+	cp->isPE = TRUE;
+
     /* assign RVAs to sections */
 
     for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
@@ -1516,8 +1540,8 @@ static void pe_set_values( struct calc_param *cp )
             cp->rva = (cp->rva + (align - 1)) & (~(align-1));
         }
         CalcOffset( curr, cp );
-        DebugMsg(("pe_set_values: section %s, start ofs=%" I32_SPEC "Xh, size=%" I32_SPEC "Xh, file ofs=%" I32_SPEC "Xh\n",
-                  curr->sym.name, curr->e.seginfo->start_offset, curr->sym.max_offset - curr->e.seginfo->start_loc, curr->e.seginfo->fileoffset ));
+        DebugMsg(("pe_set_values: section %s, idx=%u, start ofs=%" I32_SPEC "Xh, size=%" I32_SPEC "Xh, file ofs=%" I32_SPEC "Xh\n",
+                  curr->sym.name, curr->e.seginfo->lname_idx, curr->e.seginfo->start_offset, curr->sym.max_offset - curr->e.seginfo->start_loc, curr->e.seginfo->fileoffset ));
     }
 
     if ( reloc ) {
@@ -1581,7 +1605,11 @@ static void pe_set_values( struct calc_param *cp )
             DebugMsg(("pe_set_values(%s): section name=%.8s, rva=%" I32_SPEC "X\n",
                       curr->sym.name, section->Name, section->VirtualAddress ));
         }
-        section->Characteristics |= pe_get_characteristics( curr );
+        /* v2.16: if .data and .data? have been merged, don't set the "uninitialized data" flag */
+        if ( curr->e.seginfo->segtype == SEGTYPE_BSS && ( section->Characteristics & IMAGE_SCN_CNT_INITIALIZED_DATA ) )
+            ;
+        else
+            section->Characteristics |= pe_get_characteristics( curr );
 
         if ( curr->e.seginfo->segtype != SEGTYPE_BSS ) {
             section->SizeOfRawData += curr->sym.max_offset;
@@ -1745,7 +1773,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
     struct dsym *stack = NULL;
     uint_8  *hdrbuf;
 #endif
-    struct calc_param cp = { TRUE, 0 };
+    struct calc_param cp = { TRUE, 0, FALSE };
 
     DebugMsg(("bin_write_module: enter\n" ));
 
