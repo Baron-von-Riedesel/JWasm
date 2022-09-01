@@ -32,12 +32,14 @@
       dsize.asm.
 
    Other changes:
-   -  format pe: allow imports by number; see pe10.asm.
+   -  option -pe: allow imports by number; see pe10.asm.
    -  option -Zg: increased Masm compatible codegen for hll expressions; see
       hll4.asm.
    -  warning "Prologue not at PROC start" (level 3) added if the procedure's
       prologue isn't generated at the procedure's start address; see
       invoke53.asm.
+   -  option -pe: default image bases changed to 0x10000000 for PE32 dlls,
+      0x140000000 for PE64 exes, 0x180000000 for PE64 dlls (MS link compat).
 
    09.04.2022, v2.15:
 

@@ -145,6 +145,10 @@ static const char mzcode[] = {
     "db 'This is a PE executable',0Dh,0Ah,'$'"
 };
 
+#define PE_UNDEF_BASE 0xffffffff
+#define PE32_DEF_BASE_EXE 0x400000
+#define PE32_DEF_BASE_DLL 0x10000000
+
 /* default 32-bit PE header */
 static const struct IMAGE_PE_HEADER32 pe32def = {
     'P'+ ('E' << 8 ),
@@ -153,7 +157,7 @@ static const struct IMAGE_PE_HEADER32 pe32def = {
     },
     { IMAGE_NT_OPTIONAL_HDR32_MAGIC,
     5,1,0,0,0,0,0,0, /* linkervers maj/min, sizeof code/init/uninit, entrypoint, base code/data */
-    0x400000,        /* image base */
+    PE_UNDEF_BASE,   /* image base */
     0x1000, 0x200,   /* SectionAlignment, FileAlignment */
     4,0,0,0,4,0,     /* OSversion maj/min, Imagevers maj/min, Subsystemvers maj/min */
     0,0,0,0,         /* Win32vers, sizeofimage, sizeofheaders, checksum */
@@ -164,6 +168,10 @@ static const struct IMAGE_PE_HEADER32 pe32def = {
     }
 };
 #if AMD64_SUPPORT
+
+#define PE64_DEF_BASE_EXE 0x140000000
+#define PE64_DEF_BASE_DLL 0x180000000
+
 /* default 64-bit PE header */
 static const struct IMAGE_PE_HEADER64 pe64def = {
     'P'+ ('E' << 8 ),
@@ -172,7 +180,7 @@ static const struct IMAGE_PE_HEADER64 pe64def = {
     },
     { IMAGE_NT_OPTIONAL_HDR64_MAGIC,
     5,1,0,0,0,0,0,   /* linkervers maj/min, sizeof code/init data/uninit data, entrypoint, base code RVA */
-    0x400000,        /* image base */
+    PE_UNDEF_BASE,   /* image base */
     0x1000, 0x200,   /* SectionAlignment, FileAlignment */
     4,0,0,0,4,0,     /* OSversion maj/min, Imagevers maj/min, Subsystemvers maj/min */
     0,0,0,0,         /* Win32vers, sizeofimage, sizeofheaders, checksum */
@@ -846,6 +854,10 @@ static void set_file_flags( struct asym *sym, struct expr *opnd )
     DebugMsg1(("set_file_flags(%s, %X): value=%X\n", sym->name, opnd, sym->value ));
 }
 
+/* create .hdr$2 segment ( PE header ), initialized with default values,
+ * and symbol @pe_file_flags.
+ */
+
 void pe_create_PE_header( void )
 /******************************/
 {
@@ -1404,6 +1416,9 @@ void pe_finish_section( struct IMAGE_SECTION_HEADER *section, struct calc_param 
     return;
 }
 
+/* pe_set_values() - called by bin_write_module()
+ * create object table.
+ */
 
 static void pe_set_values( struct calc_param *cp )
 /************************************************/
@@ -1675,10 +1690,17 @@ static void pe_set_values( struct calc_param *cp )
             datadir[IMAGE_DIRECTORY_ENTRY_EXCEPTION].VirtualAddress = curr->e.seginfo->start_offset;
             datadir[IMAGE_DIRECTORY_ENTRY_EXCEPTION].Size = curr->sym.max_offset;
         }
-        cp->imagebase64 = GHF( OptionalHeader.ImageBase );
-    } else
+        /* v2.16: set default base for dll/exe */
+        if ( ph64->OptionalHeader.ImageBase == PE_UNDEF_BASE )
+            ph64->OptionalHeader.ImageBase = ( ff & IMAGE_FILE_DLL ) ? PE64_DEF_BASE_DLL : PE64_DEF_BASE_EXE;
+        cp->imagebase64 = ph64->OptionalHeader.ImageBase;
+    } else {
 #endif
-        cp->imagebase = GHF( OptionalHeader.ImageBase );
+        /* v2.16: set default base for dll/exe */
+        if ( ph32->OptionalHeader.ImageBase == PE_UNDEF_BASE )
+            ph32->OptionalHeader.ImageBase = ( ff & IMAGE_FILE_DLL ) ? PE32_DEF_BASE_DLL : PE32_DEF_BASE_EXE;
+        cp->imagebase = ph32->OptionalHeader.ImageBase;
+    }
 
     /* remove .hdr$1 from FLAT group again */
     //mzhdr->e.seginfo->group = NULL;
