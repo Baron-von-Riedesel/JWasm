@@ -35,7 +35,6 @@
       section, space for the .data? section was reserved in the binary; see
       pe11.asm.
 
-
    Other changes:
    -  option -pe: allow imports by number; see pe10.asm.
    -  option -Zg: increased Masm compatible codegen for hll expressions; see
@@ -45,6 +44,8 @@
       invoke53.asm.
    -  option -pe: default image bases changed to 0x10000000 for PE32 dlls,
       0x140000000 for PE64 exes, 0x180000000 for PE64 dlls (MS link compat).
+   -  error 2058 ( "magnitude of offset exceeds 16-bit" ) changed to a warning
+      ( level 3 ); see offset15.asm & offset16.asm.
 
    09.04.2022, v2.15:
 

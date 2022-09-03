@@ -569,9 +569,17 @@ static ret_code set_rm_sib( struct code_info *CodeInfo, unsigned CurrOpnd, char 
                 /* expect 16-bit but got 32-bit address */
                 DebugMsg1(( "set_rm_sib: error, Ofssize=%u, adrsize=%u, data=%" I32_SPEC "X\n",
                         CodeInfo->Ofssize, CodeInfo->prefix.adrsiz, CodeInfo->opnd[CurrOpnd].data32l ));
-                return( EmitError( MAGNITUDE_OF_OFFSET_EXCEEDS_16BIT ) );
-            }
-            rm_field = RM_D16; /* D16=110b */
+                /* v2.16: accept 32-bit offset for 16-bit, i.e. "mov ax,es:[10000000h]", but
+                 * generate a warning level 3 ( Masm just truncates to 16-bit ); see offset15.asm.
+                 * for the case code=use32 + addr size prefix 67h + offset >= 0x10000 see offset16.asm.
+                 * before v2.16, both cases were errors.
+                 */
+                rm_field = RM_D32;
+                CodeInfo->prefix.adrsiz ^= 1;
+                if ( Parse_Pass == PASS_1 )
+                    EmitWarn( 3, MAGNITUDE_OF_OFFSET_EXCEEDS_16BIT );
+            } else
+                rm_field = RM_D16; /* D16=110b */
         } else {
             rm_field = RM_D32; /* D32=101b */
 #if AMD64_SUPPORT

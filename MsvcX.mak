@@ -8,11 +8,11 @@ VCDIR  = \msvc71
 W32LIB = \WinInc\Lib
 LIBC   = \msvc71\lib\libc.lib
 
-OUTD=build\TestR
+OUTD=build\Msvc71
 inc_dirs  = -Isrc\H -I"$(VCDIR)\include"
 linker = $(VCDIR)\Bin\link.exe
 lib = $(VCDIR)\Bin\lib.exe
-extra_c_flags = -O2 -Gs -DNDEBUG
+extra_c_flags = -Ox -Gs -DNDEBUG
 c_flags =-D__NT__ $(extra_c_flags)
 LOPT = /NOLOGO /OPT:NOWIN98
 lflagsw = $(LOPTD) /SUBSYSTEM:CONSOLE $(LOPT) /map:$^*.map

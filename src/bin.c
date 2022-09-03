@@ -73,7 +73,6 @@ static const char szTotal[]    = { "%-42s %9" I32_SPEC "X %9" I32_SPEC "X" };
 struct calc_param {
     uint_8 first;          /* 1=first call of CalcOffset() */
     uint_8 alignment;      /* current aligment */
-    uint_8 isPE;           /* 1=binary format is PE */
     uint_32 fileoffset;    /* current file offset */
     uint_32 sizehdr;       /* -mz: size of MZ header, else 0 */
     //uint_32 sizebss;     /* v2.12: -mz: size of BSS segments. v2.13: removed */
@@ -81,6 +80,7 @@ struct calc_param {
     struct asym *entryseg; /* -bin only: segment of first segment */
     uint_32 imagestart;    /* -bin: start offset (of first segment), else 0 */
 #if PE_SUPPORT
+    uint_8 isPE;           /* 1=binary format is PE */
     uint_32 rva;           /* -pe: current RVA */
     union {
         uint_32 imagebase;    /* -pe: image base */
@@ -318,9 +318,11 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     /* v2.16: don't update fileoffset for BSS segments in PE, no matter what segments
      * might follow.
      */
+#if PE_SUPPORT
     if ( cp->isPE && curr->e.seginfo->segtype == SEGTYPE_BSS )
         ;
     else
+#endif
         cp->fileoffset += curr->sym.max_offset - curr->e.seginfo->start_loc;
 
     //if ( cp->first && ModuleInfo.sub_format == SFORMAT_NONE ) {
@@ -1773,7 +1775,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
     struct dsym *stack = NULL;
     uint_8  *hdrbuf;
 #endif
-    struct calc_param cp = { TRUE, 0, FALSE };
+    struct calc_param cp = { TRUE, 0 };
 
     DebugMsg(("bin_write_module: enter\n" ));
 
@@ -1810,6 +1812,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
     /* set starting offsets for all sections */
 
 #if PE_SUPPORT
+    cp.isPE = FALSE;
     cp.rva = 0;
     if ( modinfo->sub_format == SFORMAT_PE ) {
         if ( ModuleInfo.model == MODEL_NONE ) {

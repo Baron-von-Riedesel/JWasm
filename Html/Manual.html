@@ -1723,7 +1723,11 @@ _DATA                           C      10C        12        12
 </TD><TD>-</TD></TR>
 <TR BGCOLOR="#E0E0E0"><TD>20</TD><TD>if data labels become public by the -Zf option ( and not by the PUBLIC
       directive ), their names are not decorated. Also, if format is COFF, they won't become true publics,
-      they're just included in the symbol table with class "static",
+      they're just included in the symbol table with class "static".
+</TD><TD>-</TD></TR>
+<TR BGCOLOR="#E0E0E0"><TD>21</TD><TD>in 16-bit code, Masm will accept opcode "mov ax,es:[10000h]" although
+      offset 10000h exceeds 16-bit ( it will be truncated to 16-bit ). JWasm emits a level 3 warning and
+      the offset is NOT truncated.
 </TD><TD>-</TD></TR>
 </TABLE>
 
@@ -4219,7 +4223,8 @@ In 32-bit mode, all general-purpose registers except ESP can be index registers.
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x058</b></TD>
 <TD>Magnitude of offset exceeds 16 bit</TD>
-<TD></TD>
+<TD>This is a warning (level 3). Occurs, for example, if an instruction like "mov ax, ds:[1000000h]"
+    is found in a 16-bit segment. Masm accepts without complaints, but truncates the offset to 16-bit ( JWasm does NOT truncate ).</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
