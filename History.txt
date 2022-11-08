@@ -34,6 +34,9 @@
    -  option -pe: if a section with initialized data (.reloc) followed a .data?
       section, space for the .data? section was reserved in the binary; see
       pe11.asm.
+   -  if the difference of 2 labels ( at least one is a forward reference ) is
+      used as operand for another op ( shift ), error 'constant is expected'
+      may have occured; see forward9.asm.
 
    Other changes:
    -  option -pe: allow imports by number; see pe10.asm.

@@ -4083,8 +4083,8 @@ in 32/64-bit code, ESP/RSP can only appear once in indirect addressing.</TD>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x035</b></TD>
-<TD></TD>
-<TD></TD>
+<TD>Too few bits in RECORD: &lt;symbol&gt;</TD>
+<TD>Size of a Record field must be &gt; 0.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -4323,11 +4323,10 @@ Those are currently not supported.</TD>
 <TD><b>x073</b></TD>
 <TD>Size not specified, assuming: &lt;type&gt</TD>
 <TD>this is a warning. &lt;type&gt; may be BYTE, WORD or DWORD. The message may occur if an
-	immediate value is written to an untyped memory reference:
-<P><pre><font color="#008040"> 
-       mov [ebx], 1
-</font></pre><P> 
-    JWasm makes a guess and displays the warning, while Masm will display an
+	immediate value is written to an untyped memory reference, for example:
+<br><pre>mov [ebx], 1
+</pre>
+    JWasm makes a guess and displays this warning, while Masm will display an
     error in such cases.
 </TD>
 </TR>
@@ -4738,7 +4737,7 @@ error condition has occurred.</TD>
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x140</b></TD>
 <TD>Too many bits in RECORD: %s</TD>
-<TD></TD>
+<TD>Size of a RECORD is limited to 32 bits for 16-/32-bit code and 64 bits for 64-bit code.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -4780,13 +4779,13 @@ error condition has occurred.</TD>
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x147</b></TD>
 <TD>VARARG parameter must be last</TD>
-<TD></TD>
+<TD>The macro parameter qualifier VARARG can only be added to the last parameter.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x148</b></TD>
 <TD>LABEL parameter must be first</TD>
-<TD></TD>
+<TD>The macro parameter qualifier LABEL ( JWasm extension ) can only be added to the first parameter.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -4849,7 +4848,7 @@ be an EXITM somewhere inside that returns a literal.</TD>
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x158</b></TD>
 <TD>Reserved word expected</TD>
-<TD></TD>
+<TD>OPTION NOKEYWORD and OPTION RENAMEKEYWORD both expect a reserved word as argument.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">

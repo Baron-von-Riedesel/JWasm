@@ -1839,7 +1839,8 @@ static ret_code minus_op( struct expr *opnd1, struct expr *opnd2 )
         opnd2->kind == EXPR_ADDR &&
         opnd2->sym &&
         opnd2->sym->state == SYM_UNDEFINED /* && !no_error_msg */ )
-        ; /* don't convert token2 to a constant! */
+        /* don't convert token2 to a constant! */
+        DebugMsg1(("minus_op: ADDR-ADDR, op2 (undef sym) not converted to constant (kind=0)\n" ));
     else
         MakeConst( opnd2 );
 
@@ -1866,6 +1867,7 @@ static ret_code minus_op( struct expr *opnd1, struct expr *opnd2 )
             return( fnEmitErr( INVALID_USE_OF_REGISTER ) );
         }
         if( opnd2->label_tok == NULL ) {
+            //DebugMsg1(("minus_op: opnd2.label_tok == NULL, kind remains unchanged\n"));
             /* v2.06c: do 64-bit arithmetic (more rigid test in data.c) */
             //opnd1->value -= opnd2->value;
             opnd1->value64 -= opnd2->value64;
@@ -1914,17 +1916,21 @@ static ret_code minus_op( struct expr *opnd1, struct expr *opnd2 )
                 opnd2->sym->state == SYM_UNDEFINED ) {
                 opnd1->value = 1;
                 /* 2.09: make sure an undefined label is returned in opnd.sym.
-                 * expression type has to be ADDR then; see equate22.aso.
+                 * expression type has to be ADDR then; see equate22.asm.
                  * 2.11: returning EXPR_ADDR may cause problems -
                  * it may make the code longer than necessary, thus
                  * triggering an unnecessary jump extension.
                  * so it is returned only if the expression is used to define an equate.
+                 * 2.16: returning EXPR_ADDR definitely IS a problem ( see forward9.asm ).
+                 * Check for equates mentioned for 2.11 isn't implemented ( flag not available here ).
+                 * However, the problem with equate22.asm is gone by now, so there's no
+                 * longer any need to return kind EXPR_ADDR.
                  */
                 if ( opnd1->sym->state != SYM_UNDEFINED ) {
                     opnd1->sym = opnd2->sym;
                     opnd1->label_tok = opnd2->label_tok;
                 }
-                opnd1->kind = EXPR_ADDR;
+                //opnd1->kind = EXPR_ADDR; /* v2.16 deactivated - see above */
             } else {
                 /* v2.06c: do 64-bit arithmetic (more rigid test in data.c) */
                 //opnd1->value -= sym->offset;
