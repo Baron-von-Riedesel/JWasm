@@ -63,6 +63,7 @@ jmp_buf jmpenv;
 #endif
 
 #define USELSLINE 1 /* must match switch in listing.c! */
+#define EPCOMMENTS 0 /* display comments in -EP output */
 
 //#define ASM_EXT "asm"
 #ifdef __UNIX__
@@ -564,7 +565,11 @@ void WritePreprocessedLine( const char *string )
     if ( Token_Count > 0 ) {
         /* v2.08: don't print a leading % (this char is no longer filtered) */
         for ( p = string; isspace( *p ); p++ );
+#if EPCOMMENTS==0
         printf("%s\n", *p == '%' ? p+1 : string );
+#else
+        printf("%s%s\n", *p == '%' ? p+1 : string, ModuleInfo.CurrComment ? ModuleInfo.CurrComment : "" );
+#endif
         PrintEmptyLine = TRUE;
     } else if ( PrintEmptyLine ) {
         PrintEmptyLine = FALSE;

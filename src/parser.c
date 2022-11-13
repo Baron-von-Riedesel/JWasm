@@ -56,6 +56,8 @@
 #include "extern.h"
 #include "atofloat.h"
 
+#define EPCOMMENTS 0 /* 1=add pure comment lines to -EP output */
+
 #define ADDRSIZE( s, x ) ( ( ( x ) ^ ( s ) ) ? TRUE : FALSE )
 #define IS_ADDR32( s )  ( s->Ofssize ? ( s->prefix.adrsiz == FALSE ) : ( s->prefix.adrsiz == TRUE ))
 
@@ -3497,6 +3499,10 @@ void ProcessFile( struct asm_tok tokenarray[] )
             if ( Options.preprocessor_stdout == TRUE && Parse_Pass == PASS_1 )
                 WritePreprocessedLine( CurrSource );
         }
+#if EPCOMMENTS
+         else if ( Options.preprocessor_stdout == TRUE && Parse_Pass == PASS_1 && ModuleInfo.CurrComment )
+            WritePreprocessedLine( "" );
+#endif
     }
     return;
 }

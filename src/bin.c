@@ -1046,6 +1046,7 @@ static void pe_emit_export_data( void )
         if( curr->e.procinfo->isexport )
             cnt++;
     }
+
     if ( cnt ) {
         name = ModuleInfo.name;
         AddLineQueueX( "%r DOTNAME", T_OPTION );
@@ -1479,6 +1480,7 @@ static void pe_set_values( struct calc_param *cp )
 #if AMD64_SUPPORT
     }
 #endif
+
     if ( !( ff & IMAGE_FILE_RELOCS_STRIPPED ) ) {
         DebugMsg(("pe_set_values: .reloc section required\n" ));
         reloc = (struct dsym *)CreateIntSegment( ".reloc", "RELOC", 2, ModuleInfo.defOfssize, TRUE );
@@ -1548,13 +1550,20 @@ static void pe_set_values( struct calc_param *cp )
 
     if ( reloc ) {
         pe_set_base_relocs( reloc );
-        /* v2.13: if no relocs exist, remove the .reloc section that was just created */
-        if ( reloc->sym.max_offset )
+        /* v2.13: if no relocs exist, remove the .reloc section that was just created.
+         * v2.16: this didn't work because reloc->sym.max_offset was initialized with size of IMAGE_BASE_RELOCATION
+         */
+        //if ( reloc->sym.max_offset )
+        if ( reloc->sym.max_offset > sizeof ( struct IMAGE_BASE_RELOCATION ) )
             cp->rva = reloc->e.seginfo->start_offset + reloc->sym.max_offset;
-        else
-            objtab->sym.max_offset -= sizeof( struct IMAGE_SECTION_HEADER );
+        else {
+			objtab->sym.max_offset -= sizeof( struct IMAGE_SECTION_HEADER );
+			cp->rva = cp->rva - sizeof ( struct IMAGE_BASE_RELOCATION ); /* v2.16: added */
+			DebugMsg(("pe_set_values: empty .reloc section stripped\n" ));
+        }
     }
 
+    DebugMsg(("pe_set_values: cp->rva=%" I32_SPEC "X\n", cp->rva ));
     sizeimg = cp->rva;
 
     /* set e_lfanew of dosstub to start of PE header */
@@ -1583,6 +1592,12 @@ static void pe_set_values( struct calc_param *cp )
             DebugMsg(("pe_set_values: skip %s - max_offset=0\n", curr->sym.name ));
             continue;
         }
+        /* v2.16: linker directive sections are ignored. Would be good to scan
+         * them for export directives, since masm/jwasm has the restriction that only PROCs can
+         * be exported. The problem is that it's far too late here, function pe_emit_export_data() has
+         * been called just after step 1 - and worse, inside pe_emit_export_data() it cannot be done
+         * either since at that time there are no section contents available yet!
+         */
         if ( curr->e.seginfo->information ) {/* v2.13: ignore 'info' sections (linker directives) */
             EmitWarn( 2, INFO_SECTION_IGNORED, curr->sym.name ); /* v2.15: emit warning */
             DebugMsg(("pe_set_values: skip %s - info\n", curr->sym.name ));
@@ -1660,6 +1675,7 @@ static void pe_set_values( struct calc_param *cp )
         /* round up the SizeOfImage field to page boundary */
         sizeimg = ( sizeimg + ph32->OptionalHeader.SectionAlignment - 1 ) & ~(ph32->OptionalHeader.SectionAlignment - 1);
 #endif
+        DebugMsg(("pe_set_values: SizeOfImage=%" I32_SPEC "X\n", sizeimg ));
         ph32->OptionalHeader.SizeOfCode = cd.codesize;
         ph32->OptionalHeader.SizeOfInitializedData = cd.datasize;
         ph32->OptionalHeader.BaseOfCode = cd.codebase;
