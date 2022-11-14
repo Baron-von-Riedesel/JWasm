@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.2022, v2.16:
+   14.11.2022, v2.16:
 
    Bugfixes:
    -  format mz: in the binary map of listings, the RVA of segments belonging
@@ -51,6 +51,8 @@
       0x140000000 for PE64 exes, 0x180000000 for PE64 dlls (MS link compat).
    -  error 2058 ( "magnitude of offset exceeds 16-bit" ) changed to a warning
       ( level 3 ); see offset15.asm & offset16.asm.
+   -  if option -Zg is on, OPATTR is to return language bits for procs/protos
+      only; see opattr10.asm.
 
    09.04.2022, v2.15:
 

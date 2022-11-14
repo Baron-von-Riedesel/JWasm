@@ -1289,7 +1289,8 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
 #if 1
                     /* v2.11: Set the symbol's langtype. It may have been set
                      * by a PUBLIC directive, so take care not to overwrite it.
-                     * Problem: Masm doesn't do this - might be a bug.
+                     * Problem: Masm doesn't do this - might be a bug, but it
+                     * affects return value of OPATTR.
                      */
                     if ( sym->langtype == LANG_NONE )
                         sym->langtype = ModuleInfo.langtype;

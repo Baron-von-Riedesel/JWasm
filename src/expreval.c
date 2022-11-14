@@ -1302,6 +1302,8 @@ enum opattr_bits {
 /*
  * T_DOT_TYPE: implement .TYPE as an alias for OPATTR
  * T_OPATTR:
+ * compatibility: Masm (tested v6-9) sets the language bits ( bits 8-10 )
+ * for PROCs only, not for labels ( even if they are declared public with language attribute )
  */
 static ret_code opattr_op( int oper, struct expr *opnd1, struct expr *opnd2, struct asym *sym, char *name )
 /*********************************************************************************************************/
@@ -1391,8 +1393,11 @@ static ret_code opattr_op( int oper, struct expr *opnd1, struct expr *opnd2, str
     if ( oper == T_OPATTR )
         /* v2.12: no language if symbol isn't defined properly */
         //if ( opnd2->sym )
-        if ( opnd2->sym && opnd2->kind != EXPR_ERROR )
-            opnd1->value |= opnd2->sym->langtype << 8;
+        if ( opnd2->sym && opnd2->kind != EXPR_ERROR ) {
+            /* v2.16: for Masm compatible code generation (-Zg), language must only be set if isproc=true */
+            if ( opnd2->sym->isproc || ( Options.masm_compat_gencode == FALSE ) )
+                opnd1->value |= opnd2->sym->langtype << 8;
+        }
 
     DebugMsg1(("opattr_op returns %Xh\n", opnd1->value));
     return( NOT_ERROR );
