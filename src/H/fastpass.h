@@ -3,7 +3,7 @@
  fastpass.h defines structures and externals which are needed by the
  "fast pass" feature. This feature speeds JWasm's assembly significantly
  if huge header files containing declarations and definitions are used
- (as it is the case with Win32Inc and Masm32), since the header files are
+ (as it is the case with WinInc and Masm32), since the header files are
  then scanned in pass one only.
  */
 

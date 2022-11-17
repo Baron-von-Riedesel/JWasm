@@ -1041,6 +1041,7 @@ static int OnePass( void )
     }
 
     LinnumFini();
+	ResWordsFini(); /* v2.17: keywords must be restored at pass end */
 
     if ( Parse_Pass == PASS_1 )
         PassOneChecks();
@@ -1371,7 +1372,7 @@ static void AssembleFini( void )
     int i;
     SegmentFini();
     SymFini();
-    ResWordsFini();
+//	ResWordsFini(); /* v2.17: keywords must be restored at pass end, here it's too late! */
 #ifdef DEBUG_OUT
     DumpInstrStats();
     MacroFini();

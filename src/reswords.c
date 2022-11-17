@@ -550,8 +550,11 @@ void RenameKeyword( unsigned token, const char *newname, uint_8 length )
         LclFree( (void *)ResWordTable[token].name );
 #if 1
         /* v2.11: search the original name. if the "new" names matches
-         * the original name, restore the name pointer */
-        for ( curr = renamed_keys.head, prev = NULL; curr; prev = curr ) {
+		 * the original name, restore the name pointer
+		 * v2.17: fixed infinite loop ( curr wasn't changed )
+		 */
+        //for ( curr = renamed_keys.head, prev = NULL; curr; prev = curr ) {
+        for ( curr = renamed_keys.head, prev = NULL; curr; prev = curr, curr = curr->next ) {
             if ( curr->token == token ) {
                 if ( curr->length == length && !memcmp( newname, curr->name, length ) ) {
                     if ( prev )
@@ -751,7 +754,7 @@ void ResWordsFini( void )
     DebugMsg(("ResWordsFini() enter\n"));
 #if RENAMEKEY
     /* restore renamed keywords.
-     * the keyword has to removed ( and readded ) from the hash table,
+     * the keyword has to be removed ( and readded ) from the hash table,
      * since its position most likely will change.
      */
     for ( rencurr = renamed_keys.head; rencurr; ) {

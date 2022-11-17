@@ -18,6 +18,7 @@
 #if STACKBASESUPP
 #include "equate.h"
 #endif
+#include "fastpass.h"
 
 /* prototypes */
 extern struct asym          *sym_Interface;
@@ -631,7 +632,12 @@ OPTFUNC( SetElf )
 
 #if RENAMEKEY
 
-/* OPTION RENAMEKEYWORD: <keyword>,new_name */
+/* OPTION RENAMEKEYWORD: <keyword>=new_name
+ * v2.17: if the keyword was renamed multiple times ( or the name restored ),
+ * it didn't work unless the first rename happened after an instruction triggered
+ * source line save.
+ * todo: the renamed keywords aren't restored to their default values at end of pass.
+ */
 
 OPTFUNC( SetRenameKey )
 /*********************/
@@ -670,6 +676,11 @@ OPTFUNC( SetRenameKey )
     if ( index == 0 ) {
         return( EmitError( RESERVED_WORD_EXPECTED ) );
     }
+
+#if FASTPASS
+	if ( StoreState == FALSE ) FStoreLine(0); /* v2.17: ensure the option is scanned in all passes */
+#endif
+
     RenameKeyword( index, tokenarray[i].string_ptr, strlen( tokenarray[i].string_ptr ) );
     i++;
     *pi = i;
