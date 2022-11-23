@@ -518,6 +518,26 @@ struct asym *GetOverrideAssume( enum assume_segreg override )
 
 }
 
+#if STACKBASESUPP
+/* v2.17: get word size of a segment assume ( usually SS )
+ */
+enum segofssize GetOfssizeAssume( enum assume_segreg segno )
+/**********************************************************/
+{
+    if( SegAssumeTable[segno].is_flat )
+        return( ModuleInfo.Ofssize );
+
+    if ( SegAssumeTable[segno].symbol ) {
+        struct asym *sym = SegAssumeTable[segno].symbol;
+        if ( sym->state == SYM_SEG )
+            return( ((struct dsym *)sym)->e.seginfo->Ofssize );
+        return( sym->Ofssize );
+	}
+
+	return( ModuleInfo.Ofssize );
+
+}
+#endif
 /*
  * GetAssume():
  * called by check_assume() in parser.c

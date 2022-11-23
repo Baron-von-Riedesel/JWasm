@@ -561,8 +561,12 @@ next_item:  /* <--- continue scan if a comma has been detected */
                 EmitError( CONSTANT_EXPECTED );
             return( ERROR );
         }
-        /* max dup is 0x7fffffff */
-        if ( opndx.value < 0 ) {
+        /* v2.17: check high32(value)
+         * max dup is 0x7fffffff
+         */
+        if ( opndx.hvalue != 0 ) {
+            return( EmitConstError( &opndx ) );
+        } else if ( opndx.value < 0 ) {
             return( EmitError( COUNT_MUST_BE_POSITIVE_OR_ZERO ) );
         }
         i++;

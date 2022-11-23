@@ -1537,6 +1537,9 @@ ret_code InvokeDirective( int i, struct asm_tok tokenarray[] )
     int            parmpos;
     int            namepos;
     int            porder;
+#if STACKBASESUPP
+    unsigned       rstackreg;
+#endif
     uint_8         r0flags = 0;
     //bool           uselabel = FALSE;
     struct proc_info *info;
@@ -1751,11 +1754,19 @@ ret_code InvokeDirective( int i, struct asm_tok tokenarray[] )
 
     if (( sym->langtype == LANG_C || sym->langtype == LANG_SYSCALL ) &&
         ( info->parasize || ( info->has_vararg && size_vararg ) )) {
+#if STACKBASESUPP
+        /* v2.17: if stackbase is active, use the ofssize of the assumed SS;
+         * however, do this in 16-bit code only ( don't generate "add SP, x" in 32-bit )
+         */
+        rstackreg = stackreg[ ( ModuleInfo.Ofssize == USE16 && ModuleInfo.g.StackBase) ? GetOfssizeAssume( ASSUME_SS ) : ModuleInfo.Ofssize ];
+#else
+        rstackreg = stackreg[ModuleInfo.Ofssize];
+#endif
         if ( info->has_vararg ) {
             DebugMsg1(("InvokeDir: size of fix args=%u, var args=%u\n", info->parasize, size_vararg));
-            AddLineQueueX( " add %r, %u", stackreg[ModuleInfo.Ofssize], NUMQUAL info->parasize + size_vararg );
+            AddLineQueueX( " add %r, %u", rstackreg, NUMQUAL info->parasize + size_vararg );
         } else
-            AddLineQueueX( " add %r, %u", stackreg[ModuleInfo.Ofssize], NUMQUAL info->parasize );
+            AddLineQueueX( " add %r, %u", rstackreg, NUMQUAL info->parasize );
     } else if ( sym->langtype == LANG_FASTCALL ) {
         fastcall_tab[ModuleInfo.fctype].invokeend( proc, numParam, value );
     }

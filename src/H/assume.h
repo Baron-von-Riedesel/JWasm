@@ -72,6 +72,9 @@ extern enum assume_segreg search_assume( const struct asym *sym, enum assume_seg
 extern enum assume_segreg GetAssume( const struct asym *, const struct asym *, enum assume_segreg, struct asym * * );
 
 extern struct asym      *GetOverrideAssume( enum assume_segreg );
+#if STACKBASESUPP
+enum segofssize         GetOfssizeAssume( enum assume_segreg );
+#endif
 extern struct asym      *GetStdAssume( int );
 extern struct asym      *GetStdAssumeEx( int );
 

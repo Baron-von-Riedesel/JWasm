@@ -31,6 +31,7 @@
 #include "posndir.h"
 #include "myassert.h"
 #include "reswords.h"
+#include "assume.h"
 #if AMD64_SUPPORT
 #include "win64seh.h"
 #endif
@@ -936,8 +937,14 @@ static ret_code ParseParams( struct dsym *proc, int i, struct asm_tok tokenarray
          * USE32   +4    +8
          * USE64   +8    +16
          */
-        offset = ( ( 2 + ( proc->sym.mem_type == MT_FAR ? 1 : 0 ) ) * CurrWordSize );
-
+        /* v2.17: if option stackbase is on, use the size of the base pointer
+         */
+#if STACKBASESUPP
+		offset = ( ( 1 + ( proc->sym.mem_type == MT_FAR ? 1 : 0 ) ) * CurrWordSize ) +
+			GetSflagsSp( proc->e.procinfo->basereg ) & SFR_SIZMSK;
+#else
+		offset = ( ( 2 + ( proc->sym.mem_type == MT_FAR ? 1 : 0 ) ) * CurrWordSize );
+#endif
         /* now calculate the [E|R]BP offsets */
 
 #if AMD64_SUPPORT
@@ -2333,6 +2340,7 @@ static ret_code write_default_prologue( void )
     uint_16             *regist;
     uint_8              oldlinenumbers;
     int                 cnt;
+    unsigned            rstackreg; /* stackpointer register to use */
 #if AMD64_SUPPORT
     int                 resstack = 0;
 #endif
@@ -2393,13 +2401,30 @@ static ret_code write_default_prologue( void )
          * SUB  [E|R]SP, localsize
          */
 #if STACKBASESUPP
+        /* v2.17: if option stackbase is active and
+         * SS is assumed to have an offset size != Module's offset size,
+         * use the appropriate sp register
+         */
+		rstackreg = stackreg[ ModuleInfo.g.StackBase ? GetOfssizeAssume( ASSUME_SS ) : ModuleInfo.Ofssize ];
+
         if ( !info->fpo ) {
-            AddLineQueueX( "push %r", info->basereg );
-            AddLineQueueX( "mov %r, %r", info->basereg, stackreg[ModuleInfo.Ofssize] );
+			AddLineQueueX( "push %r", info->basereg );
+			/* v2.17: if code is 32-bit, baseptr is 32-bit and 16-bit stack,
+             * just use "movzx" to setup base ptr, but elso change nothing.
+             */
+			if ( SizeFromRegister( info->basereg ) > SizeFromRegister( rstackreg ) ) {
+				AddLineQueueX( "movzx %r, %r", info->basereg, rstackreg );
+				rstackreg = stackreg[ModuleInfo.Ofssize];
+			} else {
+				AddLineQueueX( "mov %r, %r", info->basereg, rstackreg );
+				if ( rstackreg != stackreg[ModuleInfo.Ofssize] )
+					info->pe_type = 0; /* avoid using LEAVE if Ofssize of base register differs */
+			}
         }
 #else
+        rstackreg = stackreg[ModuleInfo.Ofssize];
         AddLineQueueX( "push %r", basereg[ModuleInfo.Ofssize] );
-        AddLineQueueX( "mov %r, %r", basereg[ModuleInfo.Ofssize], stackreg[ModuleInfo.Ofssize] );
+        AddLineQueueX( "mov %r, %r", basereg[ModuleInfo.Ofssize], rstackreg );
 #endif
     }
 #if AMD64_SUPPORT
@@ -2416,7 +2441,7 @@ static ret_code write_default_prologue( void )
         //if( !(info->localsize || info->stackparam || info->has_vararg || info->forceframe ))
         //    AddLineQueueX( "sub %r, 8 + %s", stackreg[ModuleInfo.Ofssize], sym_ReservedStack->name );
         //else
-        AddLineQueueX( "sub %r, %d + %s", stackreg[ModuleInfo.Ofssize], NUMQUAL info->localsize, sym_ReservedStack->name );
+        AddLineQueueX( "sub %r, %d + %s", rstackreg, NUMQUAL info->localsize, sym_ReservedStack->name );
     } else
 #endif
     if( info->localsize  ) {
@@ -2425,9 +2450,9 @@ static ret_code write_default_prologue( void )
          * with SUB, short instructions work up to 127 only.
          */
         if ( Options.masm_compat_gencode || info->localsize == 128 )
-            AddLineQueueX( "add %r, %d", stackreg[ModuleInfo.Ofssize], NUMQUAL - info->localsize );
+            AddLineQueueX( "add %r, %d", rstackreg, NUMQUAL - info->localsize );
         else
-            AddLineQueueX( "sub %r, %d", stackreg[ModuleInfo.Ofssize], NUMQUAL info->localsize );
+            AddLineQueueX( "sub %r, %d", rstackreg, NUMQUAL info->localsize );
     }
 
     if ( info->loadds ) {
@@ -2790,7 +2815,10 @@ static void write_win64_default_epilogue( struct proc_info *info )
 static void write_default_epilogue( void )
 /****************************************/
 {
-    struct proc_info   *info;
+	struct proc_info   *info;
+#if STACKBASESUPP
+	unsigned           rstackreg;
+#endif
 #if AMD64_SUPPORT
     int resstack = 0;
 #endif
@@ -2831,6 +2859,15 @@ static void write_default_epilogue( void )
        info->forceframe == FALSE )
         return;
 
+#if STACKBASESUPP
+    /* v2.17: if option stackbase is active and
+     * SS is assumed to have an offset size != Module's offset size,
+     * use the appropriate sp register
+     */
+	rstackreg = stackreg[ ModuleInfo.g.StackBase ? GetOfssizeAssume( ASSUME_SS ) : ModuleInfo.Ofssize ];
+#endif
+
+
     /* restore registers e/sp and e/bp.
      * emit either "leave" or "mov e/sp,e/bp, pop e/bp".
      */
@@ -2844,13 +2881,13 @@ static void write_default_epilogue( void )
     } else  {
 #if STACKBASESUPP
         if ( info->fpo ) {
-#if AMD64_SUPPORT
+ #if AMD64_SUPPORT
             if ( ModuleInfo.Ofssize == USE64 && ModuleInfo.fctype == FCT_WIN64 && ( ModuleInfo.win64_flags & W64F_AUTOSTACKSP ) )
                 ;
             else
-#endif
+ #endif
             if ( info->localsize )
-                AddLineQueueX( "add %r, %d", stackreg[ModuleInfo.Ofssize], NUMQUAL info->localsize );
+                AddLineQueueX( "add %r, %d", rstackreg, NUMQUAL info->localsize );
             return;
         }
 #endif
@@ -2860,7 +2897,7 @@ static void write_default_epilogue( void )
          */
         if( info->localsize != 0 ) {
 #if STACKBASESUPP
-            AddLineQueueX( "mov %r, %r", stackreg[ModuleInfo.Ofssize], info->basereg );
+            AddLineQueueX( "mov %r, %r", rstackreg, info->basereg );
 #else
             AddLineQueueX( "mov %r, %r", stackreg[ModuleInfo.Ofssize], basereg[ModuleInfo.Ofssize] );
 #endif

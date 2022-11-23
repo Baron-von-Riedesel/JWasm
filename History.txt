@@ -11,6 +11,13 @@
       end of pass; see renkeyw2.asm.
    -  option renamekeyword: renaming an already renamed keyword may have
       caused an infinite loop; see renkeyw3.asm.
+   -  size operand of DUP operator was checked to be positive, but wasn't
+      checked for 32-bit overflow; see constnt3.asm.
+
+   Other changes:
+   -  option stackbase: may be used in conjunction with "assume ss" to
+      define a PROC where CS and SS differ in offset magnitude ( 16-bit
+      code with 32-bit stack and vice versa ); see stkbase1.asm, stkbase2.asm.
 
    14.11.2022, v2.16:
 

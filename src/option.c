@@ -636,7 +636,6 @@ OPTFUNC( SetElf )
  * v2.17: if the keyword was renamed multiple times ( or the name restored ),
  * it didn't work unless the first rename happened after an instruction triggered
  * source line save.
- * todo: the renamed keywords aren't restored to their default values at end of pass.
  */
 
 OPTFUNC( SetRenameKey )

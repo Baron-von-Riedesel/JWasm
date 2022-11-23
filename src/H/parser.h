@@ -182,7 +182,7 @@ struct instr_item {
  */
 struct special_item {
     unsigned     value;
-    unsigned     sflags;
+    unsigned     sflags;     /* contains size in bits 0-4 (SFR_SIZMSK) */
 #ifdef __WATCOMC__
     enum cpu_info   cpu;     /* CPU type */
 #else
