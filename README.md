@@ -15,4 +15,4 @@ Hints:
 
 There is a bunch of other makefiles in the main directory, intended for other compilers. Some of them might be a bit outdated.
 
-[JWasm Manual](./Html/Manual.html)
+[JWasm Manual](https/github.com/Baron-von-Riedesel/JWasm/Html/Manual.html)
