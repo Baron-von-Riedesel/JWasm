@@ -13,6 +13,11 @@
       caused an infinite loop; see renkeyw3.asm.
    -  size operand of DUP operator was checked to be positive, but wasn't
       checked for 32-bit overflow; see constnt3.asm.
+   -  direct memory access with flat override ( for constant addresses )
+      may have generated error "cannot access label through segment registers";
+      see flatgrp3.asm.
+   -  regression in v2.16: invoke may have generated a "PUSHD" in 64-bit code
+      if .model wasn't flat; see invoke54.asm.
 
    Other changes:
    -  option stackbase: may be used in conjunction with "assume ss" to

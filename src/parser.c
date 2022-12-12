@@ -367,7 +367,7 @@ static void check_assume( struct code_info *CodeInfo, const struct asym *sym, en
 
     reg = GetAssume( SegOverride, sym, default_reg, &assume );
     /* set global vars Frame and Frame_Datum */
-    DebugMsg1(("check_assume(%s): calling SetFixupFrame(%s, FALSE)\n", sym ? sym->name : "NULL", assume ? assume->name : "NULL" ));
+    DebugMsg1(("check_assume(%s, %u): calling SetFixupFrame(%s, FALSE)\n", sym ? sym->name : "NULL", default_reg, assume ? assume->name : "NULL" ));
     SetFixupFrame( assume, FALSE );
 
     if( reg == ASSUME_NOTHING ) {
@@ -474,7 +474,12 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
     } else {
         if ( sym || SegOverride )
             check_assume( CodeInfo, sym, default_seg );
+#if AMD64_SUPPORT
+        /* v2.17: no address prefix in 64-bit */
+        if ( sym == NULL && SegOverride && CodeInfo->Ofssize != USE64 ) {
+#else
         if ( sym == NULL && SegOverride ) {
+#endif
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, GetSymOfssize( SegOverride ) );
         }
     }

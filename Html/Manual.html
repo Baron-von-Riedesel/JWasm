@@ -971,6 +971,11 @@ _TLS ends
     The "natural" register for accessing these variables is the [E|R]BP register ( the "frame pointer").
     With OPTION STACKBASE one might set any index register as frame pointer.
 <P>
+    Besides the goal "frame pointer omission" in 64-bit, OPTION STACKBASE may also be used in 16- and
+    32-bit code to make directives PROC and INVOKE handle stack variables correctly when the code and
+    stack segment in protected-mode differ in offset magnitude ( 16-bit code running on a 32-bit stack
+    and vice versa ).
+<P>
     OPTION STACKBASE will additionally define assembly-time variable <b>@StackBase</b>.
     The assembler will add the value of this variable to the effective address of stack variables.
     @StackBase can be modified just like any userdefined variable - however, it is initialized to zero

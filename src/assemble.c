@@ -1041,7 +1041,7 @@ static int OnePass( void )
     }
 
     LinnumFini();
-	ResWordsFini(); /* v2.17: keywords must be restored at pass end */
+	ResWordsFini( FALSE ); /* v2.17: renamed keywords must be restored at pass end */
 
     if ( Parse_Pass == PASS_1 )
         PassOneChecks();
@@ -1372,7 +1372,7 @@ static void AssembleFini( void )
     int i;
     SegmentFini();
     SymFini();
-//	ResWordsFini(); /* v2.17: keywords must be restored at pass end, here it's too late! */
+	ResWordsFini( TRUE ); /* v2.17: restore keywords disabled by option nokeyword */
 #ifdef DEBUG_OUT
     DumpInstrStats();
     MacroFini();

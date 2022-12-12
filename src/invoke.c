@@ -863,6 +863,7 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                         /* v2.16: opnd.Ofssize is set - by the evaluator - only in a few cases (not clear when exactly),
                          * but here it might be needed.
                          * Either display an error or make jwasm extend the offset size.
+                         * v2.17: causes regression in v2.16 if current ofssize is USE64, see adjustment below.
                          */
                         char tmp = GetSymOfssize( opnd.sym );
                         if ( CurrWordSize != ( 2 << tmp ) )
@@ -873,9 +874,11 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 DebugMsg1(("PushInvokeParm(%u), address param: CurrWordSize=%u Ofssize=%d opnd.Ofssize=%d, psize=%u\n", reqParam, CurrWordSize, Ofssize, opnd.Ofssize, psize ));
                 /* v2.04: expand 16-bit offset to 32
                  * v2.11: also expand if there's an explicit near32 ptr requested in 16-bit
+                 * v2.17: regression in v2.16 if USE64 is active (invoke54.asm); "CurrWordSize > 2" changed to "CurrWordSize == 4"
                  */
                 //if ( opnd.Ofssize == USE16 && CurrWordSize > 2 ) {
-                if ( ( opnd.Ofssize == USE16 && CurrWordSize > 2 ) ||
+                //if ( ( opnd.Ofssize == USE16 && CurrWordSize > 2 ) ||
+                if ( ( opnd.Ofssize == USE16 && CurrWordSize == 4 ) ||
                     ( curr->sym.Ofssize == USE32 && CurrWordSize == 2 ) ) {
                     AddLineQueueX( " pushd %r %s", T_OFFSET, fullparam );
                 } else if ( CurrWordSize > 2 && curr->sym.Ofssize == USE16 &&

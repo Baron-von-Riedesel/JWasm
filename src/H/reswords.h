@@ -68,7 +68,7 @@ extern void     RenameKeyword( unsigned, const char *, uint_8 );
 extern void     Set64Bit( bool );
 #endif
 extern void     ResWordsInit( void );
-extern void     ResWordsFini( void );
+extern void     ResWordsFini( bool );
 #ifdef DEBUG_OUT
 extern void     DumpResWords( void );
 #endif

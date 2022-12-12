@@ -2393,6 +2393,7 @@ static ret_code write_default_prologue( void )
         ( ModuleInfo.win64_flags & W64F_SAVEREGPARAMS ) )
         win64_SaveRegParams( info );
 #endif
+    rstackreg = stackreg[ModuleInfo.Ofssize]; /* v2.17: init new var rstackreg */
     if( info->locallist || info->stackparam || info->has_vararg || info->forceframe ) {
 
         /* write 80386 prolog code
@@ -2405,7 +2406,8 @@ static ret_code write_default_prologue( void )
          * SS is assumed to have an offset size != Module's offset size,
          * use the appropriate sp register
          */
-		rstackreg = stackreg[ ModuleInfo.g.StackBase ? GetOfssizeAssume( ASSUME_SS ) : ModuleInfo.Ofssize ];
+        if ( ModuleInfo.g.StackBase )
+			rstackreg = stackreg[ GetOfssizeAssume( ASSUME_SS ) ];
 
         if ( !info->fpo ) {
 			AddLineQueueX( "push %r", info->basereg );
@@ -2422,7 +2424,6 @@ static ret_code write_default_prologue( void )
 			}
         }
 #else
-        rstackreg = stackreg[ModuleInfo.Ofssize];
         AddLineQueueX( "push %r", basereg[ModuleInfo.Ofssize] );
         AddLineQueueX( "mov %r, %r", basereg[ModuleInfo.Ofssize], rstackreg );
 #endif
