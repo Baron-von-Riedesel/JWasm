@@ -18,11 +18,16 @@
       see flatgrp3.asm.
    -  regression in v2.16: invoke may have generated a "PUSHD" in 64-bit code
       if .model wasn't flat; see invoke54.asm.
+   -  fixed: FLAT: override may have suppressed address size prefix; see
+      flatgrp4.asm;
 
    Other changes:
    -  option stackbase: may be used in conjunction with "assume ss" to
       define a PROC where CS and SS differ in offset magnitude ( 16-bit
       code with 32-bit stack and vice versa ); see stkbase1.asm, stkbase2.asm.
+   -  format -pe: 64-bit segments defined with USE64 are added to internal
+      "flat" group. Allows to mix 32- and 64-bit segments in .model FLAT;
+      see flatgrp5.asm & flatgrp6.asm.
 
    14.11.2022, v2.16:
 

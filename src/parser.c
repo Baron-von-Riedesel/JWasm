@@ -396,6 +396,7 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
  * called by set_rm_sib(). determine if segment override is necessary
  * with the current address mode;
  * - seg_reg: register index (T_DS, T_BP, T_EBP, T_BX, ... )
+ * might modify CodeInfo->prefix.adrsiz!!!
  */
 {
     enum assume_segreg  default_seg;
@@ -475,12 +476,17 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
         if ( sym || SegOverride )
             check_assume( CodeInfo, sym, default_seg );
 #if AMD64_SUPPORT
-        /* v2.17: no address prefix in 64-bit */
-        if ( sym == NULL && SegOverride && CodeInfo->Ofssize != USE64 ) {
+        /* v2.17: no address prefix in 64-bit or if segoverride is FLAT.
+         * todo: check if this isn't generally the wrong place to modify the adrsiz prefix.
+         * Also, the ADDRSIZE() macro should really be removed/replaced.
+         */
+        if ( sym == NULL && SegOverride && ( SegOverride != (struct asym *)ModuleInfo.flat_grp ) && CodeInfo->Ofssize != USE64 ) {
 #else
         if ( sym == NULL && SegOverride ) {
 #endif
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, GetSymOfssize( SegOverride ) );
+            DebugMsg1(("seg_override: sym==NULL, group/seg override (%u/%u), new CI->adrsize=%u\n",
+                    CodeInfo->Ofssize, GetSymOfssize( SegOverride ), CodeInfo->prefix.adrsiz ));
         }
     }
 
@@ -1832,8 +1838,9 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         CodeInfo->opnd[CurrOpnd].InsFixup->frame_datum = Frame_Datum;
     }
 
-    DebugMsg1(("memory_operand exit, ok, opndx.type/value=%Xh/%Xh, CodeInfo.memtype/rmbyte=%X/%X opndtype=%Xh fix=%Xh\n",
-              opndx->type, opndx->value, CodeInfo->mem_type, CodeInfo->rm_byte, CodeInfo->opnd[CurrOpnd].type, CodeInfo->opnd[CurrOpnd].InsFixup ));
+    DebugMsg1(("memory_operand exit, ok, opndx.type/value=%Xh/%Xh, CodeInfo.memtype/rmbyte/op/ad=%X/%X/%u/%u opndtype=%Xh fix=%Xh\n",
+			opndx->type, opndx->value, CodeInfo->mem_type, CodeInfo->rm_byte, CodeInfo->prefix.opsiz, CodeInfo->prefix.adrsiz,
+			CodeInfo->opnd[CurrOpnd].type, CodeInfo->opnd[CurrOpnd].InsFixup ));
     return( NOT_ERROR );
 }
 
