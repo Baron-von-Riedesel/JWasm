@@ -1242,9 +1242,10 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
         case INIT_OFSSIZE:
             dir->e.seginfo->Ofssize = type->value;
 #if AMD64_SUPPORT
-            /* v2.17: put USE64 segments into flat group */
-            if ( type->value == USE64 ) {
-                DefineFlatGroup();
+            /* v2.17: if .model FLAT, put USE64 segments into flat group.
+             * be aware that the "flat" attribute affects fixups of non-flat items for -pe format.
+             */
+            if ( type->value == USE64 && ModuleInfo.model == MODEL_FLAT ) {
                 dir->e.seginfo->group = &ModuleInfo.flat_grp->sym;
             }
 #endif

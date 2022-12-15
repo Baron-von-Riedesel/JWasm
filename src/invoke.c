@@ -1257,8 +1257,13 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                 //if ( asize != psize || asize < pushsize ) {
                 if ( asize != psize || asize < ( 2 << Ofssize ) ) {
                     /* register size doesn't match the needed parameter size.
+                     * v2.17: psize > 4 isn't always invalid, at least not for x64 ( see else branch below! ).
                      */
-                    if ( psize > 4 ) {
+                    if ( psize > 4
+#if AMD64_SUPPORT
+                        && ( ModuleInfo.curr_cpu & P_CPU_MASK ) < P_64
+#endif
+                       ) {
                         DebugMsg1(("PushInvokeParm(%u): error, REG, asize=%u, psize=%u, pushsize=%u\n",
                                   reqParam, asize, psize, pushsize ));
                         EmitErr( INVOKE_ARGUMENT_TYPE_MISMATCH, reqParam+1 );
@@ -1333,8 +1338,10 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                             *r0flags = R0_USED | R0_H_CLEARED | R0_X_CLEARED;
                         }
 #if AMD64_SUPPORT
-                    } else if ( asize <= 4 && ( psize == 8 || pushsize == 8 ) ) { /* v2.14: added */
-                        if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 && asize == psize ) {
+					} else if ( asize <= 4 && ( psize == 8 || pushsize == 8 ) ) { /* v2.14: added */
+						/* v2.17: accept 32-bit registers in vararg */
+                        // if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 && asize == psize ) {
+                        if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 && asize > 1 ) {
                             switch ( asize ) {
                             case 2: reg = ( reg >= T_AX && reg <= T_DI ) ? reg - T_AX + T_RAX : reg - T_R8W + T_R8; break;
                             case 4: reg = ( reg >= T_EAX && reg <= T_EDI ) ? reg - T_EAX + T_RAX : reg - T_R8D + T_R8; break;

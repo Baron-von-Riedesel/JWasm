@@ -232,9 +232,17 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
 
         if( ModuleInfo.model == MODEL_TINY ) {
             /* v2.05: add the named code segment to DGROUP */
-            if ( name )
-                AddToDgroup( SIM_CODE, name );
-            name = szDgroup;
+            if ( name ) {
+             /* v2.17: don't add to DGROUP if code segment's wordsize isn't the default wordsize;
+              *        todo: check why this "auto adding" has been implemented.
+              */
+                if ( ( sym = SymSearch( name ) ) && ( sym->state == SYM_SEG ) &&
+                    ( ( (struct dsym *)sym)->e.seginfo->Ofssize == ModuleInfo.defOfssize ) ) {
+                    AddToDgroup( SIM_CODE, name );
+                    name = szDgroup;
+                }
+            } else
+                name = szDgroup;
         } else if( ModuleInfo.model == MODEL_FLAT ) {
             name = "FLAT";
         } else {
