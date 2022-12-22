@@ -33,6 +33,8 @@
    -  simplified segment directive .code with name argument in tiny model
       always added the segment to dgroup. Now this is done only if segment's
       offset size matches the model's offset size; see tiny2.asm.
+   -  RETs inside PROCs will now show up in listing file like in Masm; see
+      lst3.asm.
 
    14.11.2022, v2.16:
 

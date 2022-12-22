@@ -2996,6 +2996,7 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
 #ifdef DEBUG_OUT
     ret_code    rc;
 #endif
+    uint_32     dwOfs;
     char        buffer[MAX_LINE_LEN]; /* stores modified RETN/RETF/IRET instruction */
 
     DebugMsg1(( "RetInstr() enter\n" ));
@@ -3027,10 +3028,6 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
 #else
         return( write_userdef_epilogue( is_iret, tokenarray ) );
 #endif
-    }
-
-    if ( ModuleInfo.list ) {
-        LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), NULL );
     }
 
     strcpy( buffer, tokenarray[i].string_ptr );
@@ -3077,8 +3074,25 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
         /* v2.06: changed. Now works even if RET has ben "renamed" */
         strcpy( p, tokenarray[i].tokpos );
     }
+    /* v2.17: print src line only if either -Sg is active or the epilogue
+     * isn't empty; else just remember current offset and write listing after
+     * line queue ( which is 1 line only [RETx] then ) has been processed.
+     */
+    if ( ModuleInfo.list )
+        if ( ModuleInfo.list_generated_code || ( is_linequeue_populated() ) ) {
+            LstWriteSrcLine();
+            dwOfs = -1;
+        } else
+            dwOfs = GetCurrOffset();
+
     AddLineQueue( buffer );
     RunLineQueue();
+
+    /* v2.17: if dwOfs is != -1, just a RET was processed in line queue and -Sg is FALSE;
+     * then display a standard "code" line in listing.
+     */
+    if ( ModuleInfo.list && dwOfs != -1 )
+            LstWrite( LSTTYPE_CODE, dwOfs, NULL );
 
     DebugMsg1(( "RetInstr() exit\n" ));
 
