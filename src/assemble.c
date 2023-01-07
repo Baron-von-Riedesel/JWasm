@@ -1529,7 +1529,7 @@ int EXPQUAL AssembleModule( const char *source )
              GetFName( ModuleInfo.srcfile )->fname,
              GetLineNumber(),
              Parse_Pass + 1,
-             endtime - starttime,
+            ( endtime - starttime ) / ( CLOCKS_PER_SEC / 1000 ), /* v2.17: ensure result is in ms */
              ModuleInfo.g.warning_count,
              ModuleInfo.g.error_count);
     if ( Options.quiet == FALSE )
