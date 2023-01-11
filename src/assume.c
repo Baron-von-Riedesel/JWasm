@@ -555,7 +555,11 @@ enum assume_segreg GetAssume( const struct asym *override, const struct asym *sy
 
     /* v2.17: handle case if model isn't flat, but current segment is 64-bit ( flatgrp3.asm ) */
     //if( ( def != ASSUME_NOTHING ) && SegAssumeTable[def].is_flat ) {
-    if( ( def != ASSUME_NOTHING ) && ( SegAssumeTable[def].is_flat || ModuleInfo.Ofssize == USE64 ) ) {
+    if( ( def != ASSUME_NOTHING ) && ( SegAssumeTable[def].is_flat
+#if AMD64_SUPPORT
+         || ModuleInfo.Ofssize == USE64
+#endif
+        ) ) {
         *passume = (struct asym *)ModuleInfo.flat_grp;
         return( def );
     }

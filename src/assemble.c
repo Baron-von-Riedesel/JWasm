@@ -1354,7 +1354,7 @@ static void AssembleInit( const char *source )
     ModuleInit();
     CondInit();
     ExprEvalInit();
-    LstInit();
+    LstInit(); /* called also after each pass, except the last one */
 
     DebugMsg(("AssembleInit() exit\n"));
     return;
@@ -1408,8 +1408,8 @@ int EXPQUAL AssembleModule( const char *source )
 {
     uint_32       prev_written = -1;
     uint_32       curr_written;
-    int           starttime;
-    int           endtime;
+    clock_t       starttime;
+    clock_t       endtime;
     struct dsym   *seg;
 
     DebugMsg(("AssembleModule(\"%s\") enter\n", source ));

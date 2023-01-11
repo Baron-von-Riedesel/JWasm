@@ -1547,9 +1547,7 @@ ret_code InvokeDirective( int i, struct asm_tok tokenarray[] )
     int            parmpos;
     int            namepos;
     int            porder;
-#if STACKBASESUPP
     unsigned       rstackreg;
-#endif
     uint_8         r0flags = 0;
     //bool           uselabel = FALSE;
     struct proc_info *info;

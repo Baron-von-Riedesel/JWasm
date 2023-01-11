@@ -22,6 +22,7 @@
       flatgrp4.asm;
    -  invoke, 64-bit, non-win64, vararg: 32-bit registers were rejected as
       arguments; see invoke55.asm.
+   -  display of assembly-time was correct only if CLOCKS_PER_SEC was 1000.
 
    Other changes:
    -  option stackbase: may be used in conjunction with "assume ss" to
@@ -35,6 +36,7 @@
       offset size matches the model's offset size; see tiny2.asm.
    -  RETs inside PROCs will now show up in listing file like in Masm; see
       lst3.asm.
+   -  in listings, offset of 16-bit segments now displayed with width 4.
 
    14.11.2022, v2.16:
 

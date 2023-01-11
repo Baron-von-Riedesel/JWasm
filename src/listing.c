@@ -26,7 +26,7 @@
 #include "omfspec.h"
 
 #define CODEBYTES 9
-#define OFSSIZE 8
+//#define OFSSIZE 8
 #define PREFFMTSTR "25"
 #define USELSLINE 1 /* also in assemble.c! */
 
@@ -199,12 +199,15 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         }
         /* no break */
     case LSTTYPE_CODE:
-        newofs = GetCurrOffset();
-        sprintf( ll.buffer, "%08" I32_SPEC "X", oldofs );
-        ll.buffer[OFSSIZE] = ' ';
-
-        if ( CurrSeg == NULL )
+        if ( CurrSeg == NULL ) {
+            DebugMsg(("LstWrite: LSTTYPE_CODE/LSTTYPE_DATA with CurrSeg==NULL!\n" ));
             break;
+        }
+
+		newofs = GetCurrOffset();
+		p2 = ll.buffer;
+		p2 += sprintf( p2, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
+
         //if ( write_to_file == FALSE )
         if ( Options.first_pass_listing ) {
             if ( Parse_Pass > PASS_1 )
@@ -217,7 +220,6 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             break;
 
         len = CODEBYTES;
-        p2 = ll.buffer + OFSSIZE + 2;
 
         if ( CurrSeg->e.seginfo->CodeBuffer == NULL ||
             CurrSeg->e.seginfo->written == FALSE ) {
@@ -300,16 +302,14 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         pSrcline = value;
         break;
     case LSTTYPE_LABEL:
-        oldofs = GetCurrOffset();
-        /* no break */
+        sprintf( ll.buffer, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), GetCurrOffset() );
+        break;
     case LSTTYPE_STRUCT:
-        sprintf( ll.buffer, "%08" I32_SPEC "X", oldofs );
-        ll.buffer[8] = ' ';
+        sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
         break;
     case LSTTYPE_DIRECTIVE:
         if ( CurrSeg || value ) {
-            sprintf( ll.buffer, "%08" I32_SPEC "X", oldofs );
-            ll.buffer[8] = ' ';
+            sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
         }
         break;
     default: /* LSTTYPE_MACRO */
@@ -340,7 +340,8 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 #endif
 #if FASTPASS
     } else {
-        idx = OFSSIZE + 2 + 2 * CODEBYTES;
+        //idx = OFSSIZE + 2 + 2 * CODEBYTES;
+        idx = 8 + 2 + 2 * CODEBYTES;
 #ifdef DEBUG_OUT
         ll.buffer[idx] = NULLC;
 #endif
@@ -389,6 +390,12 @@ void LstWriteSrcLine( void )
 {
     LstWrite( LSTTYPE_MACRO, 0, NULL );
 }
+
+/* LstPrintf() - used to
+ * - print error msgs into the listing
+ * - print structs, macros, records, procs, symbols
+ * - print special info ( binary map ) by bin.c
+ */
 
 void LstPrintf( const char *format, ... )
 /***************************************/
@@ -1264,21 +1271,13 @@ ret_code ListMacroDirective( int i, struct asm_tok tokenarray[] )
 void LstInit( void )
 /******************/
 {
-    const struct fname_item *fn;
-    const char *buffer;
+    //const struct fname_item *fn;
 
-    list_pos = 0;
+    list_pos = 0; /* reset listing position */
     if( Options.write_listing ) {
-        int namelen;
-        buffer = MsgGetEx( MSG_JWASM );
-        list_pos = strlen( buffer );
-        fwrite( buffer, 1, list_pos, CurrFile[LST] );
-        LstNL();
-        fn = GetFName( ModuleInfo.srcfile );
-        namelen = strlen( fn->fname );
-        fwrite( fn->fname, 1, namelen, CurrFile[LST] );
-        list_pos += namelen;
-        LstNL();
+        LstPrintf("%s" NLSTR, MsgGetEx( MSG_JWASM ) );
+        //fn = GetFName( ModuleInfo.srcfile );
+        LstPrintf("%s" NLSTR, GetFName( ModuleInfo.srcfile )->fname );
     }
 
 }
