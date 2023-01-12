@@ -25,7 +25,7 @@ extern void LstWrite( enum lsttype, uint_32 ofs, void * sym );
 extern void LstWriteSrcLine( void );
 extern void LstWriteCRef( void );
 extern void LstPrintf( const char *format, ... );
-extern void LstNL( void );
+//extern void LstNL( void );
 #if FASTPASS
 extern void LstSetPosition( void );
 #endif

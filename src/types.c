@@ -270,11 +270,16 @@ ret_code StructDirective( int i, struct asm_tok tokenarray[] )
 
     if ( ModuleInfo.list ) {
         if ( CurrStruct )
-            LstWrite( LSTTYPE_STRUCT, CurrStruct->sym.total_size, NULL );
+            /* v2.17: don't use total_size as argument for LstWrite(),
+             * it differs for pass==1 and pass>1. In many cases this doesn't matter,
+             * because structs/unions are defined BEFORE data/code and FASTPASS skips
+             * such definitions for subsequent passes.
+             */
+            //LstWrite( LSTTYPE_STRUCT, CurrStruct->sym.total_size, NULL );
+            LstWrite( LSTTYPE_STRUCT, CurrStruct->sym.offset, NULL );
         else
             LstWrite( LSTTYPE_STRUCT, 0, NULL );
     }
-
     /* if pass is > 1, update struct stack + CurrStruct.offset and exit */
     if ( Parse_Pass > PASS_1 ) {
         /* v2.04 changed. the previous implementation was insecure.

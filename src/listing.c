@@ -409,8 +409,8 @@ void LstPrintf( const char *format, ... )
     }
 }
 
-void LstNL( void )
-/****************/
+static void LstNL( void )
+/***********************/
 {
     if( CurrFile[LST] ) {
         fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );

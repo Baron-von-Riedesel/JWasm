@@ -45,6 +45,13 @@
 extern void             print_source_nesting_structure( void );
 extern jmp_buf          jmpenv;
 
+#ifdef __UNIX__
+#define NLSTR "\n"
+#else
+#define NLSTR "\r\n"
+#endif
+
+
 //static bool             Errfile_Written;
 //static void             PrtMsg( int severity, int msgnum, va_list args1, va_list args2 );
 //void                    PutMsg( FILE *fp, int severity, int msgnum, va_list args );
@@ -192,8 +199,7 @@ static void PutMsg( FILE *fp, int severity, int msgnum, va_list args )
              fp == CurrFile[ERR] ) {
             LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), 0 );
             /* size of "blank" prefix to be explained! */
-            LstPrintf( "                           %s", buffer );
-            LstNL();
+            LstPrintf( "                           %s" NLSTR, buffer );
         }
     }
 }

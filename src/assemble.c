@@ -68,8 +68,10 @@ jmp_buf jmpenv;
 //#define ASM_EXT "asm"
 #ifdef __UNIX__
 #define OBJ_EXT "o"
+#define NLSTR "\n"
 #else
 #define OBJ_EXT "obj"
+#define NLSTR "\r\n"
 #endif
 #define LST_EXT "lst"
 #define ERR_EXT "err"
@@ -1538,8 +1540,7 @@ int EXPQUAL AssembleModule( const char *source )
     /* v2.13: suppress the final msg (mostly useful for regression tests) */
     //if ( CurrFile[LST] ) {
     if ( CurrFile[LST] && Options.no_final_msg_listing == FALSE ) {
-        LstPrintf( CurrSource );
-        LstNL();
+        LstPrintf( "%s" NLSTR, CurrSource );
     }
 #if 1 //def __SW_BD
 done:

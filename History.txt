@@ -19,10 +19,13 @@
    -  regression in v2.16: invoke may have generated a "PUSHD" in 64-bit code
       if .model wasn't flat; see invoke54.asm.
    -  FLAT: override may have suppressed address size prefix; see
-      flatgrp4.asm;
+      flatgrp4.asm.
    -  invoke, 64-bit, non-win64, vararg: 32-bit registers were rejected as
       arguments; see invoke55.asm.
    -  display of assembly-time was correct only if CLOCKS_PER_SEC was 1000.
+   -  listing of embedded structs/unions: the printed start offset was wrong
+      if the struct/union wasn't located before any code/data lines; see
+      struct42.asm.
 
    Other changes:
    -  option stackbase: may be used in conjunction with "assume ss" to

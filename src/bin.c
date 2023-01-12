@@ -51,6 +51,12 @@
 #include "pespec.h"
 #endif
 
+#ifdef __UNIX__
+#define NLSTR "\n"
+#else
+#define NLSTR "\r\n"
+#endif
+
 extern void SortSegments( int );
 
 extern void myatoi128( const char *, uint_64[], int, int );
@@ -64,10 +70,10 @@ static const struct MZDATA mzdata = {0x1E, 0x10, 0, 0xFFFF };
 /* these strings are to be moved to ltext.h */
 static const char szCaption[]  = { "Binary Map:" };
 static const char szCaption2[] = { "Segment                  Pos(file)     RVA  Size(fil) Size(mem)" };
-static const char szSep[]      = { "---------------------------------------------------------------" };
+static const char szSep[]      = { "---------------------------------------------------------------" NLSTR };
 static const char szHeader[]   = { "<header>" };
-static const char szSegLine[]  = { "%-24s %8" I32_SPEC "X %8" I32_SPEC "X %9" I32_SPEC "X %9" I32_SPEC "X" };
-static const char szTotal[]    = { "%-42s %9" I32_SPEC "X %9" I32_SPEC "X" };
+static const char szSegLine[]  = { "%-24s %8" I32_SPEC "X %8" I32_SPEC "X %9" I32_SPEC "X %9" I32_SPEC "X" NLSTR };
+static const char szTotal[]    = { "%-42s %9" I32_SPEC "X %9" I32_SPEC "X" NLSTR };
 #endif
 
 struct calc_param {
@@ -1964,15 +1970,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
     if( CurrFile[LST] ) {
         /* go to EOF */
         fseek( CurrFile[LST], 0, SEEK_END );
-        LstNL();
-        LstNL();
-        LstPrintf( szCaption );
-        LstNL();
-        LstNL();
-        LstPrintf( szCaption2 );
-        LstNL();
-        LstPrintf( szSep );
-        LstNL();
+        LstPrintf( NLSTR NLSTR "%s" NLSTR NLSTR "%s" NLSTR "%s", szCaption, szCaption2, szSep );
     }
 #endif
 
@@ -1981,7 +1979,6 @@ static ret_code bin_write_module( struct module_info *modinfo )
             WriteError();
 #if SECTORMAP
         LstPrintf( szSegLine, szHeader, 0, 0, cp.sizehdr, 0 );
-        LstNL();
 #endif
         LclFree( hdrbuf );
     }
@@ -2047,7 +2044,6 @@ static ret_code bin_write_module( struct module_info *modinfo )
         DebugMsg(("bin_write_module(%s): binary map. start_ofs=%X grpofs=%X\n",  curr->sym.name,
                   curr->e.seginfo->start_offset, curr->e.seginfo->group ? curr->e.seginfo->group->offset : 0 ));
  #endif
-        LstNL();
 #endif
         if ( size ) { /* v2.13: write in any case, even if bss segment */
             fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
@@ -2091,20 +2087,18 @@ static ret_code bin_write_module( struct module_info *modinfo )
 #endif
 #if SECTORMAP
     LstPrintf( szSep );
-    LstNL();
-#if MZ_SUPPORT
+ #if MZ_SUPPORT
     if ( modinfo->sub_format == SFORMAT_MZ )
         sizeheap += sizetotal - cp.sizehdr;
     else
-#endif
-#if PE_SUPPORT
+ #endif
+ #if PE_SUPPORT
     if ( modinfo->sub_format == SFORMAT_PE )
         sizeheap = cp.rva;
     else
-#endif
+ #endif
         sizeheap = GetImageSize( TRUE );
     LstPrintf( szTotal, " ", sizetotal, sizeheap );
-    LstNL();
 #endif
     DebugMsg(("bin_write_module: exit\n"));
 
