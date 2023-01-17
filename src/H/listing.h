@@ -21,6 +21,9 @@ enum lsttype {
 };
 
 extern void LstInit( void );
+#ifdef DEBUG_OUT
+extern void LstFini( void );
+#endif
 extern void LstWrite( enum lsttype, uint_32 ofs, void * sym );
 extern void LstWriteSrcLine( void );
 extern void LstWriteCRef( void );

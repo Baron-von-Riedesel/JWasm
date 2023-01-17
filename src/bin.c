@@ -1149,7 +1149,7 @@ static void pe_emit_import_data( void )
     DebugMsg1(("pe_emit_import_data enter\n" ));
     for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
         if ( p->cnt ) {
-			struct dsym *curr;
+            struct dsym *curr;
             struct dsym *alias;
             char *pdot;
             if ( !type ) {
@@ -1527,15 +1527,15 @@ static void pe_set_values( struct calc_param *cp )
     falign = get_bit( GHF( OptionalHeader.FileAlignment ) );
     malign = GHF( OptionalHeader.SectionAlignment );
 
-	/* v2.16: merge .data and .data? sections */
-	for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
-		if ( curr->e.seginfo->segtype == SEGTYPE_DATA )
-			i = curr->e.seginfo->lname_idx;
-		else if ( curr->e.seginfo->segtype == SEGTYPE_BSS && i != -1 )
-			curr->e.seginfo->lname_idx = i;
-	}
+    /* v2.16: merge .data and .data? sections */
+    for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
+        if ( curr->e.seginfo->segtype == SEGTYPE_DATA )
+            i = curr->e.seginfo->lname_idx;
+        else if ( curr->e.seginfo->segtype == SEGTYPE_BSS && i != -1 )
+            curr->e.seginfo->lname_idx = i;
+    }
 
-	cp->isPE = TRUE;
+    cp->isPE = TRUE;
 
     /* assign RVAs to sections */
 
@@ -1563,9 +1563,9 @@ static void pe_set_values( struct calc_param *cp )
         if ( reloc->sym.max_offset > sizeof ( struct IMAGE_BASE_RELOCATION ) )
             cp->rva = reloc->e.seginfo->start_offset + reloc->sym.max_offset;
         else {
-			objtab->sym.max_offset -= sizeof( struct IMAGE_SECTION_HEADER );
-			cp->rva = cp->rva - sizeof ( struct IMAGE_BASE_RELOCATION ); /* v2.16: added */
-			DebugMsg(("pe_set_values: empty .reloc section stripped\n" ));
+            objtab->sym.max_offset -= sizeof( struct IMAGE_SECTION_HEADER );
+            cp->rva = cp->rva - sizeof ( struct IMAGE_BASE_RELOCATION ); /* v2.16: added */
+            DebugMsg(("pe_set_values: empty .reloc section stripped\n" ));
         }
     }
 

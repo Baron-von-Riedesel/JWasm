@@ -969,7 +969,7 @@ static void PassOneChecks( void )
 static int OnePass( void )
 /************************/
 {
-
+    LstInit();
     InputPassInit();
     ModulePassInit();
     SymPassInit( Parse_Pass );
@@ -1043,7 +1043,7 @@ static int OnePass( void )
     }
 
     LinnumFini();
-	ResWordsFini( FALSE ); /* v2.17: renamed keywords must be restored at pass end */
+    ResWordsFini( FALSE ); /* v2.17: renamed keywords must be restored at pass end */
 
     if ( Parse_Pass == PASS_1 )
         PassOneChecks();
@@ -1356,7 +1356,6 @@ static void AssembleInit( const char *source )
     ModuleInit();
     CondInit();
     ExprEvalInit();
-    LstInit(); /* called also after each pass, except the last one */
 
     DebugMsg(("AssembleInit() exit\n"));
     return;
@@ -1374,10 +1373,11 @@ static void AssembleFini( void )
     int i;
     SegmentFini();
     SymFini();
-	ResWordsFini( TRUE ); /* v2.17: restore keywords disabled by option nokeyword */
+    ResWordsFini( TRUE ); /* v2.17: restore keywords disabled by option nokeyword */
 #ifdef DEBUG_OUT
     DumpInstrStats();
     MacroFini();
+    LstFini();
 #endif
     FreePubQueue();
 #if FASTMEM==0
@@ -1510,7 +1510,6 @@ int EXPQUAL AssembleModule( const char *source )
         if ( CurrFile[LST] ) {
 #endif
             rewind( CurrFile[LST] );
-            LstInit();
         }
     } /* end for() */
 

@@ -550,9 +550,9 @@ void RenameKeyword( unsigned token, const char *newname, uint_8 length )
         LclFree( (void *)ResWordTable[token].name );
 #if 1
         /* v2.11: search the original name. if the "new" names matches
-		 * the original name, restore the name pointer
-		 * v2.17: fixed infinite loop ( curr wasn't changed )
-		 */
+         * the original name, restore the name pointer
+         * v2.17: fixed infinite loop ( curr wasn't changed )
+         */
         //for ( curr = renamed_keys.head, prev = NULL; curr; prev = curr ) {
         for ( curr = renamed_keys.head, prev = NULL; curr; prev = curr, curr = curr->next ) {
             if ( curr->token == token ) {

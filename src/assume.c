@@ -532,9 +532,9 @@ enum segofssize GetOfssizeAssume( enum assume_segreg segno )
         if ( sym->state == SYM_SEG )
             return( ((struct dsym *)sym)->e.seginfo->Ofssize );
         return( sym->Ofssize );
-	}
+    }
 
-	return( ModuleInfo.Ofssize );
+    return( ModuleInfo.Ofssize );
 
 }
 #endif

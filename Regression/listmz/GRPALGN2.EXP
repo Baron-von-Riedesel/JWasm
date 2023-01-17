@@ -1,4 +1,4 @@
-JWasm v2.16, Apr 28 2022
+JWasm v2.17, Dec 12 2022
 GRPALGN2.ASM
 
                                     .286
@@ -24,29 +24,29 @@ GRPALGN2.ASM
                                 ;--- 8 bytes of CGROUP at offset 0-7.
 
 
-00000000                        _TEXT2 segment word public 'CODE'
-00000000  909090909090909090        db 10h dup (90h)
-00000010                        _TEXT2 ends
+0000                            _TEXT2 segment word public 'CODE'
+0000 909090909090909090             db 10h dup (90h)
+0010                            _TEXT2 ends
 
                                     .data
 
-00000000  00000000              var1 dd 0
+0000 00000000                   var1 dd 0
 
-00000000                        _BSS segment para public 'BSS'
+0000                            _BSS segment para public 'BSS'
 
                                 DGROUP group _BSS
 
-00000000  000000000000000000    buffer  db 200h dup (?)
+0000 000000000000000000         buffer  db 200h dup (?)
 
-00000200                        _BSS ends
+0200                            _BSS ends
 
 00000000                            .code
 
-00000000                        start proc c public
-00000000  BA0000                    mov dx, offset buffer
-00000003  B8004C                    mov ax, 4C00h
-00000006  CD21                      int 21h
-00000008                        start endp
+0000                            start proc c public
+0000 BA0000                         mov dx, offset buffer
+0003 B8004C                         mov ax, 4C00h
+0006 CD21                           int 21h
+0008                            start endp
 
                                     END start
 

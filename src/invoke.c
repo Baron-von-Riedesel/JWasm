@@ -1338,8 +1338,8 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                             *r0flags = R0_USED | R0_H_CLEARED | R0_X_CLEARED;
                         }
 #if AMD64_SUPPORT
-					} else if ( asize <= 4 && ( psize == 8 || pushsize == 8 ) ) { /* v2.14: added */
-						/* v2.17: accept 32-bit registers in vararg */
+                    } else if ( asize <= 4 && ( psize == 8 || pushsize == 8 ) ) { /* v2.14: added */
+                        /* v2.17: accept 32-bit registers in vararg */
                         // if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 && asize == psize ) {
                         if (( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 && asize > 1 ) {
                             switch ( asize ) {

@@ -43,7 +43,9 @@ extern int_32  LastCodeBufSize;
 extern enum special_token basereg[];
 #endif
 
+#if FASTPASS
 uint_32 list_pos; /* current pos in LST file */
+#endif
 
 #define DOTSMAX 32
 static const char  dots[] = " . . . . . . . . . . . . . . . .";
@@ -108,6 +110,12 @@ static void log_segment( const struct asym *, const struct asym *group );
 static void log_group(   const struct asym *, const struct dsym * );
 static void log_proc(    const struct asym * );
 
+#ifdef DEBUG_OUT
+static uint_32 cntLstWrite;
+static uint_32 cntLstPrintf;
+static uint_32 cntLstBytes;
+#endif
+
 static const struct print_item cr[] = {
     { LQ_MACROS,          0, maccap, log_macro   },
     { LQ_STRUCTS,         0, strcap, log_struct  },
@@ -166,9 +174,17 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         }
     }
 
+#ifdef DEBUG_OUT
+    cntLstWrite++;
+#endif
+
     ModuleInfo.line_flags |= LOF_LISTED;
 
+#if FASTPASS
     DebugMsg1(("LstWrite( %u, %" I32_SPEC "u ): enter [ pos=%" I32_SPEC "u, GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, list_pos, ModuleInfo.GeneratedCode, MacroLevel ));
+#else
+    DebugMsg1(("LstWrite( %u, %" I32_SPEC "u ): enter [ GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, ModuleInfo.GeneratedCode, MacroLevel ));
+#endif
     pSrcline = CurrSource;
 #if FASTPASS
     if ( ( Parse_Pass > PASS_1 ) && UseSavedState ) {
@@ -191,6 +207,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
     ll.next = NULL;
     memset( ll.buffer, ' ', sizeof( ll.buffer ) );
     srcfile = get_curr_srcfile();
+    p2 = ll.buffer;
 
     switch ( type ) {
     case LSTTYPE_DATA:
@@ -204,9 +221,8 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             break;
         }
 
-		newofs = GetCurrOffset();
-		p2 = ll.buffer;
-		p2 += sprintf( p2, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
+        newofs = GetCurrOffset();
+        p2 += sprintf( p2, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
 
         //if ( write_to_file == FALSE )
         if ( Options.first_pass_listing ) {
@@ -241,8 +257,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             if ( ( idx+LastCodeBufSize ) < 0 )
                 break; /* just exit. The code bytes area will remain empty */
             while ( idx < 0 && len ) {
-                sprintf( p2, "%02X", CurrSeg->e.seginfo->CodeBuffer[idx+LastCodeBufSize] );
-                p2 += 2;
+                p2 += sprintf( p2, "%02X", CurrSeg->e.seginfo->CodeBuffer[idx+LastCodeBufSize] );
                 idx++;
                 oldofs++;
                 len--;
@@ -251,35 +266,35 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             idx = 0;
 
         while ( oldofs < newofs && len ) {
-            sprintf( p2, "%02X", CurrSeg->e.seginfo->CodeBuffer[idx] );
-            p2 += 2;
+            p2 += sprintf( p2, "%02X", CurrSeg->e.seginfo->CodeBuffer[idx] );
             idx++;
             oldofs++;
             len--;
         }
-        *p2 = ' ';
         break;
     case LSTTYPE_EQUATE:
-        /* v2.10: display current offset if equate is an alias for a label in this segment */
-        idx = 1;
+        /* v2.10: display current offset if equate is an alias for a label in this segment
+         * v2.17: todo: explain why this might be useful - the current offset where an equate
+         *        is defined should be pretty irrelevant.
+         */
         if ( sym->segment && sym->segment == &CurrSeg->sym ) {
-            sprintf( ll.buffer, "%08" I32_SPEC "X", GetCurrOffset() );
-            idx = 10;
+            p2 += sprintf( ll.buffer, "%08" I32_SPEC "X", GetCurrOffset() );
         }
-        ll.buffer[idx] = '=';
+        *p2++ = ' ';
+        *p2++ = '=';
+        *p2++ = ' ';
 #if AMD64_SUPPORT
         if ( sym->value3264 != 0 && ( sym->value3264 != -1 || sym->value >= 0 ) )
             /* v2.13: the addition & shift did not work. */
             //sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value + ( (uint_64)sym->value3264 << 32 ) );
 #if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
-            sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
+            p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
 #else
-            sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
+            p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
 #endif
         else
 #endif
-            sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I32_SPEC "X", sym->value );
-        ll.buffer[28] = ' ';
+            p2 += sprintf( p2, "%-" PREFFMTSTR I32_SPEC "X", sym->value );
         break;
     case LSTTYPE_TMACRO:
         ll.buffer[1] = '=';
@@ -302,25 +317,28 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         pSrcline = value;
         break;
     case LSTTYPE_LABEL:
-        sprintf( ll.buffer, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), GetCurrOffset() );
+        p2 += sprintf( ll.buffer, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), GetCurrOffset() );
         break;
     case LSTTYPE_STRUCT:
-        sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
+        p2 += sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
         break;
     case LSTTYPE_DIRECTIVE:
         if ( CurrSeg || value ) {
-            sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
+            p2 += sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
         }
         break;
     default: /* LSTTYPE_MACRO */
         if ( *pSrcline == NULLC && ModuleInfo.CurrComment == NULL && srcfile == ModuleInfo.srcfile ) {
             DebugMsg1(("LstWrite: type=%u, writing CRLF\n", type ));
             fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
+#if FASTPASS
             list_pos += NLSIZ;
+#endif
             return;
         }
         break;
     }
+    *p2 = ' ';
 
 #if FASTPASS
     if ( Parse_Pass == PASS_1 || UseSavedState == FALSE ) {
@@ -335,52 +353,46 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         if ( srcfile != ModuleInfo.srcfile ) {
             ll.buffer[30] = 'C';
         }
-#ifdef DEBUG_OUT
         ll.last = NULLC;
-#endif
 #if FASTPASS
     } else {
         //idx = OFSSIZE + 2 + 2 * CODEBYTES;
         idx = 8 + 2 + 2 * CODEBYTES;
-#ifdef DEBUG_OUT
         ll.buffer[idx] = NULLC;
-#endif
     }
 #endif
-    fwrite( ll.buffer, 1, idx, CurrFile[LST] );
-
     len = strlen( pSrcline );
     len2 = ( ModuleInfo.CurrComment ? strlen( ModuleInfo.CurrComment ) : 0 );
 
-    list_pos += sizeof( ll.buffer ) + len + len2 + NLSIZ;
-    DebugMsg1(("LstWrite: writing (%u b) >%s< [%u/%u], new pos=%" I32_SPEC "u\n", idx, ll.buffer, len, len2, list_pos ));
-
-    /* write source and comment part */
 #if FASTPASS
     if ( Parse_Pass == PASS_1 || UseSavedState == FALSE ) {
 #endif
-        if ( len )
-            fwrite( pSrcline, 1, len, CurrFile[LST] );
-        if ( len2 ) {
-            fwrite( ModuleInfo.CurrComment, 1, len2, CurrFile[LST] );
-            DebugMsg1(("LstWrite: writing (%u b) >%s%s<\n", len + len2 + NLSIZ, pSrcline, ModuleInfo.CurrComment ));
-        }
-#ifdef DEBUG_OUT
-        else DebugMsg1(("LstWrite: writing (%u b) >%s<\n", len + NLSIZ, pSrcline ));
-#endif
-        fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
+        LstPrintf( "%-32s%s%s" NLSTR, ll.buffer, len ? pSrcline : "", len2 ? ModuleInfo.CurrComment : "" );
+        DebugMsg1(("LstWrite: writing (%u b) >%s%s%s<\n", idx + len + len2 + NLSIZ, ll.buffer, pSrcline, len2 ? ModuleInfo.CurrComment : "" ));
 #if FASTPASS
+    } else {
+        fwrite( ll.buffer, 1, idx, CurrFile[LST] );
+        DebugMsg1(("LstWrite: writing (%u b) >%s<\n", idx, ll.buffer ));
+        list_pos += sizeof( ll.buffer ) + len + len2 + NLSIZ;
+#ifdef DEBUG_OUT
+        cntLstBytes += idx;
+#endif
     }
 #endif
 
     /* write optional additional lines.
      * currently works in pass one only.
+     * used to display value of text macros that won't fit in ll.buffer.
      */
     for ( pll = ll.next; pll; pll = pll->next ) {
         fwrite( pll->buffer, 1, 32, CurrFile[LST] );
         fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
+#if FASTPASS
         list_pos += 32 + NLSIZ;
         DebugMsg1(("LstWrite: additional line >%s<, new pos=%" I32_SPEC "u\n", pll->buffer, list_pos ));
+#else
+        DebugMsg1(("LstWrite: additional line >%s<\n", pll->buffer ));
+#endif
     }
     return;
 }
@@ -401,10 +413,26 @@ void LstPrintf( const char *format, ... )
 /***************************************/
 {
     va_list     args;
+#ifdef DEBUG_OUT
+    uint_32 oldpos;
+#endif
 
     if( CurrFile[LST] ) {
+#ifdef DEBUG_OUT
+        cntLstPrintf++;
+#endif
         va_start( args, format );
+#if FASTPASS
+#ifdef DEBUG_OUT
+        oldpos = list_pos;
+#endif
         list_pos += vfprintf( CurrFile[LST], format, args );
+#ifdef DEBUG_OUT
+        cntLstBytes += list_pos - oldpos;
+#endif
+#else
+        vfprintf( CurrFile[LST], format, args );
+#endif
         va_end( args );
     }
 }
@@ -414,7 +442,9 @@ static void LstNL( void )
 {
     if( CurrFile[LST] ) {
         fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
+#if FASTPASS
         list_pos += NLSIZ;
+#endif
     }
 }
 
@@ -474,11 +504,11 @@ static void log_macro( const struct asym *sym )
     const char *type = (sym->isfunc) ? strings[LS_FUNC] : strings[LS_PROC];
 
     pdots = ((i >= DOTSMAX) ? "" : dots + i + 1 );
-    LstPrintf( "%s %s        %s", sym->name, pdots ,type );
 #ifdef DEBUG_OUT
-    LstPrintf( " %5lu", ((struct dsym *)sym)->e.macroinfo->count );
+    LstPrintf( "%s %s        %s %5lu" NLSTR, sym->name, pdots ,type, ((struct dsym *)sym)->e.macroinfo->count );
+#else
+    LstPrintf( "%s %s        %s" NLSTR, sym->name, pdots ,type );
 #endif
-    LstNL();
     return;
 }
 
@@ -658,8 +688,7 @@ static void log_record( const struct asym *sym )
 
     pdots = ((i >= DOTSMAX) ? "" : dots + i + 1 );
     for( i = 0,f = si->head; f; f = f->next,i++ );
-    LstPrintf( "%s %s      %6" I32_SPEC "X  %7X", sym->name, pdots, sym->total_size*8, i );
-    LstNL();
+    LstPrintf( "%s %s      %6" I32_SPEC "X  %7X" NLSTR, sym->name, pdots, sym->total_size*8, i );
     for( f = si->head; f; f = f->next ) {
         i = f->sym.name_size + 2;
         pdots = ((i >= DOTSMAX) ? "" : dots + i + 1 );
@@ -714,8 +743,7 @@ static void log_typedef( const struct asym *sym )
         strcat( p, GetLanguage( sym->target_type ) );
     } else
         p = (char *)GetMemtypeString( sym, p );
-    LstPrintf( "%s %s    %8" I32_SPEC "u  %s", sym->name, pdots, sym->total_size, p );
-    LstNL();
+    LstPrintf( "%s %s    %8" I32_SPEC "u  %s" NLSTR, sym->name, pdots, sym->total_size, p );
 }
 
 static void log_segment( const struct asym *sym, const struct asym *group )
@@ -759,8 +787,7 @@ static void log_group( const struct asym *grp, const struct dsym *segs )
 
     i = grp->name_size;
     pdots = (( i >= DOTSMAX ) ? "" : dots + i + 1);
-    LstPrintf( "%s %s        %s", grp->name, pdots, strings[LS_GROUP] );
-    LstNL();
+    LstPrintf( "%s %s        %s" NLSTR, grp->name, pdots, strings[LS_GROUP] );
 
     /* the FLAT groups is always empty */
     if ( grp == (struct asym *)ModuleInfo.flat_grp ) {
@@ -847,8 +874,7 @@ static void log_proc( const struct asym *sym )
 #endif
     }
 
-    LstPrintf( "%s", GetLanguage( sym ) );
-    LstNL();
+    LstPrintf( "%s" NLSTR, GetLanguage( sym ) );
     /* for PROTOs, list optional altname */
     if ( sym->state == SYM_EXTERNAL && sym->altname ) {
         struct asym *sym2 = sym->altname;
@@ -1018,18 +1044,15 @@ static void log_symbol( const struct asym *sym )
             LstPrintf( "%s ", strings[LS_UNDEFINED] );
         }
 
-        LstPrintf( "%s", GetLanguage( sym ) );
-        LstNL();
+        LstPrintf( "%s" NLSTR, GetLanguage( sym ) );
         break;
     case SYM_TMACRO:
         //GetLiteralValue( buffer, sym->string_ptr );
         //strcpy( buffer, sym->string_ptr );
-        LstPrintf( "%s %s        %s   %s", sym->name, pdots, strings[LS_TEXT], sym->string_ptr );
-        LstNL();
+        LstPrintf( "%s %s        %s   %s" NLSTR, sym->name, pdots, strings[LS_TEXT], sym->string_ptr );
         break;
     case SYM_ALIAS:
-        LstPrintf( "%s %s        %s  %s", sym->name, pdots, strings[LS_ALIAS], sym->substitute->name );
-        LstNL();
+        LstPrintf( "%s %s        %s  %s" NLSTR, sym->name, pdots, strings[LS_ALIAS], sym->substitute->name );
         break;
     }
 }
@@ -1273,11 +1296,26 @@ void LstInit( void )
 {
     //const struct fname_item *fn;
 
+#ifdef DEBUG_OUT
+    if ( Parse_Pass == PASS_1 ) {
+        cntLstWrite  = 0;
+        cntLstPrintf = 0;
+        cntLstBytes  = 0;
+    }
+#endif
+#if FASTPASS
     list_pos = 0; /* reset listing position */
+#endif
     if( Options.write_listing ) {
         LstPrintf("%s" NLSTR, MsgGetEx( MSG_JWASM ) );
         //fn = GetFName( ModuleInfo.srcfile );
         LstPrintf("%s" NLSTR, GetFName( ModuleInfo.srcfile )->fname );
     }
-
 }
+#ifdef DEBUG_OUT
+void LstFini( void )
+/******************/
+{
+    printf("LstFini: calls LstWrite/LstPrintf=%" I32_SPEC "u/%" I32_SPEC "u, bytes=%" I32_SPEC "u\n", cntLstWrite, cntLstPrintf, cntLstBytes );
+}
+#endif

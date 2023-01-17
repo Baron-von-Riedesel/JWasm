@@ -677,7 +677,7 @@ OPTFUNC( SetRenameKey )
     }
 
 #if FASTPASS
-	if ( StoreState == FALSE ) FStoreLine(0); /* v2.17: ensure the option is scanned in all passes */
+    if ( StoreState == FALSE ) FStoreLine(0); /* v2.17: ensure the option is scanned in all passes */
 #endif
 
     RenameKeyword( index, tokenarray[i].string_ptr, strlen( tokenarray[i].string_ptr ) );

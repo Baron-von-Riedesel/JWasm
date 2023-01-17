@@ -768,9 +768,20 @@ void UpdateStructSize( struct asym *sym )
         if ( sym->total_size > CurrStruct->sym.total_size )
             CurrStruct->sym.total_size = sym->total_size;
     } else {
+        /* v2.17:replace signed field "offset" by unsigned "uvalue"?
+         * allows structures with size > 2GB, but isn't masm compatible;
+         * also, struct size may be incorrect if start offset of struct is
+         * negative ( due to an ORG at struct start with negative argument )
+         */
+#if 1
         CurrStruct->sym.offset += sym->total_size;
         if ( CurrStruct->sym.offset > (int_32)CurrStruct->sym.total_size )
             CurrStruct->sym.total_size = CurrStruct->sym.offset;
+#else
+        CurrStruct->sym.uvalue += sym->total_size;
+        if ( CurrStruct->sym.uvalue > CurrStruct->sym.total_size )
+            CurrStruct->sym.total_size = CurrStruct->sym.uvalue;
+#endif
     }
     DebugMsg1(("UpdateStructSize(%s.%s): %s, curr mbr size=%u curr struc/union size=%u\n",
                CurrStruct->sym.name,

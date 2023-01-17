@@ -1224,8 +1224,8 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
                     DebugMsg1(("idata_fixup, fixup_type=OFF32\n" ));
                     fixup_type = FIX_OFF32;
 #if AMD64_SUPPORT
-					if ( Ofssize == USE64 && Parse_Pass == PASS_2 )
-						EmitWarn( (ModuleInfo.Ofssize == USE64 ? 3 : 4), ADDR32_FIXUP_FOR_64BIT_LABEL );
+                    if ( Ofssize == USE64 && Parse_Pass == PASS_2 )
+                        EmitWarn( (ModuleInfo.Ofssize == USE64 ? 3 : 4), ADDR32_FIXUP_FOR_64BIT_LABEL );
 #endif
                 }
             } else {
@@ -1839,8 +1839,8 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
     }
 
     DebugMsg1(("memory_operand exit, ok, opndx.type/value=%Xh/%Xh, CodeInfo.memtype/rmbyte/op/ad=%X/%X/%u/%u opndtype=%Xh fix=%Xh\n",
-			opndx->type, opndx->value, CodeInfo->mem_type, CodeInfo->rm_byte, CodeInfo->prefix.opsiz, CodeInfo->prefix.adrsiz,
-			CodeInfo->opnd[CurrOpnd].type, CodeInfo->opnd[CurrOpnd].InsFixup ));
+            opndx->type, opndx->value, CodeInfo->mem_type, CodeInfo->rm_byte, CodeInfo->prefix.opsiz, CodeInfo->prefix.adrsiz,
+            CodeInfo->opnd[CurrOpnd].type, CodeInfo->opnd[CurrOpnd].InsFixup ));
     return( NOT_ERROR );
 }
 
