@@ -1498,19 +1498,11 @@ int EXPQUAL AssembleModule( const char *source )
 #endif
         }
 
-        /* set file position of ASM and LST files for next pass */
-
+        /* set file position of .ASM/.OBJ files for next pass */
         rewind( CurrFile[ASM] );
         if ( write_to_file && Options.output_format == OFORMAT_OMF )
             omf_set_filepos();
 
-#if FASTPASS
-        if ( UseSavedState == FALSE && CurrFile[LST] ) {
-#else
-        if ( CurrFile[LST] ) {
-#endif
-            rewind( CurrFile[LST] );
-        }
     } /* end for() */
 
     if ( ( Parse_Pass > PASS_1 ) && write_to_file )

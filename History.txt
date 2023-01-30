@@ -40,6 +40,8 @@
    -  RETs inside PROCs will now show up in listing file like in Masm; see
       lst3.asm.
    -  in listings, offset of 16-bit segments now displayed with width 4.
+   -  offsets/displacements that are too large will now always cause error
+      "constant value too large"; see offset17/18/19.asm.
 
    14.11.2022, v2.16:
 

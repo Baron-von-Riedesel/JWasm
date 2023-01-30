@@ -535,6 +535,10 @@ ret_code LocalDir( int i, struct asm_tok tokenarray[] )
                 EmitError( CONSTANT_EXPECTED );
                 opndx.value = 1;
             }
+            /* v2.17: check if value is too large */
+            if ( opndx.hvalue && ( opndx.hvalue != -1 || opndx.value >= 0 ) ) {
+                EmitConstError( &opndx );
+            }
             /* zero is allowed as value! */
             local->sym.total_length = opndx.value;
             local->sym.isarray = TRUE;

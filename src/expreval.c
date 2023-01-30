@@ -2688,18 +2688,23 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
             if( opnd2->kind == EXPR_REG ) {
                 /* scale * reg */
                 opnd1->idx_reg = opnd2->base_reg;
-                opnd1->scale = opnd1->value;
-                opnd1->value = 0;
+                //opnd1->scale = opnd1->value;
+                //opnd1->value = 0;
                 //opnd2->base_reg = NULL;
             } else {
                 /* reg * scale */
                 opnd1->idx_reg = opnd1->base_reg;
-                opnd1->scale = opnd2->value;
+                //opnd1->scale = opnd2->value;
+                opnd1->value = opnd2->value;
             }
             /* v2.08: check 0 (the default value) here */
-            if ( opnd1->scale == 0 ) {
+            /* v2.17: check if bits are lost ( else scales of 257 or similar are accepted ) */
+            if ( opnd1->value <= 0 || opnd1->value > 127 ) {
                 return( fnEmitErr( SCALE_FACTOR_MUST_BE_1_2_4_OR_8 ) );
             }
+            opnd1->scale = opnd1->value;
+            opnd1->value = 0;
+
 
             opnd1->base_reg = NULL;
             opnd1->indirect = TRUE;

@@ -1296,16 +1296,25 @@ void LstInit( void )
 {
     //const struct fname_item *fn;
 
-#ifdef DEBUG_OUT
-    if ( Parse_Pass == PASS_1 ) {
-        cntLstWrite  = 0;
-        cntLstPrintf = 0;
-        cntLstBytes  = 0;
-    }
-#endif
 #if FASTPASS
     list_pos = 0; /* reset listing position */
 #endif
+    if ( Parse_Pass == PASS_1 ) {
+#ifdef DEBUG_OUT
+        cntLstWrite  = 0;
+        cntLstPrintf = 0;
+        cntLstBytes  = 0;
+#endif
+    } else {
+        if ( CurrFile[LST]
+#if FASTPASS
+         && UseSavedState == FALSE
+#endif
+           ) {
+            rewind( CurrFile[LST] );
+        } else
+            return;
+    }
     if( Options.write_listing ) {
         LstPrintf("%s" NLSTR, MsgGetEx( MSG_JWASM ) );
         //fn = GetFName( ModuleInfo.srcfile );
@@ -1316,6 +1325,7 @@ void LstInit( void )
 void LstFini( void )
 /******************/
 {
-    printf("LstFini: calls LstWrite/LstPrintf=%" I32_SPEC "u/%" I32_SPEC "u, bytes=%" I32_SPEC "u\n", cntLstWrite, cntLstPrintf, cntLstBytes );
+    if ( Options.write_listing )
+        printf("LstFini: calls LstWrite/LstPrintf=%" I32_SPEC "u/%" I32_SPEC "u, bytes=%" I32_SPEC "u\n", cntLstWrite, cntLstPrintf, cntLstBytes );
 }
 #endif
