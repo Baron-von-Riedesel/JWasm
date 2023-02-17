@@ -1522,8 +1522,12 @@ int EXPQUAL AssembleModule( const char *source )
              GetFName( ModuleInfo.srcfile )->fname,
              GetLineNumber(),
              Parse_Pass + 1,
+#if CLOCKS_PER_SEC > 1000
             ( endtime - starttime ) / ( CLOCKS_PER_SEC / 1000 ), /* v2.17: ensure result is in ms */
-             ModuleInfo.g.warning_count,
+#else
+            ( endtime - starttime ) * 55, /* v2.17: assume it's PIT ticks (55 per second) */
+#endif
+            ModuleInfo.g.warning_count,
              ModuleInfo.g.error_count);
     if ( Options.quiet == FALSE )
         printf( "%s\n", CurrSource );

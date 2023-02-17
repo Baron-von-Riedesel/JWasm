@@ -9,8 +9,10 @@
 # "WMake"         - creates the Win32 version.
 # "WMake debug=1" - creates the Win32 debug version.
 # "WMake dos=1"   - creates both Win32 and DOS version (JWasmD.exe)
-# "WMake djgpp=1" - creates a Win32 version with DJGPP support.
 # "WMake wlink=1" - create a Win32 version that is linked with OW Wlink.
+#
+# since v2.17, -djgpp is on as default, so now:
+# "WMake djgpp=0" - creates a Win32 version without DJGPP support.
 
 name = JWasm
 
@@ -32,7 +34,7 @@ DEBUG=0
 DOS=0
 !endif
 !ifndef DJGPP
-DJGPP=0
+DJGPP=1
 !endif
 
 # to track memory leaks, the Open Watcom TRMEM module can be included.

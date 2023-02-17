@@ -20,7 +20,7 @@ extra_c_flags = -DNDEBUG -O2
 OUTD=build\DJGPPr
 endif
 
-c_flags = $(extra_c_flags)
+c_flags = -DDJGPP_SUPPORT $(extra_c_flags)
 
 CC=gcc.exe -c $(inc_dirs) $(c_flags)
 

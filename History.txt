@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.2022, v2.17:
+   __.__.2023, v2.17:
 
    Bugfixes:
    -  option renamekeyword: if the keyword was renamed multiple times it
@@ -26,6 +26,7 @@
    -  listing of embedded structs/unions: the printed start offset was wrong
       if the struct/union wasn't located before any code/data lines; see
       struct42.asm.
+   -  djgpp output format was broken.
 
    Other changes:
    -  option stackbase: may be used in conjunction with "assume ss" to
@@ -42,6 +43,8 @@
    -  in listings, offset of 16-bit segments now displayed with width 4.
    -  offsets/displacements that are too large will now always cause error
       "constant value too large"; see offset17/18/19.asm.
+   -  output format -djgpp ( special coff variant ), previously optional only,
+      is now activated as default.
 
    14.11.2022, v2.16:
 
