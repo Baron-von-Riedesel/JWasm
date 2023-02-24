@@ -27,6 +27,9 @@
       if the struct/union wasn't located before any code/data lines; see
       struct42.asm.
    -  djgpp output format was broken.
+   -  COMM directive: if a type was given instead of a size, the type wasn't
+      stored in the symbol and hence couldn't be used in expressions; see
+      comm7.asm.
 
    Other changes:
    -  option stackbase: may be used in conjunction with "assume ss" to
