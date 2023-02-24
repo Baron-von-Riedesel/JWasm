@@ -297,13 +297,17 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
             if ( fixup->type == FIX_RELOFF32 ) { /* probably also for 16-bit */
                 *pdata -= ( fixup->locofs + 4 );
             } else if ( fixup->type == FIX_OFF32 ) {
-				/* v2.17: was brokem since ???.
-				 * generally, djgpp expects the offset to be stored in the data
-				 * and the reference to the symbol is the current section!
-				 */
-				*pdata += fixup->sym->offset; /* ok */
-				//fixup->offset += fixup->sym->offset; /* ok? */
-				fixup->sym = fixup->sym->segment;
+                /* v2.17: was brokem since ???.
+                 * generally, for internal symbols djgpp expects the offset to be stored in the data
+                 * and the reference to the symbol is the current section!
+                 */
+                if ( fixup->sym->iscomm )
+                    *pdata += fixup->sym->total_size; /* "comm" vars: size + offset  */
+                else
+                    *pdata += fixup->sym->offset; /* ok */
+                //fixup->offset += fixup->sym->offset; /* ok? */
+                if ( !fixup->sym->state == SYM_EXTERNAL ) /* externals still ref. the symbol */
+                    fixup->sym = fixup->sym->segment;
             }
         } else
 #endif
