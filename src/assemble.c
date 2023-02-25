@@ -1403,6 +1403,14 @@ static void AssembleFini( void )
     return;
 }
 
+static uint_32 GetMsecs( clock_t ticks )
+{
+//    if ( CLOCKS_PER_SEC  >= 1000 )
+//        return( ticks / ( CLOCKS_PER_SEC / 1000 ) );
+    return( ticks * 1000 / CLOCKS_PER_SEC );
+}
+
+
 /* AssembleModule() assembles one source file */
 
 int EXPQUAL AssembleModule( const char *source )
@@ -1516,17 +1524,13 @@ int EXPQUAL AssembleModule( const char *source )
     /* Write a symbol listing file (if requested) */
     LstWriteCRef();
 
-    endtime = clock(); /* is in ms already */
+    endtime = clock();
 
     sprintf( CurrSource, MsgGetEx( MSG_ASSEMBLY_RESULTS ),
-             GetFName( ModuleInfo.srcfile )->fname,
-             GetLineNumber(),
-             Parse_Pass + 1,
-#if CLOCKS_PER_SEC > 1000
-            ( endtime - starttime ) / ( CLOCKS_PER_SEC / 1000 ), /* v2.17: ensure result is in ms */
-#else
-            ( endtime - starttime ) * 55, /* v2.17: assume it's PIT ticks (55 per second) */
-#endif
+            GetFName( ModuleInfo.srcfile )->fname,
+            GetLineNumber(),
+            Parse_Pass + 1,
+            GetMsecs( endtime - starttime ),
             ModuleInfo.g.warning_count,
              ModuleInfo.g.error_count);
     if ( Options.quiet == FALSE )

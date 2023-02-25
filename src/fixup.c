@@ -306,7 +306,7 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
                 else
                     *pdata += fixup->sym->offset; /* ok */
                 //fixup->offset += fixup->sym->offset; /* ok? */
-                if ( !fixup->sym->state == SYM_EXTERNAL ) /* externals still ref. the symbol */
+                if ( fixup->sym->state != SYM_EXTERNAL ) /* externals still ref. the symbol */
                     fixup->sym = fixup->sym->segment;
             }
         } else
