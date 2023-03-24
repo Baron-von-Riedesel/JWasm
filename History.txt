@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.2023, v2.17:
+   25.03.2023, v2.17:
 
    Bugfixes:
    -  option renamekeyword: if the keyword was renamed multiple times it
