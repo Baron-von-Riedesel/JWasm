@@ -53,8 +53,9 @@
 ret_code GetNumber( char *string, int *pi, struct asm_tok tokenarray[] );
 
 extern const char szDgroup[];
+#if FASTPASS
 extern uint_32 list_pos;  /* current LST file position */
-
+#endif
 /*
  * Masm allows nested procedures
  * but they must NOT have params or locals
@@ -534,6 +535,10 @@ ret_code LocalDir( int i, struct asm_tok tokenarray[] )
                 EmitError( CONSTANT_EXPECTED );
                 opndx.value = 1;
             }
+            /* v2.17: check if value is too large */
+            if ( opndx.hvalue && ( opndx.hvalue != -1 || opndx.value >= 0 ) ) {
+                EmitConstError( &opndx );
+            }
             /* zero is allowed as value! */
             local->sym.total_length = opndx.value;
             local->sym.isarray = TRUE;
@@ -940,10 +945,10 @@ static ret_code ParseParams( struct dsym *proc, int i, struct asm_tok tokenarray
         /* v2.17: if option stackbase is on, use the size of the base pointer
          */
 #if STACKBASESUPP
-		offset = ( ( 1 + ( proc->sym.mem_type == MT_FAR ? 1 : 0 ) ) * CurrWordSize ) +
-			GetSflagsSp( proc->e.procinfo->basereg ) & SFR_SIZMSK;
+        offset = ( ( 1 + ( proc->sym.mem_type == MT_FAR ? 1 : 0 ) ) * CurrWordSize ) +
+            GetSflagsSp( proc->e.procinfo->basereg ) & SFR_SIZMSK;
 #else
-		offset = ( ( 2 + ( proc->sym.mem_type == MT_FAR ? 1 : 0 ) ) * CurrWordSize );
+        offset = ( ( 2 + ( proc->sym.mem_type == MT_FAR ? 1 : 0 ) ) * CurrWordSize );
 #endif
         /* now calculate the [E|R]BP offsets */
 
@@ -2393,6 +2398,7 @@ static ret_code write_default_prologue( void )
         ( ModuleInfo.win64_flags & W64F_SAVEREGPARAMS ) )
         win64_SaveRegParams( info );
 #endif
+    rstackreg = stackreg[ModuleInfo.Ofssize]; /* v2.17: init new var rstackreg */
     if( info->locallist || info->stackparam || info->has_vararg || info->forceframe ) {
 
         /* write 80386 prolog code
@@ -2405,24 +2411,24 @@ static ret_code write_default_prologue( void )
          * SS is assumed to have an offset size != Module's offset size,
          * use the appropriate sp register
          */
-		rstackreg = stackreg[ ModuleInfo.g.StackBase ? GetOfssizeAssume( ASSUME_SS ) : ModuleInfo.Ofssize ];
+        if ( ModuleInfo.g.StackBase )
+            rstackreg = stackreg[ GetOfssizeAssume( ASSUME_SS ) ];
 
         if ( !info->fpo ) {
-			AddLineQueueX( "push %r", info->basereg );
-			/* v2.17: if code is 32-bit, baseptr is 32-bit and 16-bit stack,
+            AddLineQueueX( "push %r", info->basereg );
+            /* v2.17: if code is 32-bit, baseptr is 32-bit and 16-bit stack,
              * just use "movzx" to setup base ptr, but elso change nothing.
              */
-			if ( SizeFromRegister( info->basereg ) > SizeFromRegister( rstackreg ) ) {
-				AddLineQueueX( "movzx %r, %r", info->basereg, rstackreg );
-				rstackreg = stackreg[ModuleInfo.Ofssize];
-			} else {
-				AddLineQueueX( "mov %r, %r", info->basereg, rstackreg );
-				if ( rstackreg != stackreg[ModuleInfo.Ofssize] )
-					info->pe_type = 0; /* avoid using LEAVE if Ofssize of base register differs */
-			}
+            if ( SizeFromRegister( info->basereg ) > SizeFromRegister( rstackreg ) ) {
+                AddLineQueueX( "movzx %r, %r", info->basereg, rstackreg );
+                rstackreg = stackreg[ModuleInfo.Ofssize];
+            } else {
+                AddLineQueueX( "mov %r, %r", info->basereg, rstackreg );
+                if ( rstackreg != stackreg[ModuleInfo.Ofssize] )
+                    info->pe_type = 0; /* avoid using LEAVE if Ofssize of base register differs */
+            }
         }
 #else
-        rstackreg = stackreg[ModuleInfo.Ofssize];
         AddLineQueueX( "push %r", basereg[ModuleInfo.Ofssize] );
         AddLineQueueX( "mov %r, %r", basereg[ModuleInfo.Ofssize], rstackreg );
 #endif
@@ -2815,9 +2821,9 @@ static void write_win64_default_epilogue( struct proc_info *info )
 static void write_default_epilogue( void )
 /****************************************/
 {
-	struct proc_info   *info;
+    struct proc_info   *info;
 #if STACKBASESUPP
-	unsigned           rstackreg;
+    unsigned           rstackreg;
 #endif
 #if AMD64_SUPPORT
     int resstack = 0;
@@ -2864,7 +2870,7 @@ static void write_default_epilogue( void )
      * SS is assumed to have an offset size != Module's offset size,
      * use the appropriate sp register
      */
-	rstackreg = stackreg[ ModuleInfo.g.StackBase ? GetOfssizeAssume( ASSUME_SS ) : ModuleInfo.Ofssize ];
+    rstackreg = stackreg[ ModuleInfo.g.StackBase ? GetOfssizeAssume( ASSUME_SS ) : ModuleInfo.Ofssize ];
 #endif
 
 
@@ -2995,6 +3001,7 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
 #ifdef DEBUG_OUT
     ret_code    rc;
 #endif
+    uint_32     dwOfs;
     char        buffer[MAX_LINE_LEN]; /* stores modified RETN/RETF/IRET instruction */
 
     DebugMsg1(( "RetInstr() enter\n" ));
@@ -3026,10 +3033,6 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
 #else
         return( write_userdef_epilogue( is_iret, tokenarray ) );
 #endif
-    }
-
-    if ( ModuleInfo.list ) {
-        LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), NULL );
     }
 
     strcpy( buffer, tokenarray[i].string_ptr );
@@ -3076,8 +3079,25 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
         /* v2.06: changed. Now works even if RET has ben "renamed" */
         strcpy( p, tokenarray[i].tokpos );
     }
+    /* v2.17: print src line only if either -Sg is active or the epilogue
+     * isn't empty; else just remember current offset and write listing after
+     * line queue ( which is 1 line only [RETx] then ) has been processed.
+     */
+    if ( ModuleInfo.list )
+        if ( ModuleInfo.list_generated_code || ( is_linequeue_populated() ) ) {
+            LstWriteSrcLine();
+            dwOfs = -1;
+        } else
+            dwOfs = GetCurrOffset();
+
     AddLineQueue( buffer );
     RunLineQueue();
+
+    /* v2.17: if dwOfs is != -1, just a RET was processed in line queue and -Sg is FALSE;
+     * then display a standard "code" line in listing.
+     */
+    if ( ModuleInfo.list && dwOfs != -1 )
+            LstWrite( LSTTYPE_CODE, dwOfs, NULL );
 
     DebugMsg1(( "RetInstr() exit\n" ));
 

@@ -87,7 +87,7 @@ static void output_opc( struct code_info *CodeInfo )
     uint_8           tmp;
     uint_8           fpfix = FALSE;
 
-    DebugMsg1(("output_opc enter, ins.opc/rm=%X/%X, byte1_info=%X CodeInfo->rm=%X opsiz=%u\n", ins->opcode, ins->rm_byte, ins->byte1_info, CodeInfo->rm_byte, CodeInfo->prefix.opsiz ));
+    DebugMsg1(("output_opc enter, ins.opc/rm=%X/%X, byte1_info=%X CodeInfo->rm=%X op/addrsiz=%u/%u\n", ins->opcode, ins->rm_byte, ins->byte1_info, CodeInfo->rm_byte, CodeInfo->prefix.opsiz, CodeInfo->prefix.adrsiz ));
     /*
      * Output debug info - line numbers
      */

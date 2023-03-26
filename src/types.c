@@ -270,11 +270,16 @@ ret_code StructDirective( int i, struct asm_tok tokenarray[] )
 
     if ( ModuleInfo.list ) {
         if ( CurrStruct )
-            LstWrite( LSTTYPE_STRUCT, CurrStruct->sym.total_size, NULL );
+            /* v2.17: don't use total_size as argument for LstWrite(),
+             * it differs for pass==1 and pass>1. In many cases this doesn't matter,
+             * because structs/unions are defined BEFORE data/code and FASTPASS skips
+             * such definitions for subsequent passes.
+             */
+            //LstWrite( LSTTYPE_STRUCT, CurrStruct->sym.total_size, NULL );
+            LstWrite( LSTTYPE_STRUCT, CurrStruct->sym.offset, NULL );
         else
             LstWrite( LSTTYPE_STRUCT, 0, NULL );
     }
-
     /* if pass is > 1, update struct stack + CurrStruct.offset and exit */
     if ( Parse_Pass > PASS_1 ) {
         /* v2.04 changed. the previous implementation was insecure.
@@ -763,9 +768,20 @@ void UpdateStructSize( struct asym *sym )
         if ( sym->total_size > CurrStruct->sym.total_size )
             CurrStruct->sym.total_size = sym->total_size;
     } else {
+        /* v2.17:replace signed field "offset" by unsigned "uvalue"?
+         * allows structures with size > 2GB, but isn't masm compatible;
+         * also, struct size may be incorrect if start offset of struct is
+         * negative ( due to an ORG at struct start with negative argument )
+         */
+#if 1
         CurrStruct->sym.offset += sym->total_size;
         if ( CurrStruct->sym.offset > (int_32)CurrStruct->sym.total_size )
             CurrStruct->sym.total_size = CurrStruct->sym.offset;
+#else
+        CurrStruct->sym.uvalue += sym->total_size;
+        if ( CurrStruct->sym.uvalue > CurrStruct->sym.total_size )
+            CurrStruct->sym.total_size = CurrStruct->sym.uvalue;
+#endif
     }
     DebugMsg1(("UpdateStructSize(%s.%s): %s, curr mbr size=%u curr struc/union size=%u\n",
                CurrStruct->sym.name,

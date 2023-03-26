@@ -86,7 +86,7 @@
 "-coff\0"           "COFF object file\0"
 #endif
 #if COFF_SUPPORT && DJGPP_SUPPORT
-"-djgpp\0"          "Djgpp's variant of 32-bit COFF object file\0"
+"-djgpp\0"          "Djgpp's variant of 32-bit COFF format\0"
 #endif
 #if ELF_SUPPORT
 "-elf\0"            "32-bit ELF object file\0"

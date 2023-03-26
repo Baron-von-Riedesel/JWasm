@@ -103,7 +103,7 @@ struct expr {
 
     enum exprtype   kind;           /* Type of expression */
     enum memtype    mem_type;       /* memory type if expr is a memory ref. */
-    uint_8          scale;          /* EXPR_ADDR: scaling factor 1, 2, 4, or 8 - 386 code only */
+    int_8           scale;          /* EXPR_ADDR: scaling factor 1, 2, 4, or 8 - 386 code only */
     uint_8          Ofssize;        /* 16,32,64 bit if MT_NEAR, MT_FAR */
     union {
         uint_8      flags1;

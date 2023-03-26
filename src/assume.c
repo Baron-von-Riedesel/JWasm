@@ -532,9 +532,9 @@ enum segofssize GetOfssizeAssume( enum assume_segreg segno )
         if ( sym->state == SYM_SEG )
             return( ((struct dsym *)sym)->e.seginfo->Ofssize );
         return( sym->Ofssize );
-	}
+    }
 
-	return( ModuleInfo.Ofssize );
+    return( ModuleInfo.Ofssize );
 
 }
 #endif
@@ -553,7 +553,13 @@ enum assume_segreg GetAssume( const struct asym *override, const struct asym *sy
 {
     enum assume_segreg  reg;
 
-    if( ( def != ASSUME_NOTHING ) && SegAssumeTable[def].is_flat ) {
+    /* v2.17: handle case if model isn't flat, but current segment is 64-bit ( flatgrp3.asm ) */
+    //if( ( def != ASSUME_NOTHING ) && SegAssumeTable[def].is_flat ) {
+    if( ( def != ASSUME_NOTHING ) && ( SegAssumeTable[def].is_flat
+#if AMD64_SUPPORT
+         || ModuleInfo.Ofssize == USE64
+#endif
+        ) ) {
         *passume = (struct asym *)ModuleInfo.flat_grp;
         return( def );
     }

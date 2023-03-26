@@ -68,8 +68,10 @@ jmp_buf jmpenv;
 //#define ASM_EXT "asm"
 #ifdef __UNIX__
 #define OBJ_EXT "o"
+#define NLSTR "\n"
 #else
 #define OBJ_EXT "obj"
+#define NLSTR "\r\n"
 #endif
 #define LST_EXT "lst"
 #define ERR_EXT "err"
@@ -967,7 +969,7 @@ static void PassOneChecks( void )
 static int OnePass( void )
 /************************/
 {
-
+    LstInit();
     InputPassInit();
     ModulePassInit();
     SymPassInit( Parse_Pass );
@@ -1041,7 +1043,7 @@ static int OnePass( void )
     }
 
     LinnumFini();
-	ResWordsFini(); /* v2.17: keywords must be restored at pass end */
+    ResWordsFini( FALSE ); /* v2.17: renamed keywords must be restored at pass end */
 
     if ( Parse_Pass == PASS_1 )
         PassOneChecks();
@@ -1354,7 +1356,6 @@ static void AssembleInit( const char *source )
     ModuleInit();
     CondInit();
     ExprEvalInit();
-    LstInit();
 
     DebugMsg(("AssembleInit() exit\n"));
     return;
@@ -1372,10 +1373,11 @@ static void AssembleFini( void )
     int i;
     SegmentFini();
     SymFini();
-//	ResWordsFini(); /* v2.17: keywords must be restored at pass end, here it's too late! */
+    ResWordsFini( TRUE ); /* v2.17: restore keywords disabled by option nokeyword */
 #ifdef DEBUG_OUT
     DumpInstrStats();
     MacroFini();
+    LstFini();
 #endif
     FreePubQueue();
 #if FASTMEM==0
@@ -1401,6 +1403,14 @@ static void AssembleFini( void )
     return;
 }
 
+static uint_32 GetMsecs( clock_t ticks )
+{
+//    if ( CLOCKS_PER_SEC  >= 1000 )
+//        return( ticks / ( CLOCKS_PER_SEC / 1000 ) );
+    return( ticks * 1000 / CLOCKS_PER_SEC );
+}
+
+
 /* AssembleModule() assembles one source file */
 
 int EXPQUAL AssembleModule( const char *source )
@@ -1408,8 +1418,8 @@ int EXPQUAL AssembleModule( const char *source )
 {
     uint_32       prev_written = -1;
     uint_32       curr_written;
-    int           starttime;
-    int           endtime;
+    clock_t       starttime;
+    clock_t       endtime;
     struct dsym   *seg;
 
     DebugMsg(("AssembleModule(\"%s\") enter\n", source ));
@@ -1496,20 +1506,11 @@ int EXPQUAL AssembleModule( const char *source )
 #endif
         }
 
-        /* set file position of ASM and LST files for next pass */
-
+        /* set file position of .ASM/.OBJ files for next pass */
         rewind( CurrFile[ASM] );
         if ( write_to_file && Options.output_format == OFORMAT_OMF )
             omf_set_filepos();
 
-#if FASTPASS
-        if ( UseSavedState == FALSE && CurrFile[LST] ) {
-#else
-        if ( CurrFile[LST] ) {
-#endif
-            rewind( CurrFile[LST] );
-            LstInit();
-        }
     } /* end for() */
 
     if ( ( Parse_Pass > PASS_1 ) && write_to_file )
@@ -1523,14 +1524,14 @@ int EXPQUAL AssembleModule( const char *source )
     /* Write a symbol listing file (if requested) */
     LstWriteCRef();
 
-    endtime = clock(); /* is in ms already */
+    endtime = clock();
 
     sprintf( CurrSource, MsgGetEx( MSG_ASSEMBLY_RESULTS ),
-             GetFName( ModuleInfo.srcfile )->fname,
-             GetLineNumber(),
-             Parse_Pass + 1,
-             endtime - starttime,
-             ModuleInfo.g.warning_count,
+            GetFName( ModuleInfo.srcfile )->fname,
+            GetLineNumber(),
+            Parse_Pass + 1,
+            GetMsecs( endtime - starttime ),
+            ModuleInfo.g.warning_count,
              ModuleInfo.g.error_count);
     if ( Options.quiet == FALSE )
         printf( "%s\n", CurrSource );
@@ -1538,8 +1539,7 @@ int EXPQUAL AssembleModule( const char *source )
     /* v2.13: suppress the final msg (mostly useful for regression tests) */
     //if ( CurrFile[LST] ) {
     if ( CurrFile[LST] && Options.no_final_msg_listing == FALSE ) {
-        LstPrintf( CurrSource );
-        LstNL();
+        LstPrintf( "%s" NLSTR, CurrSource );
     }
 #if 1 //def __SW_BD
 done:

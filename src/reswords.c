@@ -550,9 +550,9 @@ void RenameKeyword( unsigned token, const char *newname, uint_8 length )
         LclFree( (void *)ResWordTable[token].name );
 #if 1
         /* v2.11: search the original name. if the "new" names matches
-		 * the original name, restore the name pointer
-		 * v2.17: fixed infinite loop ( curr wasn't changed )
-		 */
+         * the original name, restore the name pointer
+         * v2.17: fixed infinite loop ( curr wasn't changed )
+         */
         //for ( curr = renamed_keys.head, prev = NULL; curr; prev = curr ) {
         for ( curr = renamed_keys.head, prev = NULL; curr; prev = curr, curr = curr->next ) {
             if ( curr->token == token ) {
@@ -738,12 +738,17 @@ void ResWordsInit( void )
     return;
 }
 
-/* ResWordsFini() is called once per module
- * it restores the resword table
+/*
+ * v2.17: up to v2.16, ResWordsFini() was called once per module.
+ *        now it has argument bAll: 0=called after each pass
+ *                                  1=called when module is done
+ * restoring the resword table.
+ * bAll = 0: restore the renamed keywords only
+ *      = 1: restore the keywords disabled by option nokeyword
  */
 
-void ResWordsFini( void )
-/***********************/
+void ResWordsFini( bool bNoKeyWord )
+/**********************************/
 {
     int i;
     int next;
@@ -751,26 +756,29 @@ void ResWordsFini( void )
     struct rename_node  *rencurr;
 #endif
 
-    DebugMsg(("ResWordsFini() enter\n"));
+    DebugMsg(("ResWordsFini(%u) enter\n", bNoKeyWord ));
 #if RENAMEKEY
-    /* restore renamed keywords.
-     * the keyword has to be removed ( and readded ) from the hash table,
-     * since its position most likely will change.
-     */
-    for ( rencurr = renamed_keys.head; rencurr; ) {
-        struct rename_node *tmp = rencurr->next;
-        RemoveResWord( rencurr->token );
-        /* v2.06: this is the correct name to free */
-        LclFree( (void *)ResWordTable[rencurr->token].name );
-        ResWordTable[rencurr->token].name = rencurr->name;
-        ResWordTable[rencurr->token].len = rencurr->length;
-        AddResWord( rencurr->token );
-        DebugMsg(("ResWordsFini(): %s restored\n", GetResWName( rencurr->token, NULL ) ));
-        //LclFree( (void *)rencurr->name ); /* v2.06: this was the wrong one */
-        LclFree( rencurr );
-        rencurr = tmp;
+    if ( !bNoKeyWord ) { /* v2.17: just restore the renamed keywords */
+        /* restore renamed keywords.
+         * the keyword has to be removed ( and readded ) from the hash table,
+         * since its position most likely will change.
+         */
+        for ( rencurr = renamed_keys.head; rencurr; ) {
+            struct rename_node *tmp = rencurr->next;
+            RemoveResWord( rencurr->token );
+            /* v2.06: this is the correct name to free */
+            LclFree( (void *)ResWordTable[rencurr->token].name );
+            ResWordTable[rencurr->token].name = rencurr->name;
+            ResWordTable[rencurr->token].len = rencurr->length;
+            AddResWord( rencurr->token );
+            DebugMsg(("ResWordsFini(): %s restored\n", GetResWName( rencurr->token, NULL ) ));
+            //LclFree( (void *)rencurr->name ); /* v2.06: this was the wrong one */
+            LclFree( rencurr );
+            rencurr = tmp;
+        }
+        renamed_keys.head = NULL;
+        return;
     }
-    renamed_keys.head = NULL;
 #endif
 
     /* reenter disabled keywords */

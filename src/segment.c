@@ -1241,6 +1241,14 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
             break;
         case INIT_OFSSIZE:
             dir->e.seginfo->Ofssize = type->value;
+#if AMD64_SUPPORT
+            /* v2.17: if .model FLAT, put USE64 segments into flat group.
+             * be aware that the "flat" attribute affects fixups of non-flat items for -pe format.
+             */
+            if ( type->value == USE64 && ModuleInfo.model == MODEL_FLAT ) {
+                dir->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+            }
+#endif
             break;
 #if COFF_SUPPORT || ELF_SUPPORT || PE_SUPPORT
         case INIT_CHAR_INFO:
@@ -1375,6 +1383,11 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
                 if ( dir->e.seginfo->group->Ofssize == USE_EMPTY )
                     dir->e.seginfo->group->Ofssize = dir->e.seginfo->Ofssize;
                 else if ( dir->e.seginfo->group->Ofssize != dir->e.seginfo->Ofssize )
+#if AMD64_SUPPORT
+                    /* v2.17: allow both 32- and 64-bit segments in FLAT group */
+                    if ( dir->e.seginfo->group == &ModuleInfo.flat_grp->sym &&
+                        dir->e.seginfo->Ofssize >= USE32 ) ; else
+#endif
                     EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
         }
 #if COMDATSUPP

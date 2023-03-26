@@ -367,7 +367,7 @@ static void check_assume( struct code_info *CodeInfo, const struct asym *sym, en
 
     reg = GetAssume( SegOverride, sym, default_reg, &assume );
     /* set global vars Frame and Frame_Datum */
-    DebugMsg1(("check_assume(%s): calling SetFixupFrame(%s, FALSE)\n", sym ? sym->name : "NULL", assume ? assume->name : "NULL" ));
+    DebugMsg1(("check_assume(%s, %u): calling SetFixupFrame(%s, FALSE)\n", sym ? sym->name : "NULL", default_reg, assume ? assume->name : "NULL" ));
     SetFixupFrame( assume, FALSE );
 
     if( reg == ASSUME_NOTHING ) {
@@ -396,6 +396,7 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
  * called by set_rm_sib(). determine if segment override is necessary
  * with the current address mode;
  * - seg_reg: register index (T_DS, T_BP, T_EBP, T_BX, ... )
+ * might modify CodeInfo->prefix.adrsiz!!!
  */
 {
     enum assume_segreg  default_seg;
@@ -474,8 +475,18 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
     } else {
         if ( sym || SegOverride )
             check_assume( CodeInfo, sym, default_seg );
+#if AMD64_SUPPORT
+        /* v2.17: no address prefix in 64-bit or if segoverride is FLAT.
+         * todo: check if this isn't generally the wrong place to modify the adrsiz prefix.
+         * Also, the ADDRSIZE() macro should really be removed/replaced.
+         */
+        if ( sym == NULL && SegOverride && ( SegOverride != (struct asym *)ModuleInfo.flat_grp ) && CodeInfo->Ofssize != USE64 ) {
+#else
         if ( sym == NULL && SegOverride ) {
+#endif
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, GetSymOfssize( SegOverride ) );
+            DebugMsg1(("seg_override: sym==NULL, group/seg override (%u/%u), new CI->adrsize=%u\n",
+                    CodeInfo->Ofssize, GetSymOfssize( SegOverride ), CodeInfo->prefix.adrsiz ));
         }
     }
 
@@ -1213,8 +1224,8 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
                     DebugMsg1(("idata_fixup, fixup_type=OFF32\n" ));
                     fixup_type = FIX_OFF32;
 #if AMD64_SUPPORT
-					if ( Ofssize == USE64 && Parse_Pass == PASS_2 )
-						EmitWarn( (ModuleInfo.Ofssize == USE64 ? 3 : 4), ADDR32_FIXUP_FOR_64BIT_LABEL );
+                    if ( Ofssize == USE64 && Parse_Pass == PASS_2 )
+                        EmitWarn( (ModuleInfo.Ofssize == USE64 ? 3 : 4), ADDR32_FIXUP_FOR_64BIT_LABEL );
 #endif
                 }
             } else {
@@ -1476,10 +1487,10 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
     uint_8              Ofssize;
     enum fixup_types    fixup_type;
 
-    DebugMsg1(("memory_operand(opndx.value=%" I32_SPEC "X / sym=%s / memtype=%Xh, with_fixup=%u) enter, [CodeInfo->memtype=%Xh, Ofssize=%u, adrsiz=%u]\n",
-               opndx->value, opndx->sym ? opndx->sym->name : "NULL", opndx->mem_type, with_fixup, CodeInfo->mem_type, CodeInfo->Ofssize, CodeInfo->prefix.adrsiz ));
+    DebugMsg1(("memory_operand(opndx.value=%" I64_SPEC "X / sym=%s / memtype=%Xh, with_fixup=%u) enter, [CodeInfo->memtype=%Xh, Ofssize=%u, adrsiz=%u]\n",
+               opndx->value64, opndx->sym ? opndx->sym->name : "NULL", opndx->mem_type, with_fixup, CodeInfo->mem_type, CodeInfo->Ofssize, CodeInfo->prefix.adrsiz ));
 
-    /* v211: use full 64-bit value */
+    /* v2.11: use full 64-bit value */
     //CodeInfo->opnd[CurrOpnd].data = opndx->value;
     CodeInfo->opnd[CurrOpnd].data64 = opndx->value64;
     CodeInfo->opnd[CurrOpnd].type = OP_M;
@@ -1651,7 +1662,7 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         else {
             CodeInfo->prefix.adrsiz = TRUE;
 #if AMD64_SUPPORT
-            /* 16bit addressing modes don't exist in long mode */
+            /* 16bit addressing modes don't exist in 64-bit */
             if ( ( GetValueSp( base ) & OP_R16) && CodeInfo->Ofssize == USE64 ) {
                 return( EmitError( INVALID_ADDRESSING_MODE_WITH_CURRENT_CPU_SETTING ) );
             }
@@ -1670,8 +1681,8 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
             CodeInfo->prefix.adrsiz = FALSE;
         } else {
             CodeInfo->prefix.adrsiz = TRUE;
-#if AMD64_SUPPORT /* v2.13: check added. see expr6.aso */
-            /* 16bit addressing modes don't exist in long mode */
+#if AMD64_SUPPORT /* v2.13: check added. see expr6.asm */
+            /* 16bit addressing modes don't exist in 64-bit */
             if ( ( GetValueSp( index ) & OP_R16) && CodeInfo->Ofssize == USE64 ) {
                 return( EmitError( INVALID_ADDRESSING_MODE_WITH_CURRENT_CPU_SETTING ) );
             }
@@ -1818,6 +1829,17 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         DebugMsg1(("memory_operand: without fixup, CI->Ofssize=%u, adrsize=%u\n", CodeInfo->Ofssize, CodeInfo->prefix.adrsiz ));
 #endif
 
+    /* v2.17: check if offset fits in 32-bit; this replaces check
+     * in process_address(), which was for indirect addressing only.
+     */
+    if ( opndx->hvalue && ( opndx->hvalue != -1 || opndx->value >= 0 ) ) {
+        DebugMsg1(("offset exceeds 32-bit, Ofssize=%u, indirect=%u\n", Ofssize, opndx->indirect ));
+#if AMD64_SUPPORT
+        if ( CodeInfo->Ofssize != USE64 || opndx->indirect )
+#endif
+        return( EmitConstError( opndx ) );
+    }
+
     if( set_rm_sib( CodeInfo, CurrOpnd, ss, index, base, sym ) == ERROR ) {
         return( ERROR );
     }
@@ -1827,8 +1849,9 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         CodeInfo->opnd[CurrOpnd].InsFixup->frame_datum = Frame_Datum;
     }
 
-    DebugMsg1(("memory_operand exit, ok, opndx.type/value=%Xh/%Xh, CodeInfo.memtype/rmbyte=%X/%X opndtype=%Xh fix=%Xh\n",
-              opndx->type, opndx->value, CodeInfo->mem_type, CodeInfo->rm_byte, CodeInfo->opnd[CurrOpnd].type, CodeInfo->opnd[CurrOpnd].InsFixup ));
+    DebugMsg1(("memory_operand exit, ok, opndx.type/value=%Xh/%Xh, CodeInfo.memtype/rmbyte/op/ad=%X/%X/%u/%u opndtype=%Xh fix=%Xh\n",
+            opndx->type, opndx->value, CodeInfo->mem_type, CodeInfo->rm_byte, CodeInfo->prefix.opsiz, CodeInfo->prefix.adrsiz,
+            CodeInfo->opnd[CurrOpnd].type, CodeInfo->opnd[CurrOpnd].InsFixup ));
     return( NOT_ERROR );
 }
 
@@ -1846,12 +1869,16 @@ static ret_code process_address( struct code_info *CodeInfo, unsigned CurrOpnd, 
                    opndx->sym ? opndx->sym->name : "NULL",
                    opndx->mbr ? opndx->mbr->name : "NULL",
                    CodeInfo->prefix.adrsiz ));
+
         /* if displacement doesn't fit in 32-bits:
          * Masm (both ML and ML64) just truncates.
          * JWasm throws an error in 64bit mode and
          * warns (level 3) in the other modes.
          * todo: this check should also be done for direct addressing!
+         * v2.17: removed, more generic check now in memory_operand();
+         * it always emits error "constant value too large".
          */
+#if 0
         if ( opndx->hvalue && ( opndx->hvalue != -1 || opndx->value >= 0 ) ) {
             DebugMsg1(("process_address: displacement doesn't fit in 32 bits: %" I64_SPEC "X\n", opndx->value64 ));
 #if AMD64_SUPPORT
@@ -1862,6 +1889,7 @@ static ret_code process_address( struct code_info *CodeInfo, unsigned CurrOpnd, 
             if( Parse_Pass == PASS_1 ) /* v2.13: don't warn multiple times */
                 EmitWarn( 3, DISPLACEMENT_OUT_OF_RANGE, opndx->value64 );
         }
+#endif
         if( opndx->sym == NULL || opndx->sym->state == SYM_STACK ) {
             return( memory_operand( CodeInfo, CurrOpnd, opndx, FALSE ) );
         }

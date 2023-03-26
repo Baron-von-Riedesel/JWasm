@@ -1133,7 +1133,7 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
                  */
                 if ( section->e.seginfo->start_loc ) {
                     fseek( CurrFile[OBJ], section->e.seginfo->start_loc, SEEK_CUR );
-   	                DebugMsg(("coff_write_data(%s, %Xh): fseek() called for start_loc=%X\n", section->sym.name, offset, section->e.seginfo->start_loc ));
+                    DebugMsg(("coff_write_data(%s, %Xh): fseek() called for start_loc=%X\n", section->sym.name, offset, section->e.seginfo->start_loc ));
                     size -= section->e.seginfo->start_loc;
                 }
 

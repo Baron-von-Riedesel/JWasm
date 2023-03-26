@@ -233,8 +233,14 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
 #endif
                ) {
             } else if ( symseg != NULL && CurrSeg != NULL ) {
-                /* if the segments belong to the same group, it's ok */
+                /* if the segments belong to the same group, it's ok ...
+                 * v2.17: not always, since 32- and 64-bit segments might now both
+                 * belong to the internal FLAT group. Check (again) that Ofssizes match.
+                 */
                 if ( symseg->e.seginfo->group != NULL &&
+#if AMD64_SUPPORT
+                    symseg->e.seginfo->Ofssize == ModuleInfo.Ofssize &&
+#endif
                     symseg->e.seginfo->group == CurrSeg->e.seginfo->group )
                     ;
                 /* v2.05: added SegOverride condition */

@@ -731,6 +731,7 @@ ret_code CommDirective( int i, struct asm_tok tokenarray[] )
     uint_32         size;  /* v2.12: changed from 'int' to 'uint_32' */
     uint_32         count; /* v2.12: changed from 'int' to 'uint_32' */
     struct asym     *sym;
+	struct asym     *type; /* v2.17: remember type in case one was given */
     struct expr     opndx;
     enum lang_type  langtype;
 
@@ -797,6 +798,7 @@ ret_code CommDirective( int i, struct asm_tok tokenarray[] )
             EmitError( POSITIVE_VALUE_EXPECTED );
 
         size = opndx.uvalue;
+        type = opndx.type; /* v2.17: save type */
 
         count = 1;
         if( tokenarray[i].token == T_COLON ) {
@@ -825,6 +827,7 @@ ret_code CommDirective( int i, struct asm_tok tokenarray[] )
             sym = MakeComm( token, sym, size, count, isfar );
             if ( sym == NULL )
                 return( ERROR );
+            sym->type = type; /* v2.17 added */
         } else if ( sym->state != SYM_EXTERNAL || sym->iscomm != TRUE ) {
             return( EmitErr( SYMBOL_REDEFINITION, sym->name ) );
         } else {

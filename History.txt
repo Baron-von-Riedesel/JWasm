@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.2022, v2.17:
+   25.03.2023, v2.17:
 
    Bugfixes:
    -  option renamekeyword: if the keyword was renamed multiple times it
@@ -13,11 +13,41 @@
       caused an infinite loop; see renkeyw3.asm.
    -  size operand of DUP operator was checked to be positive, but wasn't
       checked for 32-bit overflow; see constnt3.asm.
+   -  direct memory access with flat override ( for constant addresses )
+      may have generated error "cannot access label through segment registers";
+      see flatgrp3.asm.
+   -  regression in v2.16: invoke may have generated a "PUSHD" in 64-bit code
+      if .model wasn't flat; see invoke54.asm.
+   -  FLAT: override may have suppressed address size prefix; see
+      flatgrp4.asm.
+   -  invoke, 64-bit, non-win64, vararg: 32-bit registers were rejected as
+      arguments; see invoke55.asm.
+   -  display of assembly-time was correct only if CLOCKS_PER_SEC was 1000.
+   -  listing of embedded structs/unions: the printed start offset was wrong
+      if the struct/union wasn't located before any code/data lines; see
+      struct42.asm.
+   -  djgpp output format was broken.
+   -  COMM directive: if a type was given instead of a size, the type wasn't
+      stored in the symbol and hence couldn't be used in expressions; see
+      comm7.asm.
 
    Other changes:
    -  option stackbase: may be used in conjunction with "assume ss" to
       define a PROC where CS and SS differ in offset magnitude ( 16-bit
       code with 32-bit stack and vice versa ); see stkbase1.asm, stkbase2.asm.
+   -  format -pe: 64-bit segments defined with USE64 are added to internal
+      "flat" group if model is flat. Allows to mix 32- and 64-bit segments in
+      .model FLAT; see flatgrp5.asm & flatgrp6.asm.
+   -  simplified segment directive .code with name argument in tiny model
+      always added the segment to dgroup. Now this is done only if segment's
+      offset size matches the model's offset size; see tiny2.asm.
+   -  RETs inside PROCs will now show up in listing file like in Masm; see
+      lst3.asm.
+   -  in listings, offset of 16-bit segments now displayed with width 4.
+   -  offsets/displacements that are too large will now always cause error
+      "constant value too large"; see offset17/18/19.asm.
+   -  output format -djgpp ( special coff variant ), previously optional only,
+      is now activated as default.
 
    14.11.2022, v2.16:
 
