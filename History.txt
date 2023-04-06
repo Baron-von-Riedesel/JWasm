@@ -1,6 +1,11 @@
 
    Changelog
 
+   __.__.2023, v2.18:
+
+   Other changes:
+   -  output format -djgpp: support added for 16-bit offset fixups.
+
    25.03.2023, v2.17:
 
    Bugfixes:

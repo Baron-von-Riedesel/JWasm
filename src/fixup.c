@@ -292,11 +292,13 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
 #if DJGPP_SUPPORT
         /* Djgpp's COFF variant needs special handling for
          * - at least - relative and direct 32-bit offsets.
+         * v2.18: support for 16-bit offsets (FIX_OFF16) added
          */
         if ( fixup->sym && ModuleInfo.sub_format == SFORMAT_DJGPP ) {
             if ( fixup->type == FIX_RELOFF32 ) { /* probably also for 16-bit */
                 *pdata -= ( fixup->locofs + 4 );
-            } else if ( fixup->type == FIX_OFF32 ) {
+            //} else if ( fixup->type == FIX_OFF32 ) {
+            } else if ( fixup->type == FIX_OFF32 || fixup->type == FIX_OFF16 ) { /* v2.18 */
                 /* v2.17: was brokem since ???.
                  * generally, for internal symbols djgpp expects the offset to be stored in the data
                  * and the reference to the symbol is the current section!
