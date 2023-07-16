@@ -5,6 +5,8 @@
 
    Other changes:
    -  output format -djgpp: support added for 16-bit offset fixups.
+   -  in listings, for directives, offset of 16-bit segments displayed with
+      width 4
 
    25.03.2023, v2.17:
 

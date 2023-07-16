@@ -324,7 +324,9 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         break;
     case LSTTYPE_DIRECTIVE:
         if ( CurrSeg || value ) {
-            p2 += sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
+            /* v2.18: print 4-digit offset in 16-bit mode */
+            //p2 += sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
+            p2 += sprintf( ll.buffer, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
         }
         break;
     default: /* LSTTYPE_MACRO */
