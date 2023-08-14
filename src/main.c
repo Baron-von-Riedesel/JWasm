@@ -105,7 +105,7 @@ int main( int argc, char **argv )
 #endif
 
     /* ParseCmdLine() returns NULL if no source file name has been found (anymore) */
-    while ( ParseCmdline( (const char **)argv, &numArgs ) ) {
+    while ( ParseCmdline( (const char **)argv + 1, &numArgs ) ) {
         numFiles++;
         write_logo();
 #if WILDCARDS
