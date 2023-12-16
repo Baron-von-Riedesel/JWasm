@@ -3,10 +3,14 @@
 
    __.__.2023, v2.18:
 
+   Bugfixes:
+   -  omffixup.c, debug version only: a superfluous %s in a debug display
+      may have caused an exception for output format omf.
+   
    Other changes:
    -  output format -djgpp: support added for 16-bit offset fixups.
    -  in listings, for directives, offset of 16-bit segments displayed with
-      width 4
+      width 4.
 
    25.03.2023, v2.17:
 

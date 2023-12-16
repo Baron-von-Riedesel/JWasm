@@ -68,6 +68,8 @@ extern uint_32          StackAdj;
 static int evallvl = 0;
 #endif
 
+//__declspec(dllimport) void __stdcall DebugBreak( void );
+
 /* the following static variables should be moved to ModuleInfo. */
 static struct asym *thissym; /* helper symbol for THIS operator */
 static struct asym *nullstruct; /* used for T_DOT if second op is a forward ref */
@@ -1774,7 +1776,7 @@ static ret_code plus_op( struct expr *opnd1, struct expr *opnd2 )
     } else if( check_both( opnd1, opnd2, EXPR_CONST, EXPR_ADDR ) ) {
 
         if( opnd1->kind == EXPR_CONST ) {
-            DebugMsg1(("plus_op: CONST - ADDR\n" ));
+            DebugMsg1(("plus_op: CONST (is_type=%u) - ADDR\n", opnd1->is_type ));
             opnd2->llvalue += opnd1->llvalue;
             opnd2->indirect |= opnd1->indirect;
 
@@ -1788,9 +1790,13 @@ static ret_code plus_op( struct expr *opnd1, struct expr *opnd2 )
             if ( opnd2->mbr == NULL )
                 opnd2->mbr = opnd1->mbr;
 
+            /* v2.18: to be fixed: mov ax, [S1][bx] may cause error "symbol size conflict" because
+             * mem_type of the const operand isn't ignored.
+             */
+
             /* v2.08: added, test case [4+ebx.<struc>].<mbr> */
             if ( opnd2->type )
-                opnd1->type = opnd2->type; /* set <type> in op1! */
+                opnd1->type = opnd2->type; /* type is NOT modified by TokenAssign() */
 
             TokenAssign( opnd1, opnd2 );
 

@@ -303,7 +303,7 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
 
     } else if( sym->state == SYM_SEG ) {
 
-        DebugMsg1(("omf_set_logref: sym->state is SYM_SEG %s\n" ));
+        DebugMsg1(("omf_set_logref: sym->state is SYM_SEG\n" )); /* v2.18: removed %s behind "SYM_SEG" */
         lr->target_meth = TARGET_SEG;
         lr->target_datum = GetSegIdx( sym );
         if( fixup->frame_type != FRAME_NONE ) {
