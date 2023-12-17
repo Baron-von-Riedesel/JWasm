@@ -45,7 +45,7 @@ extern void MemFree( void *ptr );
 #elif defined(__GNUC__) || defined(__TINYC__)
 
 #define myalloca  alloca
-#ifndef __FreeBSD__  /* added v2.08 */
+#if !(defined(__FreeBSD__) || defined(__APPLE__))  /* added v2.08 */
 #include <malloc.h>  /* added v2.07 */
 #endif
 
