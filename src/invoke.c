@@ -962,7 +962,7 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     DebugMsg1(("PushInvokeParm(%u): sym=%s, Ofssize=%d\n", reqParam, opnd.sym->name, GetSymOfssize( opnd.sym ) ));
                 } else
                     asize = psize;
-                DebugMsg1(("PushInvokeParm(%u): opnd.kind=%u opnd.instr=%u asize=%u psize=%u\n", reqParam, opnd.kind, opnd.instr, asize, psize ));
+                DebugMsg1(("PushInvokeParm(%u): opnd.kind=%u opnd.instr=%d asize=%u psize=%u\n", reqParam, opnd.kind, opnd.instr, asize, psize ));
                 /* v2.04: added, to catch 0-size params ( STRUCT without members ) */
                 if ( psize == 0 ) {
                     if ( curr->sym.is_vararg == FALSE ) {
@@ -973,6 +973,13 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     if ( opnd.mbr && opnd.mbr->mem_type == MT_TYPE )
                         asize = SizeFromMemtype( opnd.mbr->mem_type, opnd.Ofssize, opnd.mbr->type );
                 }
+#if 1
+                /* v2.18: error (vararg param used as argument?) */
+                if ( opnd.sym && opnd.sym->state == SYM_STACK && opnd.sym->is_vararg ) {
+                    DebugMsg1(("PushInvokeParm(%u): error, vararg parameter (%s) used as argument\n", reqParam, opnd.sym->name ));
+                    EmitErr( INVOKE_ARGUMENT_TYPE_MISMATCH, reqParam+1 );
+                }
+#endif
                 DebugMsg1(("PushInvokeParm(%u): memtype EMPTY, asize=%u psize=%u\n", reqParam, asize, psize ));
             } else if ( opnd.mem_type != MT_TYPE ) {
                 if ( opnd.kind == EXPR_ADDR &&
@@ -1021,9 +1028,9 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
 
 #ifdef DEBUG_OUT
         if ( opnd.sym )
-            DebugMsg1(("PushInvokeParam(%s, %u): arg name=%s, asize=%u, amtype=%xh psize=%u\n", proc->sym.name, reqParam, opnd.sym->name, asize, opnd.mem_type, psize));
+            DebugMsg1(("PushInvokeParam(%s, %u): arg name=%s, asize=%u, amemtype=%xh psize=%u\n", proc->sym.name, reqParam, opnd.sym->name, asize, opnd.mem_type, psize));
         else
-            DebugMsg1(("PushInvokeParam(%s, %u): arg no name, asize=%u, amtype=%xh psize=%u\n", proc->sym.name, reqParam, asize, opnd.mem_type, psize));
+            DebugMsg1(("PushInvokeParam(%s, %u): arg no name, asize=%u, amemtype=%xh psize=%u\n", proc->sym.name, reqParam, asize, opnd.mem_type, psize));
 #endif
         pushsize = CurrWordSize;
 

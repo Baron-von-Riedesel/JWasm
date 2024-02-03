@@ -1,11 +1,13 @@
 
    Changelog
 
-   __.__.2023, v2.18:
+   __.__.2024, v2.18:
 
    Bugfixes:
    -  omffixup.c, debug version only: a superfluous %s in a debug display
       may have caused an exception for output format omf.
+   -  invoke directive: vararg parameter now rejected if used as argument;
+      see vararg1.asm.
    
    Other changes:
    -  output format -djgpp: support added for 16-bit offset fixups.
