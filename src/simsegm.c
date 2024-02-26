@@ -77,6 +77,23 @@ static void AddToDgroup( enum sim_seg segm, const char *name )
     AddLineQueueX( "%s %r %s", szDgroup, T_GROUP, name );
 }
 
+static const char *GetCodeGroupName( const char *name )
+/*****************************************************/
+{
+    if( ModuleInfo.model == MODEL_FLAT
+#if COFF_SUPPORT
+       || Options.output_format == OFORMAT_COFF
+#endif
+#if ELF_SUPPORT
+       || Options.output_format == OFORMAT_ELF
+#endif
+      )
+        return( name ? name : SegmNames[SIM_CODE] );
+
+    return( szDgroup );
+}
+
+
 /* generate code to close the current segment */
 
 static void close_currseg( void )
@@ -239,10 +256,12 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
                 if ( ( sym = SymSearch( name ) ) && ( sym->state == SYM_SEG ) &&
                     ( ( (struct dsym *)sym)->e.seginfo->Ofssize == ModuleInfo.defOfssize ) ) {
                     AddToDgroup( SIM_CODE, name );
-                    name = szDgroup;
+                    name = GetCodeGroupName( name );
                 }
-            } else
-                name = szDgroup;
+            } else {
+                /* v2.18: don't set "assume CS:DGROUP" if model is flat or format is coff/elf; */
+                name = GetCodeGroupName( name );
+            }
         } else if( ModuleInfo.model == MODEL_FLAT ) {
             name = "FLAT";
         } else {

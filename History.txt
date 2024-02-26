@@ -8,7 +8,8 @@
       may have caused an exception for output format omf.
    -  invoke directive: vararg parameter now rejected if used as argument;
       see vararg1.asm.
-   
+   -  don't add "assume cs:dgroup" in tiny model if format is coff/elf or
+      model is flat; see tiny3.asm.
    Other changes:
    -  output format -djgpp: support added for 16-bit offset fixups.
    -  in listings, for directives, offset of 16-bit segments displayed with
