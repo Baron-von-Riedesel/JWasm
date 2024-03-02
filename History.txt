@@ -10,6 +10,8 @@
       see vararg1.asm.
    -  don't add "assume cs:dgroup" in tiny model if format is coff/elf or
       model is flat; see tiny3.asm.
+   -  default fastcall for 32-bit (MS style) caused a GPF for non-proc
+      symbols; see fastcms.asm.
    Other changes:
    -  output format -djgpp: support added for 16-bit offset fixups.
    -  in listings, for directives, offset of 16-bit segments displayed with
