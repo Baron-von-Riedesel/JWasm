@@ -147,6 +147,7 @@ struct lstleft {
 void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 /*************************************************************/
 {
+    unsigned inbracket = 0;
     uint_32 newofs;
     struct asym *sym = value;
     int     len;
@@ -159,6 +160,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
     struct lstleft *pll;
     struct lstleft ll;
     //char    buffer2[MAX_LINE_LEN]; /* stores text macro value */
+    struct dsym *curr;
 
     if ( ModuleInfo.list == FALSE || CurrFile[LST] == NULL || ( ModuleInfo.line_flags & LOF_LISTED ) )
         return;
@@ -266,10 +268,33 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             idx = 0;
 
         while ( oldofs < newofs && len ) {
+            unsigned isfixup = 0;
+            for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
+                isfixup |= IsFixup(curr, &CurrSeg->e.seginfo->CodeBuffer[idx]);
+            }
+            if (isfixup) {
+                if (! inbracket) {
+                    -- len;
+                    if (! len)
+                        break;
+                    p2 += sprintf(p2, "[");
+                }
+                inbracket = 1;
+            } else if (inbracket) {
+                p2 += sprintf(p2, "]");
+                inbracket = 0;
+            }
             p2 += sprintf( p2, "%02X", CurrSeg->e.seginfo->CodeBuffer[idx] );
             idx++;
             oldofs++;
             len--;
+        }
+        if (inbracket) {
+            p2 += sprintf(p2, "]");
+            inbracket = 0;
+        }
+        if (oldofs < newofs) {
+            p2 += sprintf(p2, "$");
         }
         break;
     case LSTTYPE_EQUATE:

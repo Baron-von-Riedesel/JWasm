@@ -871,4 +871,7 @@ extern char             *myltoa( uint_32 value, char *buffer, unsigned radix, bo
 extern char             *ConvertSectionName( const struct asym *, enum seg_type *pst, char *buffer );
 #endif
 
+extern unsigned IsFixup( struct dsym *curr, void* isfixup_pointer );
+
 #endif
+

@@ -507,6 +507,126 @@ union genptr {
 
 /* handle the fixups contained in a segment */
 
+unsigned IsFixup( struct dsym *curr, void* isfixup_pointer )
+{
+    unsigned isfixup_size = 0, retval = 0;
+    union genptr codeptr;
+    struct dsym *seg;
+    uint_32 value;
+#if PE_SUPPORT && AMD64_SUPPORT
+    uint_64 value64 = 0;
+#endif
+#ifdef DEBUG_OUT
+    uint_32 oldvalue;
+#endif
+    uint_32 offset;  /* v2.07 */
+    struct fixup *fixup;
+    char *tmp;
+
+    if ( curr->e.seginfo->segtype == SEGTYPE_ABS )
+        return 0;
+
+    DebugMsg(("IsFixup(%s) enter, segment start ofs=%" I32_SPEC "Xh\n", curr->sym.name, curr->e.seginfo->start_offset ));
+    for ( fixup = curr->e.seginfo->FixupList.head; fixup; fixup = fixup->nextrlc ) {
+        codeptr.db = curr->e.seginfo->CodeBuffer +
+            ( fixup->locofs - curr->e.seginfo->start_loc );
+
+        //if ( fixup->sym && fixup->sym->segment ) { /* v2.08: changed */
+        if ( fixup->sym && ( fixup->sym->segment || fixup->sym->isvariable ) ) {
+            /* assembly time variable (also $ symbol) in reloc? */
+            /* v2.07: moved inside if-block, using new local var "offset" */
+            if ( fixup->sym->isvariable ) {
+                seg = (struct dsym *)fixup->segment_var;
+                offset = 0;
+                DebugMsg(("IsFixup(%s, %04" I32_SPEC "X, %s): variable, fixup->segment=%Xh fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
+                          curr->sym.name, fixup->locofs, fixup->sym->name, seg, fixup->offset, fixup->sym->offset ));
+            } else {
+                seg = (struct dsym *)fixup->sym->segment;
+                offset = fixup->sym->offset;
+            }
+            /* the offset result consists of
+             * - the symbol's offset
+             * - the fixup's offset (usually the displacement )
+             * - the segment/group offset in the image
+             */
+            switch ( fixup->type ) {
+            case FIX_OFF32_IMGREL:
+                break;
+            case FIX_OFF32_SECREL:
+                break;
+            case FIX_RELOFF8:
+            case FIX_RELOFF16:
+            case FIX_RELOFF32:
+                break;
+            default:
+                break;
+            }
+
+        } else {
+            /* v2.10: member segment_var is for assembly-time variables only */
+            //seg = (struct dsym *)fixup->segment_var;
+            seg = NULL;
+            DebugMsg(("IsFixup(%s, %04" I32_SPEC "X, %s): target segment=0, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
+                      curr->sym.name, fixup->locofs, fixup->sym ? fixup->sym->name : "", fixup->offset ? offset : 0 ));
+        }
+
+        switch ( fixup->type ) {
+        case FIX_RELOFF8:
+            isfixup_size = 1;
+            break;
+        case FIX_RELOFF16:
+            isfixup_size = 2;
+            break;
+        case FIX_RELOFF32:
+            isfixup_size = 4;
+            break;
+        case FIX_OFF8:
+            isfixup_size = 1;
+            break;
+        case FIX_OFF16:
+            isfixup_size = 2;
+            break;
+        case FIX_OFF32:
+            isfixup_size = 4;
+            break;
+        case FIX_OFF32_IMGREL:
+            isfixup_size = 4;
+            break;
+        case FIX_OFF32_SECREL:
+            isfixup_size = 4;
+            break;
+#if AMD64_SUPPORT
+        case FIX_OFF64:
+            isfixup_size = 8;
+            break;
+#endif
+        case FIX_HIBYTE:
+            isfixup_size = 1;
+            break;
+        case FIX_SEG:
+            isfixup_size = 2;
+            break;
+        case FIX_PTR16:
+            isfixup_size = 4;
+            break;
+        case FIX_PTR32:
+            isfixup_size = 6;
+            break;
+        default:
+            break;
+        }
+    if (codeptr.db) {
+        retval |= (isfixup_pointer >= (void *)codeptr.db && isfixup_pointer < (void *)codeptr.db + isfixup_size);
+        DebugMsg(("IsFixup: pointer=%p db=%p size=%u retval=%u\n",
+            isfixup_pointer, (void *)codeptr.db, isfixup_size, retval));
+    } else {
+        DebugMsg(("IsFixup: pointer=%p db=NULL size=%u retval=%u\n",
+            isfixup_pointer, isfixup_size, retval));
+    }
+}
+    return retval;
+}
+
 static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
 /*****************************************************************/
 {
