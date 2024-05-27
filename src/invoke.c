@@ -1450,6 +1450,7 @@ static int PushInvokeParam( int i, struct asm_tok tokenarray[], struct dsym *pro
                     case 2:
                         if ( opnd.value != 0 || opnd.kind == EXPR_ADDR ) {
                             AddLineQueueX( " mov %r, %s", T_AX, fullparam );
+                            *r0flags &= ~(R0_H_CLEARED | R0_X_CLEARED); /* 2.18: added; see invoke56.asm */
                         } else {
                             if ( !(*r0flags & R0_X_CLEARED ) ) {
                                 AddLineQueueX( " xor %r, %r", T_AX, T_AX );

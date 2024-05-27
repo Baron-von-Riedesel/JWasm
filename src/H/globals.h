@@ -103,7 +103,7 @@ char *strupr(char *);
 #define COFF_SUPPORT 1 /* support COFF output format             */
 #endif
 #ifndef DJGPP_SUPPORT
-#define DJGPP_SUPPORT 0 /* support for Djgpp COFF variant        */
+#define DJGPP_SUPPORT 1 /* support for Djgpp COFF variant; NOP if COFF isn't active */
 #endif
 #ifndef ELF_SUPPORT
 #define ELF_SUPPORT  1 /* support ELF output format              */

@@ -289,7 +289,7 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
 #endif
         }
 #endif
-#if DJGPP_SUPPORT
+#if COFF_SUPPORT && DJGPP_SUPPORT
         /* Djgpp's COFF variant needs special handling for
          * - at least - relative and direct 32-bit offsets.
          * v2.18: support for 16-bit offsets (FIX_OFF16) added

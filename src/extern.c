@@ -352,6 +352,21 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
              */
             if ( langtype != LANG_NONE && sym->langtype != langtype )
                 EmitWarn( 3, LANGUAGE_ATTRIBUTE_CONFLICT, sym->name );
+
+#if 1
+            /* v2.18: code moved from below to this place
+             * this covers the case where the externdef is located BEHIND
+             * the label that is to become public.
+             * It's still a bit doubtful for PROCs, because the PROC directive
+             * should know better about the visibility status of the procedure.
+             * So if the PROC has been explicitely marked as private, the
+             * externdef doesn't care. But that's what masm (6/8) does...
+             */
+            if ( sym->state == SYM_INTERNAL && sym->ispublic == FALSE ) {
+                sym->ispublic = TRUE;
+                AddPublicData( sym );
+            }
+#endif
         }
         sym->isdefined = TRUE;
 
@@ -364,7 +379,19 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
             DebugMsg1(("ExterndefDirective(%s): writing a global entry\n", sym->name));
             QAddItem( &ModuleInfo.g.GlobalQueue, sym );
         }
-#else
+#endif
+#if 0
+        /* v2.18: removed, because it's a bug.
+         * 1. adding a public after pass one is something that should NOT be done.
+         * If output format is OMF, the publics are written after pass one and then
+         * again when all is finished. If the number of publics differ for the second
+         * write, the object module may become invalid!
+         * 2. if FASTPASS is on, there's a good chance that the EXTERNDEF directive
+         * code won't run after pass one - if the FASTPASS's line store feature hasn't
+         * been triggered yet ( that is, no code or data definition BEFORE the EXTERNDEF ).
+         * 3. the EXTERNDEF directive running in pass 2 surely cannot know better than
+         * the PROC directive what the visibility status of the procedure is supposed to be.
+         */
         if ( sym->state == SYM_INTERNAL && sym->ispublic == FALSE ) {
             sym->ispublic = TRUE;
             AddPublicData( sym );
@@ -845,6 +872,16 @@ ret_code CommDirective( int i, struct asm_tok tokenarray[] )
     }
     return( NOT_ERROR );
 }
+
+/* add a symbol into the Publics queue.
+ * called by:
+ * - EXTERNDEF (if symbol is internal and public=0) - this cannot happen in pass 1
+ *   ( and it's a very questionable thing!)
+ * - PUBLIC ( this usually happens in pass 1 )
+ * - END ( if the label hasn't been marked as public )
+ * - PROC
+ * - sym_ext2int() in parser.c, for public data, constants, labels ( not PROCs )
+ */
 
 void AddPublicData( struct asym *sym )
 /************************************/

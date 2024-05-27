@@ -1079,8 +1079,16 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
         newofssize = (( Ofssize != USE_EMPTY ) ? Ofssize : ModuleInfo.Ofssize );
         i++;
     } else {
-        newmemtype = ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? MT_FAR : MT_NEAR );
-        newofssize = ModuleInfo.Ofssize;
+        /* v2.18: if PROTO/EXTERNDEF is behind the PROC directive,
+         * ignore module's ofssize or distance.
+         */
+        if (IsPROC == FALSE && proc->sym.state == SYM_INTERNAL && proc->sym.isproc == TRUE ) {
+            newmemtype = proc->sym.mem_type;
+            newofssize = proc->sym.seg_ofssize;
+        } else {
+            newmemtype = ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? MT_FAR : MT_NEAR );
+            newofssize = ModuleInfo.Ofssize;
+        }
     }
 
     /* v2.11: GetSymOfssize() cannot handle SYM_TYPE correctly */
@@ -1532,6 +1540,20 @@ ret_code ProcDir( int i, struct asm_tok tokenarray[] )
         if ( CurrProc->e.procinfo->paralist && GetRegNo( CurrProc->e.procinfo->basereg ) == 4 )
             CurrProc->e.procinfo->fpo = TRUE;
 #endif
+		/* add item to the PUBLIC queue.
+		 * this is done when
+		 * a) OPTION PROC:PRIVATE is set:
+		 *    Masm6: PROC must be marked as PUBLIC, EXTERNDEF or PROTO won't have any effect
+		 *    Masm8: EXTERNDEF or PROTO will change visibility to public!
+		 *    JWasm: default is Masm6, option -Zv8 switches to Masm8
+		 * b) OPTION PROC:PRIVATE is NOT set:
+		 *    Masm:
+		 *    -  PROC will be public unless it's marked as private;
+		 *       In that case it depends if an EXTERNDEF/PROTO is also found
+		 *    JWasm:
+		 *    -  if PROC is marked as private, EXTERNDEF/PROTO will change that
+		 *       only if option -Zv8 is set!
+		 */
         if( sym->ispublic == TRUE && oldpubstate == FALSE )
             AddPublicData( sym );
 
