@@ -845,6 +845,7 @@ static void log_proc( const struct asym *sym )
     char Ofssize = GetSymOfssize( sym );
     const char *pdots;
 
+    DebugMsg(("log_proc(%s): enter\n", sym->name ));
     pdots = (( i >= DOTSMAX ) ? "" : dots + i + 1 );
     if ( Ofssize )
         p = "%s %s        P %-6s %08" I32_SPEC "X %-8s ";
@@ -936,6 +937,7 @@ static void log_proc( const struct asym *sym )
         }
 
         /* print the procedure's locals */
+        DebugMsg(("log_proc(%s): print locals\n", sym->name ));
         for ( l = dir->e.procinfo->locallist; l; l = l->nextlocal ) {
             char buffer[32];
             i = l->sym.name_size;

@@ -18,6 +18,8 @@
       in pass 2, resulting in an invalid object module.
    -  invoke directive: if cpu was 8086, and the argument was a constant 0,
       a wrong value may have been pushed; see invoke56.asm.
+   -  jwasm may have entered an infinite loop if a structured variable wasn't
+      defined (yet), but a member name matched a local name; see undef2.asm.
 
    Other changes:
    -  output format -djgpp: support added for 16-bit offset fixups.
