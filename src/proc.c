@@ -1084,7 +1084,8 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
          */
         if (IsPROC == FALSE && proc->sym.state == SYM_INTERNAL && proc->sym.isproc == TRUE ) {
             newmemtype = proc->sym.mem_type;
-            newofssize = proc->sym.seg_ofssize;
+            //newofssize = proc->sym.seg_ofssize; /* CreateProc() sets seg_ofssize for PROTO, but probably wasn't called */
+            newofssize = GetSymOfssize( &proc->sym ); /* just get the PROC's ofssize, so the check can't fail */
         } else {
             newmemtype = ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? MT_FAR : MT_NEAR );
             newofssize = ModuleInfo.Ofssize;
@@ -1101,7 +1102,8 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
     if ( proc->sym.mem_type != MT_EMPTY &&
         ( proc->sym.mem_type != newmemtype ||
          oldofssize != newofssize ) ) {
-        DebugMsg(("ParseProc: error, memtype changed, old-new memtype=%X-%X, ofssize=%X-%X\n", proc->sym.mem_type, newmemtype, proc->sym.Ofssize, newofssize));
+        DebugMsg(("ParseProc: error, memtype changed, old-new memtype=%X-%X, ofssize=%X-%X\n",
+            proc->sym.mem_type, newmemtype, oldofssize, newofssize));
         if ( proc->sym.mem_type == MT_NEAR || proc->sym.mem_type == MT_FAR )
             EmitError( PROC_AND_PROTO_CALLING_CONV_CONFLICT );
         else {

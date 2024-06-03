@@ -557,10 +557,12 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                          * their "successor".
                          */
                         if ( sym->state == SYM_UNDEFINED ) {
-                            sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym ); /* add UNDEFINED */
-                            DebugMsg1(("get_operand(%s): symbol not (yet) defined, CurrProc=%s\n", tmp, CurrProc ? CurrProc->sym.name : "NULL" ));
+                            DebugMsg1(("get_operand(%s): symbol not (yet) defined, CurrProc=%s, used=%u\n", tmp, CurrProc ? CurrProc->sym.name : "NULL", sym->used ));
+                            /* don't add undefined symbols multiple times! */
+                            if ( sym->used == FALSE )
+                                sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym ); /* add UNDEFINED */
                         } else if (opnd->is_dot) {
-                            DebugMsg1(("get_operand(%s): member of an unknown struct var: %s\n", tmp ));
+                            DebugMsg1(("get_operand(%s): member of an unknown struct var\n", tmp ));
                             if ( !nullmbr ) nullmbr = SymAlloc( "" );
                             sym = nullmbr;
                         } else {
