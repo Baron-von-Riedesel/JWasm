@@ -491,6 +491,13 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                         sym = NULL;
                     }
                 }
+#if 1 /* v2.18: avoid an undefined symbol is created inside the next "if()" */
+                if ( sym == NULL && opnd->type == NULL ) {
+                    DebugMsg1(("get_operand(%s): unknown type or undefined structured variable\n", tmp ));
+                    if (!nullstruct) nullstruct = CreateTypeSymbol( NULL, "", FALSE );
+                    opnd->type = nullstruct;
+                }
+#endif
             }
         } else {
             DebugMsg1(("%u get_operand: T_ID, id=%s\n", evallvl, tokenarray[i].string_ptr ));
@@ -558,13 +565,16 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                          */
                         if ( sym->state == SYM_UNDEFINED ) {
                             DebugMsg1(("get_operand(%s): symbol not (yet) defined, CurrProc=%s, used=%u\n", tmp, CurrProc ? CurrProc->sym.name : "NULL", sym->used ));
-                            /* don't add undefined symbols multiple times! */
-                            if ( sym->used == FALSE )
+                            /* v2.18: don't add undefined symbols multiple times! */
+                            if ( sym->used == FALSE ) {
                                 sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym ); /* add UNDEFINED */
+                            }
+#if 0 /* v2.18: first fix, now replaced by code above, that handles the "is_dot" case without creating an undef symbol */
                         } else if (opnd->is_dot) {
                             DebugMsg1(("get_operand(%s): member of an unknown struct var\n", tmp ));
                             if ( !nullmbr ) nullmbr = SymAlloc( "" );
                             sym = nullmbr;
+#endif
                         } else {
                             return( fnEmitErr( SYMBOL_ALREADY_DEFINED, tmp ) ); /* can this happen at all? */
                         }

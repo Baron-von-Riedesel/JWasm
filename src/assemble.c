@@ -753,8 +753,11 @@ static void PassOneChecks( void )
         EmitError( END_DIRECTIVE_REQUIRED );
 
 #ifdef DEBUG_OUT
-    for ( curr = SymTables[TAB_UNDEF].head; curr; curr = curr->next ) {
-        DebugMsg(("PassOneChecks: undefined symbol %s\n", curr->sym.name ));
+    if ( SymTables[TAB_UNDEF].head ) {
+        DebugMsg(("PassOneChecks, undefined symbols:\n" ));
+        for ( curr = SymTables[TAB_UNDEF].head; curr; curr = curr->next ) {
+            DebugMsg(("%s\n", curr->sym.name ));
+        }
     }
 #endif
     /* v2.04: check the publics queue.
@@ -1512,6 +1515,19 @@ int EXPQUAL AssembleModule( const char *source )
             omf_set_filepos();
 
     } /* end for() */
+#ifdef DEBUG_OUT
+    /* display items still in the "undefined" queue.
+     * this may happen since the expression evaluator has problems with
+     * undefined structured variables.
+     */
+    if ( ( Parse_Pass > PASS_1 ) && SymTables[TAB_UNDEF].head ) {
+        struct dsym *curr;
+        DebugMsg(("AssembleModule: undefined symbols after last pass:\n" ));
+        for ( curr = SymTables[TAB_UNDEF].head; curr; curr = curr->next ) {
+            DebugMsg(("%s\n", curr->sym.name ));
+        }
+    }
+#endif
 
     if ( ( Parse_Pass > PASS_1 ) && write_to_file )
         WriteModule( &ModuleInfo );
