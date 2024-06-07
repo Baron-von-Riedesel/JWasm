@@ -67,6 +67,9 @@ static void SaveState( void )
     DebugMsg(( "SaveState exit\n" ));
 }
 
+/* flags: b0: 1=store line with comment
+ */
+
 void StoreLine( const char *srcline, int flags, uint_32 lst_position )
 /********************************************************************/
 {
@@ -83,7 +86,7 @@ void StoreLine( const char *srcline, int flags, uint_32 lst_position )
         SaveState();
 
     i = strlen( srcline );
-    j = ( ( ( flags & 1 ) && ModuleInfo.CurrComment ) ? strlen( ModuleInfo.CurrComment ) : 0 );
+    j = ( ( ( flags & FSL_WITHCMT ) && ModuleInfo.CurrComment ) ? strlen( ModuleInfo.CurrComment ) : 0 );
     LineStoreCurr = LclAlloc( i + j + sizeof( struct line_item ) );
     LineStoreCurr->next = NULL;
     LineStoreCurr->lineno = GetLineNumber();

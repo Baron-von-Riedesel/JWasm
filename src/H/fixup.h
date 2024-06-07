@@ -113,6 +113,7 @@ struct fixup {
 #endif
             unsigned char loader_resolved:1;        /* operator LROFFSET */
             unsigned char orgoccured:1;             /* v2.04 ORG occured behind this fix */
+            unsigned char size:4;                   /* v2.18 */
 #if FASTMEM==0
             unsigned char count:2;                  /* v2.14 ref count */
 #endif

@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.2024, v2.18:
+   09.06.2024, v2.18:
 
    Bugfixes:
    -  omffixup.c, debug version only: a superfluous %s in a debug display
@@ -28,6 +28,7 @@
    -  OWDOS32.mak added. Creates a 32-bit version that uses the native Open
       Watcom runtime for extended DOS. Open Watcom 2.0 is recommended to
       create this variant.
+   -  listing: relocations in code marked with lowercase letters.
 
    25.03.2023, v2.17:
 

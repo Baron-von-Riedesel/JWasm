@@ -250,16 +250,16 @@ struct code_info {
         unsigned char   adrsiz:1;      /* address size prefix 0x67 is to be emitted */
         unsigned char   opsiz:1;       /* operand size prefix 0x66 is to be emitted */
     } prefix;
-    const struct instr_item *pinstr;   /* current pointer into InstrTable */
+    const struct instr_item *pinstr;   /* current pointer into InstrTable (=InstrTable[IndexFromToken(token)] */
     enum instr_token token;
     enum memtype    mem_type;          /* byte / word / etc. NOT near/far */
     struct opnd_item opnd[MAX_OPND];
-    unsigned char   rm_byte;
-    unsigned char   sib;
-    unsigned char   Ofssize;
-    unsigned char   opc_or;
+    unsigned char   rm_byte;           /* rm byte set by set_rm_sib() in parser.c */
+    unsigned char   sib;               /* sib byte set by set_rm_sib() in parser.c */
+    unsigned char   Ofssize;           /* current offset size */
+    unsigned char   opc_or;            /* bit 0 & 2 or'ed with opcode */
 #if AVXSUPP
-    unsigned char   vexregop; /* in based-1 format (0=empty) */
+    unsigned char   vexregop;          /* in based-1 format (0=empty) */
 #endif
     union {
         unsigned char flags;

@@ -83,6 +83,8 @@ void FreeLineStore( void );
 
 #define FStoreLine( flags ) if ( Parse_Pass == PASS_1 ) StoreLine( CurrSource, flags, 0 ); else
 
+#define FSL_WITHCMT 1
+
 #else
 
 #define FStoreLine( flags )

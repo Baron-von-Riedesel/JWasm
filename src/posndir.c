@@ -257,9 +257,7 @@ ret_code AlignDirective( int i, struct asm_tok tokenarray[] )
         align_value -= seg_align;
         fill_in_objfile_space( align_value );
     }
-    if ( CurrFile[LST] ) {
-        LstWrite( LSTTYPE_DATA, CurrAddr, NULL );
-    }
+    LstWrite( LSTTYPE_DATA, CurrAddr, NULL );
     DebugMsg1(("AlignDirective exit\n"));
     return( NOT_ERROR );
 }

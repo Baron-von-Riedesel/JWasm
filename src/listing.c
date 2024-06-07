@@ -24,11 +24,14 @@
 #include "msgtext.h"
 #include "types.h"
 #include "omfspec.h"
+#include "fixup.h"
 
 #define CODEBYTES 9
 //#define OFSSIZE 8
 #define PREFFMTSTR "25"
 #define USELSLINE 1 /* also in assemble.c! */
+#define SHOWRELOCS 1 /* v2.18: 1=show relocs in code lines */
+#define CODELINE2 1 /* v2.18: 1=emit a second line for code lines if first line cannot render all bytes */
 
 #ifdef __UNIX__
 #define NLSIZ 1
@@ -142,13 +145,17 @@ struct lstleft {
  *  GeneratedCode: flag if code is generated
  *  MacroLevel:    macro depth
  *
+ * "value":
+ * LSTTYPE_EQUATE, LSTTYPE_TMACRO: struct asym
+ * LSTTYPE_MACROLINE: line buffer
+ * LSTTYPE_CODE: struct code_info ( since v2.18 )
  */
 
 void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 /*************************************************************/
 {
     uint_32 newofs;
-    struct asym *sym = value;
+    struct asym *sym = value; /* LSTTYPE_EQUATE, LSTTYPE_TMACRO */
     int     len;
     int     len2;
     int     idx;
@@ -156,6 +163,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
     char    *p1;
     char    *p2;
     char    *pSrcline;
+    char    *pv;  /* code buffer ptr */
     struct lstleft *pll;
     struct lstleft ll;
     //char    buffer2[MAX_LINE_LEN]; /* stores text macro value */
@@ -181,9 +189,9 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
     ModuleInfo.line_flags |= LOF_LISTED;
 
 #if FASTPASS
-    DebugMsg1(("LstWrite( %u, %" I32_SPEC "u ): enter [ pos=%" I32_SPEC "u, GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, list_pos, ModuleInfo.GeneratedCode, MacroLevel ));
+    DebugMsg1(("LstWrite( %u, oldofs=%" I32_SPEC "u ): enter [ pos=%" I32_SPEC "u, GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, list_pos, ModuleInfo.GeneratedCode, MacroLevel ));
 #else
-    DebugMsg1(("LstWrite( %u, %" I32_SPEC "u ): enter [ GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, ModuleInfo.GeneratedCode, MacroLevel ));
+    DebugMsg1(("LstWrite( %u, oldofs=%" I32_SPEC "u ): enter [ GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, ModuleInfo.GeneratedCode, MacroLevel ));
 #endif
     pSrcline = CurrSource;
 #if FASTPASS
@@ -191,13 +199,13 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         if ( ModuleInfo.GeneratedCode == 0 ) {
             if ( !( ModuleInfo.line_flags & LOF_SKIPPOS ) )
                 list_pos = LineStoreCurr->list_pos;
-#if USELSLINE /* either use CurrSource + CurrComment or LineStoreCurr->line (see assemble.c, OnePass() */
+ #if USELSLINE /* either use CurrSource + CurrComment or LineStoreCurr->line (see assemble.c, OnePass() */
             pSrcline = LineStoreCurr->line;
-            if ( ModuleInfo.CurrComment ) { /* if comment was removed, readd it! */
+            if ( ModuleInfo.CurrComment ) { /* if comment was removed, read it! */
                 *( LineStoreCurr->line + strlen( LineStoreCurr->line ) ) = ';';
                 ModuleInfo.CurrComment = NULL;
             }
-#endif
+ #endif
             DebugMsg1(("LstWrite: Pass=%u, stored pos=%" I32_SPEC "u\n", Parse_Pass+1, list_pos ));
         }
         fseek( CurrFile[LST], list_pos, SEEK_SET );
@@ -223,6 +231,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 
         newofs = GetCurrOffset();
         p2 += sprintf( p2, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
+        len = ( ModuleInfo.Ofssize > USE16) ? CODEBYTES : CODEBYTES + 2; /* in 16-bit, there's room for 2 more bytes */
 
         //if ( write_to_file == FALSE )
         if ( Options.first_pass_listing ) {
@@ -232,13 +241,22 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         } else if ( Options.max_passes == 1 ) {
             ; /* write a listing in pass 1 */
 #endif
-        } else if ( Parse_Pass == PASS_1 )  /* changed v1.96 */
+        } else if ( Parse_Pass == PASS_1 ) { /* changed v1.96 */
+#if CODELINE2
+			/* v2.18: add a second line if codebytes won't fit in the first */
+			if ( type == LSTTYPE_CODE && newofs - oldofs > len ) {
+				ll.next = myalloca( sizeof( struct lstleft ) );
+				ll.next->next = NULL;
+				memset( ll.next->buffer, ' ', sizeof( ll.next->buffer) );
+			}
+#endif
             break;
+        }
 
-        len = CODEBYTES;
-
-        if ( CurrSeg->e.seginfo->CodeBuffer == NULL ||
-            CurrSeg->e.seginfo->written == FALSE ) {
+        /* e.seginfo->written set to FALSE in SetCurrOffset().
+         * used for _BSS segments
+         */
+        if ( CurrSeg->e.seginfo->CodeBuffer == NULL || CurrSeg->e.seginfo->written == FALSE ) {
             while ( oldofs < newofs && len ) {
                 *p2++ = '0';
                 *p2++ = '0';
@@ -248,29 +266,115 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             break;
         }
 
-        /* OMF hold just a small buffer for one LEDATA record */
-        /* if it has been flushed, use LastCodeBufSize */
-        idx = (CurrSeg->e.seginfo->current_loc - CurrSeg->e.seginfo->start_loc)
-            - (newofs - oldofs);
-        if ( Options.output_format == OFORMAT_OMF ) {
-            /* v2.11: additional check to make the hack more robust [ test case:  db 800000h dup (0) ] */
-            if ( ( idx+LastCodeBufSize ) < 0 )
-                break; /* just exit. The code bytes area will remain empty */
-            while ( idx < 0 && len ) {
-                p2 += sprintf( p2, "%02X", CurrSeg->e.seginfo->CodeBuffer[idx+LastCodeBufSize] );
-                idx++;
-                oldofs++;
-                len--;
-            }
-        } else if (idx < 0)
-            idx = 0;
+        idx = (CurrSeg->e.seginfo->current_loc - CurrSeg->e.seginfo->start_loc) - (newofs - oldofs);
+        /* OMF holds just a small buffer for one LEDATA record;
+         * if it has been flushed, use LastCodeBufSize.
+         * v2.18: if parts of the current instruction are in the old buffer,
+         * alloc memory on the stack and merge the old and new part.
+         * better approach: don't get the contents from CodeBuffer. For code,
+         * the bytes should be contained in struct code_info (codegen.c).
+         * For data, let data_item() render the contents.
+         */
+		if ( Options.output_format == OFORMAT_OMF ) {
+			/* v2.11: additional check to make the hack more robust [ test case:  db 800000h dup (0) ] */
+			if ( ( idx+LastCodeBufSize ) < 0 )
+				break; /* just exit. The code bytes area will remain empty */
+			if ( idx < 0 ) {
+				DebugMsg1(("LstWrite: copy code from codebuffer to temp stack var. idx=%d\n", idx));
+				pv = myalloca( newofs - oldofs  );
+				memcpy( pv, &CurrSeg->e.seginfo->CodeBuffer[idx+LastCodeBufSize], 0 - idx );
+				memcpy( pv + (0 - idx), &CurrSeg->e.seginfo->CodeBuffer[0], ( newofs - oldofs ) - (0 - idx) );
+			} else
+				pv = &CurrSeg->e.seginfo->CodeBuffer[idx];
+		} else {
+			if (idx < 0) idx = 0;
+			pv = &CurrSeg->e.seginfo->CodeBuffer[idx];
+		}
 
-        while ( oldofs < newofs && len ) {
-            p2 += sprintf( p2, "%02X", CurrSeg->e.seginfo->CodeBuffer[idx] );
-            idx++;
-            oldofs++;
-            len--;
-        }
+
+#if SHOWRELOCS
+		/* v2.18: mark relocations in listings for code lines.
+		 */
+		if ( type == LSTTYPE_CODE && value ) {
+			struct code_info *CodeInfo = value;
+			int oidx = ( CodeInfo->opnd[0].type != OP_NONE && CodeInfo->opnd[0].InsFixup ) ? 0 : 1;
+			DebugMsg1(("LstWrite: opnd[%u].type=0x%" I32_SPEC "X fixup=%p\n", oidx, CodeInfo->opnd[oidx].type, CodeInfo->opnd[oidx].InsFixup));
+			while ( oldofs < newofs ) {
+				if ( CodeInfo->opnd[oidx].type != OP_NONE &&
+					CodeInfo->opnd[oidx].InsFixup &&
+					CodeInfo->opnd[oidx].InsFixup->locofs == oldofs ) {
+					char cType;
+					unsigned char cSize = CodeInfo->opnd[oidx].InsFixup->size;
+					enum fixup_types ftype = CodeInfo->opnd[oidx].InsFixup->type;
+					if ( (p2 - ll.buffer) >= 28 - (cSize*2+2) ) {
+ #if CODELINE2
+						/* write to second line if no more space in first */
+						ll.next = myalloca( sizeof( struct lstleft ) );
+						ll.next->next = NULL;
+						memset( ll.next->buffer, ' ', sizeof( ll.next->buffer) );
+						*p2 = ' ';
+						p2 = ll.next->buffer + 8;
+ #else
+						break;
+ #endif
+					}
+					if ( ftype < FIX_SEG )
+						cType = ( ftype & 4 ) ? 'o': 'r';
+					else
+						switch (ftype) {
+						case FIX_SEG: cType = 's';break;
+						case FIX_HIBYTE: cType = 'h';break;
+ #if COFF_SUPPORT || ELF_SUPPORT
+						case FIX_OFF32_IMGREL: cType = 'i';break;
+						case FIX_OFF32_SECREL: cType = 's';break;
+ #endif
+						}
+					switch ( cSize ) {
+					case 1: p2 += sprintf( p2, " %02X%c", *( uint_8 *)pv, cType ); break;
+					case 2: p2 += sprintf( p2, " %04X%c", *(uint_16 *)pv, cType ); break;
+					case 4:
+						if ( CodeInfo->opnd[oidx].InsFixup->type == FIX_PTR16 )
+							p2 += sprintf( p2, " %04Xo %04Xs", *(uint_16 *)pv, *(uint_16 *)(pv+2) );
+                        else
+							p2 += sprintf( p2, " %08" I32_SPEC "X%c", *(uint_32 *)pv, cType );
+						break;
+					case 6: p2 += sprintf( p2, " %08" I32_SPEC "Xo %04Xs", *(uint_32 *)pv, *(uint_16 *)(pv+4) ); break;
+ #if AMD64_SUPPORT
+					case 8: p2 += sprintf( p2, " %016" I64_SPEC "X%c", *(uint_64 *)pv, cType ); break;
+ #endif
+					}
+					pv += cSize;
+					oldofs += cSize;
+					oidx++;
+				} else {
+					if ( (p2 - ll.buffer) >= 28-2 ) {
+ #if CODELINE2
+						/* write to second line if no more space in first */
+						ll.next = myalloca( sizeof( struct lstleft ) );
+						ll.next->next = NULL;
+						memset( ll.next->buffer, ' ', sizeof( ll.next->buffer) );
+						*p2 = ' ';
+						p2 = ll.next->buffer + 9;
+					} else {
+						if (oidx && *(p2-1) > 'a')
+							*p2++ = ' ';
+ #else
+						break;
+ #endif
+					}
+					p2 += sprintf( p2, "%02X", *(uint_8 *)pv );
+					pv++; oldofs++;
+				}
+			} /* end while() */
+		} else
+#endif
+			while ( oldofs < newofs && len ) {
+				p2 += sprintf( p2, "%02X", *(uint_8 *)pv );
+				pv++;
+				oldofs++;
+				len--;
+			}
+
         break;
     case LSTTYPE_EQUATE:
         /* v2.10: display current offset if equate is an alias for a label in this segment
@@ -321,6 +425,13 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         break;
     case LSTTYPE_STRUCT:
         p2 += sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
+        /* todo: struct may contain "initialized" members - display the contents!
+         * v2.18: struct members will have a non-null value argument.
+         * It's not clear what that argument will be. Struct sfield has the
+         * ivalue member, but that contains the fields initial value as plain string;
+         * it has to be tokenized first. The best approach probably is to let
+         * data_item() render what's to be displayed.
+         */
         break;
     case LSTTYPE_DIRECTIVE:
         if ( CurrSeg || value ) {
@@ -358,8 +469,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         ll.last = NULLC;
 #if FASTPASS
     } else {
-        //idx = OFSSIZE + 2 + 2 * CODEBYTES;
-        idx = 8 + 2 + 2 * CODEBYTES;
+        idx = sizeof(ll.buffer) - 4;
         ll.buffer[idx] = NULLC;
     }
 #endif
@@ -374,11 +484,15 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 #if FASTPASS
     } else {
         fwrite( ll.buffer, 1, idx, CurrFile[LST] );
-        DebugMsg1(("LstWrite: writing (%u b) >%s<\n", idx, ll.buffer ));
+        DebugMsg1(("LstWrite: writing (%u b) >%s< len=%u, len2=%u\n", idx, ll.buffer, len, len2 ));
         list_pos += sizeof( ll.buffer ) + len + len2 + NLSIZ;
-#ifdef DEBUG_OUT
+ #if CODELINE2
+		if ( ll.next ) /* v2.18: currently just 1 additional line possible if pass > 1 */
+			fseek( CurrFile[LST], list_pos, SEEK_SET );
+ #endif
+ #ifdef DEBUG_OUT
         cntLstBytes += idx;
-#endif
+ #endif
     }
 #endif
 
@@ -387,10 +501,10 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
      * used to display value of text macros that won't fit in ll.buffer.
      */
     for ( pll = ll.next; pll; pll = pll->next ) {
-        fwrite( pll->buffer, 1, 32, CurrFile[LST] );
+        fwrite( pll->buffer, 1, sizeof( ll.buffer ), CurrFile[LST] );
         fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
 #if FASTPASS
-        list_pos += 32 + NLSIZ;
+        list_pos += sizeof( ll.buffer ) + NLSIZ;
         DebugMsg1(("LstWrite: additional line >%s<, new pos=%" I32_SPEC "u\n", pll->buffer, list_pos ));
 #else
         DebugMsg1(("LstWrite: additional line >%s<\n", pll->buffer ));

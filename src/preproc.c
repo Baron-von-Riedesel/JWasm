@@ -46,7 +46,7 @@ ret_code WriteCodeLabel( char *line, struct asm_tok tokenarray[] )
         return( EmitErr( SYNTAX_ERROR_EX, tokenarray[0].string_ptr ) );
     }
     /* ensure the listing is written with the FULL source line */
-    if ( CurrFile[LST] ) LstWrite( LSTTYPE_LABEL, 0, NULL );
+    LstWrite( LSTTYPE_LABEL, 0, NULL );
     /* v2.04: call ParseLine() to parse the "label" part of the line */
     oldcnt = Token_Count;
     oldtoken = tokenarray[2].token;
@@ -163,7 +163,7 @@ int PreprocessLine( char *line, struct asm_tok tokenarray[] )
                         WritePreprocessedLine( line );
                 }
                 /* v2.03: LstWrite() must be called AFTER StoreLine()! */
-                if ( ModuleInfo.list == TRUE ) {
+                if ( ModuleInfo.list ) {
                     LstWrite( sym->state == SYM_INTERNAL ? LSTTYPE_EQUATE : LSTTYPE_TMACRO, 0, sym );
                 }
             }

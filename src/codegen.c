@@ -469,11 +469,11 @@ static void output_data( const struct code_info *CodeInfo, enum operand_type det
                     size = 4; /* = size of displacement */
 #if AMD64_SUPPORT
                     /* v2.11: overflow check for 64-bit added */
-#if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
+ #if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
                     if ( CodeInfo->Ofssize == USE64 && CodeInfo->opnd[index].data64 >= 0x80000000 && CodeInfo->opnd[index].data64 < 0xffffffff80000000ULL )
-#else
+ #else
                     if ( CodeInfo->Ofssize == USE64 && CodeInfo->opnd[index].data64 >= 0x80000000 && CodeInfo->opnd[index].data64 < 0xffffffff80000000ui64 )
-#endif
+ #endif
                         EmitErr( INVALID_INSTRUCTION_OPERANDS );
 #endif
                 }
@@ -506,8 +506,9 @@ static void output_data( const struct code_info *CodeInfo, enum operand_type det
                            CodeInfo->opnd[index].InsFixup->sym ? CodeInfo->opnd[index].InsFixup->sym->name : szNull );
                     /* don't exit! */
                 }
+            CodeInfo->opnd[index].InsFixup->locofs = GetCurrOffset();
+            CodeInfo->opnd[index].InsFixup->size = size;
             if ( write_to_file ) {
-                CodeInfo->opnd[index].InsFixup->locofs = GetCurrOffset();
                 OutputBytes( (unsigned char *)&CodeInfo->opnd[index].data32l,
                             size, CodeInfo->opnd[index].InsFixup );
                 return;
@@ -928,8 +929,7 @@ ret_code codegen( struct code_info *CodeInfo, uint_32 oldofs )
         /* v2.06: simplified */
         if ( tbl_op1 == OP_NONE && opnd1 == OP_NONE ) {
             output_opc( CodeInfo );
-            if ( CurrFile[LST] )
-                LstWrite( LSTTYPE_CODE, oldofs, NULL );
+            LstWrite( LSTTYPE_CODE, oldofs, CodeInfo );
             return( NOT_ERROR );
         } else if ( opnd1 & tbl_op1 ) {
             /* for immediate operands, the idata type has sometimes
@@ -955,8 +955,7 @@ ret_code codegen( struct code_info *CodeInfo, uint_32 oldofs )
                 break;
             }
             if( retcode == NOT_ERROR ) {
-                if ( CurrFile[LST] )
-                    LstWrite( LSTTYPE_CODE, oldofs, NULL );
+                LstWrite( LSTTYPE_CODE, oldofs, CodeInfo );
                 return( NOT_ERROR );
             }
         }

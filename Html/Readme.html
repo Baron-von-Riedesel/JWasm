@@ -14,6 +14,13 @@
     JWasm is intended to be a free Masm-compatible assembler. It supports
     16-, 32- and 64-bit code generation and instructions up to AVX.
 
+    JWasm is distributed in several packages. Besides the source package
+    there are some containing precompiled binaries for Windows and DOS.
+    For other OSes the binary must be created from the sources.
+
+    JWasm has its roots in Open Watcom's Wasm. The source is released under
+    the Sybase Open Watcom Public License (see <a href="License.html">license.txt</a> for details).
+
     Various output formats are supported:
 
     format     option     comment
@@ -28,33 +35,25 @@
     ELF64      -elf64     Linux 64-bit object format
     DJGPP      -djgpp     Djgpp's 32-bit COFF variant
 
-    JWasm is distributed in several packages. Besides the source package
-    there are some which contain precompiled binaries for Windows, DOS and
-    Linux. Other OSes like OS/2 and FreeBSD are also supported, but no binary
-    is supplied, it must be created from the sources.
-
-    JWasm has its roots in Open Watcom's Wasm. The source is released under
-    the Sybase Open Watcom Public License (see <a href="License.html">license.txt</a> for details).
-
 
     <b>2. Requirements</b>
 
-    - JWASM.EXE, a precompiled Win32 binary, should run on any 32- or 64-bit
+    - JWasm.exe, a precompiled Win32 binary, should run on any 32- or 64-bit
       Windows.
 
-    - JWASMD.EXE, a precompiled DOS binary, runs in DOS 32bit protected-mode.
+    - JWasmD.exe, a precompiled DOS binary, runs in DOS 32bit protected-mode.
       It requires a 80386 cpu and needs a MS-DOS v5 compatible DOS to run
-      (FreeDOS v1 will do). Long filenames (LFN) are supported. JWASMD.EXE
-      won't run on 64-bit Windows.
+      (FreeDOS should do). Long filenames (LFN) are supported. JWasmD won't
+      run on 64-bit Windows.
 
-    - JWASMR.EXE is a DOS real-mode program which runs on any x86 cpu.
-      Similar to JWASMD.EXE it needs a MS-DOS v5 compatible DOS. This version
+    - JWasmR.exe is a DOS real-mode program which runs on any x86 cpu.
+      Similar to JWasmD it needs a MS-DOS v5 compatible DOS. This version
       has some <A HREF="Manual.html#AE">restrictions</A>, to limit the amount of memory the binary will need.
 
     Memory requirements depend on the source which is assembled. The source
     itself is not kept in memory, but the symbol table is, and this table
     can easily grow to several MBs if huge amounts of equates are defined.
-    That's why JWASMR.EXE might be unable to assemble large sources.
+    That's why JWasmR might be unable to assemble large sources.
 
 
     <b>3. Installation</b>
@@ -78,8 +77,8 @@
     - Readme.txt (this file)
     - a Manual, which describes the differences to Masm. It may be in
       <a href="Manual.html">HTML</a> (Manual.html) or Windows HTMLHelp (JWasm.ch*) format.
-    - <a href="History.txt">History.txt</a>, which describes bugfixes and changes of all JWasm versions.
-    - <a href="License.html">License.txt</a>, which is a copy of the Sybase Open Watcom Public License.
+    - <a href="History.txt">History.txt</a>, describes bugfixes and changes of all JWasm versions.
+    - <a href="License.html">License.txt</a>, that's a copy of the Sybase Open Watcom Public License.
 
 
     <b>5. Samples</b>

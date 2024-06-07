@@ -7,7 +7,7 @@
 # Tools used:
 # - Open Watcom v2.0
 # - jwlink ( OW's wlink might also be used )
-# - HXDev ( for modules cstrtdhr.obj and loadpe.bin )
+# - HXDev ( for modules cstrtdhr.obj and loadpero.bin )
 #
 # "WMake debug=1" - creates a debug version.
 #
@@ -18,10 +18,6 @@ name = JWasm
 # Open Watcom root directory
 !ifndef WATCOM
 WATCOM = \ow20
-!endif
-# HXDIR must contain the HX root directory
-!ifndef HXDIR
-HXDIR = \HX
 !endif
 
 NOGBL = 1
@@ -51,6 +47,8 @@ OUTD=Build\OWDOS32R
 inc_dirs  = -Isrc\H -I$(WATCOM)\H
 c_flags = -q -bc -bt=dos -3r -fpi87 -wcd=115 -D__WATCOM_LFN__
 
+# OW's wlink could be used as well, but jwlink can better handle CONST segments in PE file format;
+# also, it understands "format windows pe hx" ( which simply produces a 'PX' instead of 'PE' binary )
 LINK = jwlink.exe
 
 #cflags stuff

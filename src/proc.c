@@ -3121,7 +3121,7 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
      * then display a standard "code" line in listing.
      */
     if ( ModuleInfo.list && dwOfs != -1 )
-            LstWrite( LSTTYPE_CODE, dwOfs, NULL );
+            LstWrite( LSTTYPE_CODE, dwOfs, NULL ); /* no CodeInfo supplied here */
 
     DebugMsg1(( "RetInstr() exit\n" ));
 
