@@ -239,8 +239,10 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
         DebugMsg(("CalcOffset(%s): abs seg, offset=%" I32_SPEC "Xh\n",
                   curr->sym.name, curr->e.seginfo->start_offset ));
         return;
-    } else if ( curr->e.seginfo->information )
+    } else if ( curr->e.seginfo->information ) {
+        DebugMsg(("CalcOffset(%s): info seg, ignored\n", curr->sym.name ));
         return;
+    }
 
     grp = (struct dsym *)curr->e.seginfo->group;
     if ( cp->alignment > curr->e.seginfo->alignment )
@@ -265,7 +267,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
             /* v2.13: sizebss removed */
             //offset = cp->fileoffset + cp->sizebss - cp->sizehdr;  // + alignbytes;
             offset = cp->fileoffset - cp->sizehdr;  // + alignbytes;
-            DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh\n", curr->sym.name, offset ));
+            DebugMsg(("CalcOffset(%s): no group, ofs=%" I32_SPEC "Xh\n", curr->sym.name, offset ));
         } else {
             /* grp->sym.included is FALSE for the first segment of the group.
              */
@@ -275,7 +277,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
                 grp->sym.offset = cp->fileoffset - cp->sizehdr;
                 grp->sym.included = TRUE;
                 offset = 0;
-                DebugMsg(("CalcOffset(%s): first segment of group, grp.ofs initialized\n", curr->sym.name ));
+                DebugMsg(("CalcOffset(%s): first segment of group %s, grp.ofs initialized\n", curr->sym.name, grp->sym.name ));
             } else {
                 /* v2.12: the old way wasn't correct. if there's a segment between the
                  * segments of a group, it affects the offset as well ( if it
@@ -329,7 +331,12 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
         ;
     else
 #endif
+#if MZ_SUPPORT
+		/* v2.19: changed */
+		cp->fileoffset += (ModuleInfo.sub_format == SFORMAT_MZ ) ? curr->sym.max_offset : curr->sym.max_offset - curr->e.seginfo->start_loc;
+#else
         cp->fileoffset += curr->sym.max_offset - curr->e.seginfo->start_loc;
+#endif
 
     //if ( cp->first && ModuleInfo.sub_format == SFORMAT_NONE ) {
     if ( ModuleInfo.sub_format == SFORMAT_NONE ) {
@@ -1864,7 +1871,6 @@ static ret_code bin_write_module( struct module_info *modinfo )
             SortSegments( 1 );
         }
         for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
-            /* ignore absolute segments */
             CalcOffset( curr, &cp );
             DebugMsg(("bin_write_module(%s): start ofs=%" I32_SPEC "Xh, size=%" I32_SPEC "Xh, file ofs=%" I32_SPEC "Xh, grp=%s\n",
                       curr->sym.name, curr->e.seginfo->start_offset, curr->sym.max_offset - curr->e.seginfo->start_loc, curr->e.seginfo->fileoffset, (curr->e.seginfo->group ? curr->e.seginfo->group->name : "NULL" )));
@@ -1879,9 +1885,10 @@ static ret_code bin_write_module( struct module_info *modinfo )
         //    return( ERROR );
         DoFixup( curr, &cp );
 #if MZ_SUPPORT
-        if ( stack == NULL &&
-            curr->e.seginfo->combine == COMB_STACK )
+        if ( stack == NULL && curr->e.seginfo->combine == COMB_STACK ) {
             stack = curr;
+            DebugMsg(("bin_write_module: %s set as stack segment\n", curr->sym.name ));
+        }
 #endif
     }
     /* v2.04: return if any errors occured during fixup handling */
@@ -2002,13 +2009,19 @@ static ret_code bin_write_module( struct module_info *modinfo )
             continue;
         }
 #if PE_SUPPORT
-        if ( ModuleInfo.sub_format == SFORMAT_PE &&
+        if ( modinfo->sub_format == SFORMAT_PE &&
             ( curr->e.seginfo->segtype == SEGTYPE_BSS || curr->e.seginfo->information ) )
             size = 0;
-        else
+		else
 #endif
-            /* v2.05: changed */
-            size = curr->sym.max_offset - curr->e.seginfo->start_loc;
+			/* v2.05: changed */
+			/* v2.19: don't do this for MZ */
+			//size = curr->sym.max_offset - curr->e.seginfo->start_loc;
+#if MZ_SUPPORT
+			size = ( modinfo->sub_format == SFORMAT_MZ ) ? curr->sym.max_offset : curr->sym.max_offset - curr->e.seginfo->start_loc;
+#else
+			size = curr->sym.max_offset - curr->e.seginfo->start_loc;
+#endif
         //size = sizemem;
         sizemem = bFirst ? size : curr->sym.max_offset;
         /* if no bytes have been written to the segment, check if there's
