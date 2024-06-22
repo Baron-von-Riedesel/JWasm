@@ -1235,7 +1235,7 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
                 return ( ERROR );
             }
 #if FASTPASS
-            if ( StoreState ) FStoreLine(0);
+            if ( StoreState ) FStoreLine( FSL_NOCMT );
 #endif
             currofs = sym->offset;
             sym->isdata = TRUE; /* 'first_size' is valid */
@@ -1252,7 +1252,7 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
             return( EmitError( MUST_BE_IN_SEGMENT_BLOCK ) );
         }
 
-        FStoreLine(0);
+        FStoreLine( FSL_NOCMT );
 
         if ( ModuleInfo.CommentDataInCode )
             omf_OutSelect( TRUE );

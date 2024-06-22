@@ -868,7 +868,7 @@ void DumpInstrStats( void )
     if ( Options.dump_reswords_hash )
         printf("---------------------------\n");
     if ( Options.quiet == FALSE ) {
-        printf( "%u items in resw table, max items/line=%u ", count, max );
+        printf( "reserved words hash table: %u items, max items/line=%u ", count, max );
         printf( "[0=%u 1=%u %u %u %u %u %u %u]\n", num[0], num[1], num[2], num[3], num[4], num[5], num[6], num[7] );
     }
 }

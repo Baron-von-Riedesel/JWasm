@@ -848,8 +848,8 @@ static void DumpSymbols( void )
             max = curr;
     }
     if ( Options.quiet == FALSE ) {
-        printf( "%u items in symbol table, expected %u\n", count, SymCount );
-        printf( "max items in a line=%u, lines with 0/1/<=5/<=10 items=%u/%u/%u/%u, \n", max, num0, num1, num5, num10 );
+        printf( "symbol table: %u items, expected %u\n", count, SymCount );
+        printf( "hash table: max items in a line=%u, lines with 0/1/<=5/<=10 items=%u/%u/%u/%u, \n", max, num0, num1, num5, num10 );
     }
 }
 #endif

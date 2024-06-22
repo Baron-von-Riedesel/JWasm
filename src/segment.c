@@ -1662,7 +1662,7 @@ void SegmentInit( int pass )
     ModuleInfo.Ofssize = USE16;
 
 #if FASTPASS
-    if ( pass != PASS_1 && UseSavedState == TRUE ) {
+    if ( UseSavedState == TRUE ) {
         CurrSeg = saved_CurrSeg;
         stkindex = saved_stkindex;
         if ( stkindex )
@@ -1687,7 +1687,7 @@ void SegmentSaveState( void )
     if ( stkindex ) {
         saved_SegStack = LclAlloc( stkindex * sizeof(struct dsym *) );
         memcpy( saved_SegStack, &SegStack, stkindex * sizeof(struct dsym *) );
-        DebugMsg(("SegmentSaveState: saved_segStack=%X\n", saved_SegStack ));
+        DebugMsg1(("SegmentSaveState: saved_segStack=%X\n", saved_SegStack ));
     }
 
     //saved_CurSeg_name  = symCurSeg->string_ptr;

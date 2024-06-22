@@ -54,7 +54,7 @@ ret_code GetNumber( char *string, int *pi, struct asm_tok tokenarray[] );
 
 extern const char szDgroup[];
 #if FASTPASS
-extern uint_32 list_pos;  /* current LST file position */
+//extern uint_32 list_pos;  /* current LST file position */
 #endif
 /*
  * Masm allows nested procedures
@@ -2119,7 +2119,8 @@ static ret_code write_userdef_prologue( struct asm_tok tokenarray[] )
     char                buffer[MAX_LINE_LEN];
 
 #if FASTPASS
-    if ( Parse_Pass > PASS_1 && UseSavedState )
+    //if ( Parse_Pass > PASS_1 && UseSavedState )
+    if ( UseSavedState )
         return( NOT_ERROR );
 #endif
 
@@ -2504,11 +2505,13 @@ runqueue:
 
 #if FASTPASS
     /* special case: generated code runs BEFORE the line.*/
-    if ( ModuleInfo.list && UseSavedState )
+    //if ( ModuleInfo.list && UseSavedState )
+    if ( ModuleInfo.list )
         if ( Parse_Pass == PASS_1 )
-            info->prolog_list_pos = list_pos;
-        else
-            list_pos = info->prolog_list_pos;
+            ;//info->prolog_list_pos = list_pos;
+        //else
+        else if ( UseSavedState )
+            ;//list_pos = info->prolog_list_pos;
 #endif
     /* line number debug info also needs special treatment
      * because current line number is the first true src line
@@ -2520,8 +2523,8 @@ runqueue:
     Options.line_numbers = oldlinenumbers;
 
 #if FASTPASS
-    if ( ModuleInfo.list && UseSavedState && (Parse_Pass > PASS_1))
-         LineStoreCurr->list_pos = list_pos;
+    if ( ModuleInfo.list && UseSavedState )
+         ;//LineStoreCurr->list_pos = list_pos;
 #endif
 
     return( NOT_ERROR );

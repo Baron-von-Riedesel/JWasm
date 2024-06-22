@@ -45,7 +45,7 @@ ret_code LoopDirective( int i, struct asm_tok tokenarray[] )
     DebugMsg1(("LoopDirective(%s) enter\n", GetResWName( directive, NULL ) ));
 
     i++; /* skip directive */
-    if ( ModuleInfo.list == TRUE ) LstWriteSrcLine();
+    if ( ModuleInfo.list ) LstWriteSrcLine();
 
     switch ( directive ) {
     case T_WHILE:
