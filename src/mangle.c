@@ -115,7 +115,10 @@ static int StdcallMangler( const struct asym *sym, char *buffer )
 static int ms32_decorate( const struct asym *sym, char *buffer )
 /**************************************************************/
 {
-    return ( sprintf( buffer, "@%s@%u", sym->name, ((struct dsym *)sym)->e.procinfo->parasize ) );
+    /* v2.18: don't assume all symbols are PROCs */
+    if ( sym->isproc )
+        return ( sprintf( buffer, "@%s@%u", sym->name, ((struct dsym *)sym)->e.procinfo->parasize ) );
+    return( UScoreMangler( sym, buffer ) );
 }
 
 #if OWFC_SUPPORT
@@ -248,7 +251,7 @@ int Mangle( struct asym *sym, char *buffer )
 }
 
 /* the "mangle_type" is an extension inherited from OW Wasm
- * accepted are "C" and "N". It's NULL if MANGLESUPP == 0 (standard)
+ * accepted are "C" and "N". It's NULL if MANGLERSUPP == 0 (standard)
  */
 void SetMangler( struct asym *sym, int langtype, const char *mangle_type )
 /************************************************************************/

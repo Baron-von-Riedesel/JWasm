@@ -395,8 +395,8 @@ ret_code EndstructDirective( int i, struct asm_tok tokenarray[] )
         CurrStruct = CurrStruct->next;
         if ( CurrStruct )
             UpdateStructSize( (struct asym *)dir );
-        if ( CurrFile[LST] )
-            LstWrite( LSTTYPE_STRUCT, size, dir );
+        //LstWrite( LSTTYPE_STRUCT, size, dir ); /* v2.18: dir not used by LSTTYPE_STRUCT */
+        LstWrite( LSTTYPE_STRUCT, size, NULL );
         return( NOT_ERROR );
     }
 
@@ -471,9 +471,8 @@ ret_code EndstructDirective( int i, struct asm_tok tokenarray[] )
         dir->sym.name_size = 0;
     }
 
-    if ( CurrFile[LST] ) {
-        LstWrite( LSTTYPE_STRUCT, size, dir );
-    }
+    //LstWrite( LSTTYPE_STRUCT, size, dir ); /* v2.18: dir not used by LSTTYPE_STRUCT */
+    LstWrite( LSTTYPE_STRUCT, size, NULL );
 #if 1
     /* to allow direct structure access */
     switch ( dir->sym.total_size ) {
@@ -539,7 +538,9 @@ static ret_code CheckAnonymousStruct( struct dsym *type )
 }
 
 /* CreateStructField() - creates a symbol of state SYM_STRUCT_FIELD.
- * this function is called in pass 1 only.
+ * this function is called in pass 1 only, by
+ * 1. for struct members by data_dir() in data.c.
+ * 2. for embedded structs by EndStructDirective().
  * - loc: initializer index location, -1 means no initializer (is an embedded struct)
  * - name: field name, may be NULL
  * - mem_type: mem_type of item

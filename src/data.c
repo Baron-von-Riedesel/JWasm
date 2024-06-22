@@ -1235,7 +1235,7 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
                 return ( ERROR );
             }
 #if FASTPASS
-            if ( StoreState ) FStoreLine(0);
+            if ( StoreState ) FStoreLine( FSL_NOCMT );
 #endif
             currofs = sym->offset;
             sym->isdata = TRUE; /* 'first_size' is valid */
@@ -1252,7 +1252,7 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
             return( EmitError( MUST_BE_IN_SEGMENT_BLOCK ) );
         }
 
-        FStoreLine(0);
+        FStoreLine( FSL_NOCMT );
 
         if ( ModuleInfo.CommentDataInCode )
             omf_OutSelect( TRUE );
@@ -1373,7 +1373,14 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
         UpdateStructSize( sym );
 
     if ( ModuleInfo.list )
-        LstWrite( CurrStruct ? LSTTYPE_STRUCT : LSTTYPE_DATA, currofs, sym );
+        //LstWrite( CurrStruct ? LSTTYPE_STRUCT : LSTTYPE_DATA, currofs, sym ); /* v2.18: sym not used by LSTTYPE _STRUCT/_DATA */
+        /* todo: struct members should display useful info in the "code" area.
+         * Currently just the offset is displayed.
+         */
+        if ( CurrStruct )
+            LstWrite( LSTTYPE_STRUCT, currofs, NULL );
+        else
+            LstWrite( LSTTYPE_DATA, currofs, NULL );
 
     DebugMsg1(("data_dir: exit, no error, label=%s, is_array=%u, Curr%s.ofs=%X\n",
                sym ? sym->name : "NULL",

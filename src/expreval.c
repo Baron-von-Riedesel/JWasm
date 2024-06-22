@@ -68,6 +68,8 @@ extern uint_32          StackAdj;
 static int evallvl = 0;
 #endif
 
+//__declspec(dllimport) void __stdcall DebugBreak( void );
+
 /* the following static variables should be moved to ModuleInfo. */
 static struct asym *thissym; /* helper symbol for THIS operator */
 static struct asym *nullstruct; /* used for T_DOT if second op is a forward ref */
@@ -489,6 +491,13 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                         sym = NULL;
                     }
                 }
+#if 1 /* v2.18: avoid an undefined symbol is created inside the next "if()" */
+                if ( sym == NULL && opnd->type == NULL ) {
+                    DebugMsg1(("get_operand(%s): unknown type or undefined structured variable\n", tmp ));
+                    if (!nullstruct) nullstruct = CreateTypeSymbol( NULL, "", FALSE );
+                    opnd->type = nullstruct;
+                }
+#endif
             }
         } else {
             DebugMsg1(("%u get_operand: T_ID, id=%s\n", evallvl, tokenarray[i].string_ptr ));
@@ -550,10 +559,25 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                     //if ( opnd->type == NULL && !( flags & EXPF_NOLCREATE ) ) { /* added v1.95 */
                     if ( opnd->type == NULL ) {
                         sym = SymLookup( tmp );
-                        sym->state = SYM_UNDEFINED;
-                        sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym ); /* add UNDEFINED */
-                        DebugMsg1(("get_operand(%s): symbol not (yet) defined, CurrProc=%s\n", tmp, CurrProc ? CurrProc->sym.name : "NULL" ));
-                    
+                        /* v2.18: don't insert an already defined symbol to the "undefined" list;
+                         * "undefined" symbols, procs and stack variables all use the same field to link to
+                         * their "successor".
+                         */
+                        if ( sym->state == SYM_UNDEFINED ) {
+                            DebugMsg1(("get_operand(%s): symbol not (yet) defined, CurrProc=%s, used=%u\n", tmp, CurrProc ? CurrProc->sym.name : "NULL", sym->used ));
+                            /* v2.18: don't add undefined symbols multiple times! */
+                            if ( sym->used == FALSE ) {
+                                sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym ); /* add UNDEFINED */
+                            }
+#if 0 /* v2.18: first fix, now replaced by code above, that handles the "is_dot" case without creating an undef symbol */
+                        } else if (opnd->is_dot) {
+                            DebugMsg1(("get_operand(%s): member of an unknown struct var\n", tmp ));
+                            if ( !nullmbr ) nullmbr = SymAlloc( "" );
+                            sym = nullmbr;
+#endif
+                        } else {
+                            return( fnEmitErr( SYMBOL_ALREADY_DEFINED, tmp ) ); /* can this happen at all? */
+                        }
                     // } else if ( opnd->type == NULL || opnd->type != nullstruct ) { /* v2.08: if changed */
                     // } else if ( opnd->type == NULL || opnd->type->typekind != TYPE_NONE ) { /* v2.11: if changed */
                     } else if ( opnd->type->typekind != TYPE_NONE ) {
@@ -568,9 +592,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                         /* forward reference to a struct.
                          * In these cases, assume everything is ok.
                          */
-                        if ( !nullmbr ) {
-                            nullmbr = SymAlloc( "" );
-                        }
+                        if ( !nullmbr ) nullmbr = SymAlloc( "" );
                         DebugMsg(("get_operand(%s): forward reference to a struct (using nullmbr)\n", tmp ));
                         /* "break" because nullmbr has state SYM_UNDEFINED */
                         opnd->mbr = nullmbr;
@@ -1774,7 +1796,7 @@ static ret_code plus_op( struct expr *opnd1, struct expr *opnd2 )
     } else if( check_both( opnd1, opnd2, EXPR_CONST, EXPR_ADDR ) ) {
 
         if( opnd1->kind == EXPR_CONST ) {
-            DebugMsg1(("plus_op: CONST - ADDR\n" ));
+            DebugMsg1(("plus_op: CONST (is_type=%u) - ADDR\n", opnd1->is_type ));
             opnd2->llvalue += opnd1->llvalue;
             opnd2->indirect |= opnd1->indirect;
 
@@ -1788,9 +1810,13 @@ static ret_code plus_op( struct expr *opnd1, struct expr *opnd2 )
             if ( opnd2->mbr == NULL )
                 opnd2->mbr = opnd1->mbr;
 
+            /* v2.18: to be fixed: mov ax, [S1][bx] may cause error "symbol size conflict" because
+             * mem_type of the const operand isn't ignored.
+             */
+
             /* v2.08: added, test case [4+ebx.<struc>].<mbr> */
             if ( opnd2->type )
-                opnd1->type = opnd2->type; /* set <type> in op1! */
+                opnd1->type = opnd2->type; /* type is NOT modified by TokenAssign() */
 
             TokenAssign( opnd1, opnd2 );
 

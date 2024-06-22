@@ -25,19 +25,159 @@
 #include "input.h"
 #include "segment.h"
 #include "fastpass.h"
+#include "listing.h"
 
 #if FASTPASS
 
-extern uint_32 list_pos;  /* current LST file position */
+/* rework listing for v2.19.
+ * goal: remove current restrictions and bugs:
+ * - trashed listing if code bytes increase AFTER pass 1 so that a second line becomes necessary.
+ * - multiple lines for data possible.
+ * For this to be achieved, the listing isn't written after SaveState() has
+ * been called. Instead a queue is generated in pass 1, that holds the listing lines.
+ * In further passes, those items may be extended if necessary.
+ * The listing is written AFTER the last pass has run.
+ */
+
+/* equ_item: used for a linked list of assembly time variables. Any variable
+ * which is defined or modified after SaveState() has been called is to be stored
+ * here - once!
+ */
+struct equ_item {
+    struct equ_item *next;
+    struct asym *sym;
+    int lvalue;
+    int hvalue;
+    enum memtype mem_type; /* v2.07: added */
+    bool isdefined;
+};
+
+/* mod_state: store the module state within SaveState() */
+
+struct mod_state {
+    bool init;           /* is this struct initialized? */
+    struct {
+        struct equ_item *head; /* the list of modified assembly time variables */
+        struct equ_item *tail;
+    } Equ;
+    unsigned saved_src; /* v2.13: save the current src item */
+    uint_8 modinfo[ sizeof( struct module_info ) - sizeof( struct module_vars ) ];
+};
 
 static struct mod_state modstate; /* struct to store assembly status */
+
 static struct {
     struct line_item *head;
     struct line_item *tail;
 } LineStore;
 struct line_item *LineStoreCurr; /* must be global! */
+
+/* v2.19: listing queue */
+static struct {
+    struct list_item *head;
+    struct list_item *tail;
+} ListStore;
+static struct list_item *ListStoreCurr;
+
 bool StoreState;
 bool UseSavedState;
+
+/* called by LstWrite() if UseSavedState == 1 */
+
+struct list_item *ListGetItem( uint_8 bGeneratedCode )
+/****************************************************/
+{
+	if ( bGeneratedCode ) {
+		ListStoreCurr = ListStoreCurr->next;
+	} else
+		ListStoreCurr = LineStoreCurr->pList;
+
+	return ListStoreCurr;
+}
+
+/* called by LstWrite() if StoreState == 1 (that's in pass 1 only) */
+
+struct list_item *ListAddItem( char *pLine )
+/******************************************/
+{
+	int len = strlen( pLine );
+	struct list_item *pItem;
+
+	pItem = LclAlloc( sizeof( struct list_item ) + len );
+	pItem->next = NULL;
+	pItem->lprfx = NULL;
+	memcpy( pItem->line, pLine, len+1 );
+
+	if ( ListStore.head )
+		ListStore.tail->next = pItem;
+	else
+		ListStore.head = pItem;
+	ListStore.tail = pItem;
+
+    /* attach to the current line if it's still NULL */
+	if ( !LineStoreCurr->pList )
+		LineStoreCurr->pList = pItem;
+
+	return pItem;
+}
+
+/* update list item - just the first 28 bytes */
+
+void ListUpdateItem( struct list_item *pItem, char *pLine )
+/*********************************************************/
+{
+    memcpy( pItem->line, pLine, 28 );
+}
+
+/* ListAddPrefix(), called by
+ * a) LstWrite()          if StoreState == 1
+ * b) ListUpdatePrefix()  if UseSavedState == 1
+ */
+void ListAddPrefix( struct list_item *pItem, char *pLine )
+/********************************************************/
+{
+	int len = strlen( pLine );
+	struct lprefix *curr;
+	struct lprefix *prefix;
+	prefix = LclAlloc( sizeof( struct lprefix ) + ( len > 28 ? len : 28 ) );
+	prefix->next = NULL;
+	memcpy( prefix->line, pLine, len+1 );
+	if ( pItem->lprfx == NULL )
+		pItem->lprfx = prefix;
+	else {
+		for ( curr = pItem->lprfx; curr->next; curr = curr->next );
+		curr->next = prefix;
+	}
+	return;
+}
+
+/* called by LstWrite() if UseSavedState == 1;
+ * prefix to be updated/added in pass > 1.
+ */
+void ListUpdatePrefix( struct list_item *pItem, int prefix, char *pLine )
+/***********************************************************************/
+{
+	struct lprefix *curr;
+	for ( curr = pItem->lprfx; prefix && curr; prefix--, curr = curr->next );
+	if ( curr )
+		strcpy( curr->line, pLine );
+	else
+		ListAddPrefix( pItem, pLine );
+}
+
+/* last pass is done, write listing from list queue items. */
+
+void ListWriteAll( void )
+/***********************/
+{
+	struct list_item *pItem = ListStore.head;
+	for (; pItem; pItem = pItem->next ) {
+		struct lprefix *pPrefix;
+		LstPrintf("%s\n", pItem->line );
+		for ( pPrefix = pItem->lprfx; pPrefix; pPrefix = pPrefix->next )
+			LstPrintf("%s\n", pPrefix->line );
+	}
+}
 
 /*
  * save the current status (happens in pass one only) and
@@ -51,7 +191,10 @@ static void SaveState( void )
 {
     DebugMsg1(("SaveState enter\n" ));
     StoreState = TRUE;
-    UseSavedState = TRUE;
+    /* v2.19: UseSavedState is now set in DefSavedState(), so it's always
+     * zero during pass one.
+     */
+    //UseSavedState = TRUE;
     modstate.init = TRUE;
     modstate.Equ.head = modstate.Equ.tail = NULL;
 
@@ -60,15 +203,20 @@ static void SaveState( void )
     /* save the part of ModuleInfo that is NOT in module_vars */
     memcpy( &modstate.modinfo, (uint_8 *)&ModuleInfo + sizeof( struct module_vars ), sizeof( modstate.modinfo ) );
 
+    ListStore.head = ListStore.tail = NULL;
+
     SegmentSaveState();
     AssumeSaveState();
     ContextSaveState(); /* save pushcontext/popcontext stack */
 
-    DebugMsg(( "SaveState exit\n" ));
+    DebugMsg1(( "SaveState exit\n" ));
 }
 
-void StoreLine( const char *srcline, int flags, uint_32 lst_position )
-/********************************************************************/
+/* flags: b0: 1=store line with comment
+ */
+
+void StoreLine( const char *srcline, int flags )
+/**********************************************/
 {
     int i,j;
     char *p;
@@ -83,23 +231,23 @@ void StoreLine( const char *srcline, int flags, uint_32 lst_position )
         SaveState();
 
     i = strlen( srcline );
-    j = ( ( ( flags & 1 ) && ModuleInfo.CurrComment ) ? strlen( ModuleInfo.CurrComment ) : 0 );
+    j = ( ( ( flags & FSL_WITHCMT ) && ModuleInfo.CurrComment ) ? strlen( ModuleInfo.CurrComment ) : 0 );
     LineStoreCurr = LclAlloc( i + j + sizeof( struct line_item ) );
     LineStoreCurr->next = NULL;
     LineStoreCurr->lineno = GetLineNumber();
+	LineStoreCurr->pList = NULL;
     if ( MacroLevel ) {
         LineStoreCurr->srcfile = 0xfff;
     } else {
         LineStoreCurr->srcfile = get_curr_srcfile();
     }
-    LineStoreCurr->list_pos = ( lst_position ? lst_position : list_pos );
     if ( j ) {
         memcpy( LineStoreCurr->line, srcline, i );
         memcpy( LineStoreCurr->line + i, ModuleInfo.CurrComment, j + 1 );
     } else
         memcpy( LineStoreCurr->line, srcline, i + 1 );
 
-    DebugMsg1(("StoreLine(>%s<, lst_position=%u): cur=%X\n", LineStoreCurr->line, lst_position, LineStoreCurr ));
+    DebugMsg1(("StoreLine(>%s<): cur=%X\n", LineStoreCurr->line, LineStoreCurr ));
 
     /* v2.08: don't store % operator at pos 0 */
     for ( p = LineStoreCurr->line; *p && isspace(*p); p++ );
@@ -117,6 +265,15 @@ void StoreLine( const char *srcline, int flags, uint_32 lst_position )
     LineStore.tail = LineStoreCurr;
 }
 
+/* called by PassOneChecks().
+ * Set the default state, may be altered by calling SkipSavedState().
+ */
+
+void DefSavedState( void )
+/*************************/
+{
+    UseSavedState = StoreState;
+}
 /* an error has been detected in pass one. it should be
  reported in pass 2, so ensure that a full source scan is done then
  */
@@ -162,6 +319,9 @@ void SaveVariableState( struct asym *sym )
 //    printf("state of symbol >%s< saved, value=%u, defined=%u\n", sym->name, sym->value, sym->defined);
 }
 
+/* called by OnePass() if UseSavedState == true;
+ * returns start of line store */
+
 struct line_item *RestoreState( void )
 /************************************/
 {
@@ -190,19 +350,8 @@ struct line_item *RestoreState( void )
         SymSetCmpFunc();
     }
 
-#if 0
-    /* v2.05: AFAICS this can't happen anymore. */
-    if ( LineStore.head == NULL ) {
-        struct line_item *endl = LclAlloc( sizeof( struct line_item ) + 3 );
-        endl->next = NULL;
-        endl->srcfile = 0;
-        endl->lineno = GetLineNumber();
-        endl->list_pos = 0;
-        strcpy( endl->line, "END");
-        LineStore.head = endl;
-        DebugMsg(("RestoreState: LineStore.head was NULL !!!\n" ));
-    }
-#endif
+	ListStoreCurr = NULL;
+
     return( LineStore.head );
 }
 
@@ -222,6 +371,8 @@ void FreeLineStore( void )
     }
 }
 #endif
+
+/* called by AssembleInit() once per module. */
 
 void FastpassInit( void )
 /***********************/

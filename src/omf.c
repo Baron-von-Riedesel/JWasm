@@ -153,7 +153,7 @@ static void omf_InitRec( struct omf_rec *obj, uint_8 command )
     obj->data = NULL;
     obj->command = command;
     obj->is_32 = 0;
-    DebugMsg1(("omf_InitRec(%p, %X)\n", obj, command ));
+    DebugMsg1(("omf_InitRec(%X)\n", command ));
     return;
 }
 
@@ -1370,6 +1370,7 @@ static void omf_write_alias( void )
  *   - name[]
  *   - offset ( 2/4 bytes )
  *   - type ( index field, here always 0 )
+ * PUBDEFs are written after pass 1 and finally ( when the offsets are known ).
  */
 static ret_code omf_write_pubdef( void )
 /**************************************/
@@ -1461,6 +1462,7 @@ static ret_code omf_write_pubdef( void )
             }
             *data++ = 0; /* type field */
             size = (char *)data - StringBufferEnd;
+            DebugMsg1(("omf_write_pub(%s)\n", sym->name ));
         }
         if ( size ) {
             struct omf_rec      obj;
@@ -1475,6 +1477,7 @@ static ret_code omf_write_pubdef( void )
                 obj.d.pubdef.base.grp_idx = omf_GetGrpIdx( GetGroup( curr_seg ) );
             }
             obj.d.pubdef.base.frame = 0;
+            DebugMsg1(("omf_write_pub: is_32=%u, size=%u\n", obj.is_32, size));
             omf_write_record( &obj );
         }
     }

@@ -720,8 +720,7 @@ ret_code MacroDir( int i, struct asm_tok tokenarray[] )
     } else
         store_data = FALSE;
 
-    if ( ModuleInfo.list )
-        LstWriteSrcLine();
+    if ( ModuleInfo.list ) LstWriteSrcLine();
 
     return( StoreMacro( macro, ++i, tokenarray, store_data ) );
 }

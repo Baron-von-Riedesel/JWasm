@@ -1,6 +1,44 @@
 
    Changelog
 
+   __.__.____, v2.19:
+
+   Bugfixes:
+   -  format mz: stack segment was never written - a fault if it isn't
+      located at the end of the binary; see stack1.asm.
+
+   Other changes:
+   -  write listing reworked.
+
+   09.06.2024, v2.18:
+
+   Bugfixes:
+   -  omffixup.c, debug version only: a superfluous %s in a debug display
+      may have caused an exception for output format omf.
+   -  invoke directive: vararg parameter now rejected if used as argument;
+      see vararg1.asm.
+   -  don't add "assume cs:dgroup" in tiny model if format is coff/elf or
+      model is flat; see tiny3.asm.
+   -  default fastcall for 32-bit (MS style) caused a GPF for non-proc
+      symbols; see fastcms.asm.
+   -  listing: when segment directive created a list entry, the offset size
+      may have been wrong.
+   -  omf format: externdef may have caused a PUBDEF record to be written
+      in pass 2, resulting in an invalid object module.
+   -  invoke directive: if cpu was 8086, and the argument was a constant 0,
+      a wrong value may have been pushed; see invoke56.asm.
+   -  jwasm may have entered an infinite loop if a structured variable wasn't
+      defined (yet), but a member name matched a local name; see undef2.asm.
+
+   Other changes:
+   -  output format -djgpp: support added for 16-bit offset fixups.
+   -  in listings, for directives, offset of 16-bit segments displayed with
+      width 4.
+   -  OWDOS32.mak added. Creates a 32-bit version that uses the native Open
+      Watcom runtime for extended DOS. Open Watcom 2.0 is recommended to
+      create this variant.
+   -  listing: relocations in code marked with lowercase letters.
+
    25.03.2023, v2.17:
 
    Bugfixes:

@@ -1653,6 +1653,13 @@ _DATA                           C      10C        12        12
 <P>
     Sample <A HREF="#AB06">Win64_8</A> shows how a 64-bit Windows binary is created with -pe. It also
     shows how to define resources in .rsrc manually and how to modify default values of PE header fields.
+<P>
+    To import functions by number with option -pe, the alias directive has to be used:
+<pre>
+    OPTION DLLIMPORT: &lt;kernel32.dll&gt;
+    VxDCall1 proto stdcall :dword
+    ALIAS &lt;kernel32.1&gt; = &lt;VxDCall1&gt;
+</pre>
 
 
 <H1 ID="CHAPMASMBUGS">    7. Masm bugs fixed in JWasm </H1>

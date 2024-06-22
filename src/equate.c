@@ -179,7 +179,7 @@ static struct asym *CreateAssemblyTimeVariable( struct asm_tok tokenarray[] )
              */
             if( opnd.sym && opnd.sym->state == SYM_UNDEFINED && opnd.indirect == FALSE ) {
 #if FASTPASS
-                if ( StoreState == FALSE ) FStoreLine(0); /* make sure this line is evaluated in pass two */
+                if ( StoreState == FALSE ) FStoreLine( FSL_NOCMT ); /* make sure this line is evaluated in pass two */
 #endif
             } else
                 EmitError( CONSTANT_EXPECTED );

@@ -54,7 +54,7 @@ ret_code GetNumber( char *string, int *pi, struct asm_tok tokenarray[] );
 
 extern const char szDgroup[];
 #if FASTPASS
-extern uint_32 list_pos;  /* current LST file position */
+//extern uint_32 list_pos;  /* current LST file position */
 #endif
 /*
  * Masm allows nested procedures
@@ -1079,8 +1079,17 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
         newofssize = (( Ofssize != USE_EMPTY ) ? Ofssize : ModuleInfo.Ofssize );
         i++;
     } else {
-        newmemtype = ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? MT_FAR : MT_NEAR );
-        newofssize = ModuleInfo.Ofssize;
+        /* v2.18: if PROTO/EXTERNDEF is behind the PROC directive,
+         * ignore module's ofssize or distance.
+         */
+        if (IsPROC == FALSE && proc->sym.state == SYM_INTERNAL && proc->sym.isproc == TRUE ) {
+            newmemtype = proc->sym.mem_type;
+            //newofssize = proc->sym.seg_ofssize; /* CreateProc() sets seg_ofssize for PROTO, but probably wasn't called */
+            newofssize = GetSymOfssize( &proc->sym ); /* just get the PROC's ofssize, so the check can't fail */
+        } else {
+            newmemtype = ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? MT_FAR : MT_NEAR );
+            newofssize = ModuleInfo.Ofssize;
+        }
     }
 
     /* v2.11: GetSymOfssize() cannot handle SYM_TYPE correctly */
@@ -1093,7 +1102,8 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
     if ( proc->sym.mem_type != MT_EMPTY &&
         ( proc->sym.mem_type != newmemtype ||
          oldofssize != newofssize ) ) {
-        DebugMsg(("ParseProc: error, memtype changed, old-new memtype=%X-%X, ofssize=%X-%X\n", proc->sym.mem_type, newmemtype, proc->sym.Ofssize, newofssize));
+        DebugMsg(("ParseProc: error, memtype changed, old-new memtype=%X-%X, ofssize=%X-%X\n",
+            proc->sym.mem_type, newmemtype, oldofssize, newofssize));
         if ( proc->sym.mem_type == MT_NEAR || proc->sym.mem_type == MT_FAR )
             EmitError( PROC_AND_PROTO_CALLING_CONV_CONFLICT );
         else {
@@ -1532,6 +1542,20 @@ ret_code ProcDir( int i, struct asm_tok tokenarray[] )
         if ( CurrProc->e.procinfo->paralist && GetRegNo( CurrProc->e.procinfo->basereg ) == 4 )
             CurrProc->e.procinfo->fpo = TRUE;
 #endif
+		/* add item to the PUBLIC queue.
+		 * this is done when
+		 * a) OPTION PROC:PRIVATE is set:
+		 *    Masm6: PROC must be marked as PUBLIC, EXTERNDEF or PROTO won't have any effect
+		 *    Masm8: EXTERNDEF or PROTO will change visibility to public!
+		 *    JWasm: default is Masm6, option -Zv8 switches to Masm8
+		 * b) OPTION PROC:PRIVATE is NOT set:
+		 *    Masm:
+		 *    -  PROC will be public unless it's marked as private;
+		 *       In that case it depends if an EXTERNDEF/PROTO is also found
+		 *    JWasm:
+		 *    -  if PROC is marked as private, EXTERNDEF/PROTO will change that
+		 *       only if option -Zv8 is set!
+		 */
         if( sym->ispublic == TRUE && oldpubstate == FALSE )
             AddPublicData( sym );
 
@@ -2095,7 +2119,8 @@ static ret_code write_userdef_prologue( struct asm_tok tokenarray[] )
     char                buffer[MAX_LINE_LEN];
 
 #if FASTPASS
-    if ( Parse_Pass > PASS_1 && UseSavedState )
+    //if ( Parse_Pass > PASS_1 && UseSavedState )
+    if ( UseSavedState )
         return( NOT_ERROR );
 #endif
 
@@ -2480,11 +2505,13 @@ runqueue:
 
 #if FASTPASS
     /* special case: generated code runs BEFORE the line.*/
-    if ( ModuleInfo.list && UseSavedState )
+    //if ( ModuleInfo.list && UseSavedState )
+    if ( ModuleInfo.list )
         if ( Parse_Pass == PASS_1 )
-            info->prolog_list_pos = list_pos;
-        else
-            list_pos = info->prolog_list_pos;
+            ;//info->prolog_list_pos = list_pos;
+        //else
+        else if ( UseSavedState )
+            ;//list_pos = info->prolog_list_pos;
 #endif
     /* line number debug info also needs special treatment
      * because current line number is the first true src line
@@ -2496,8 +2523,8 @@ runqueue:
     Options.line_numbers = oldlinenumbers;
 
 #if FASTPASS
-    if ( ModuleInfo.list && UseSavedState && (Parse_Pass > PASS_1))
-         LineStoreCurr->list_pos = list_pos;
+    if ( ModuleInfo.list && UseSavedState )
+         ;//LineStoreCurr->list_pos = list_pos;
 #endif
 
     return( NOT_ERROR );
@@ -3097,7 +3124,7 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
      * then display a standard "code" line in listing.
      */
     if ( ModuleInfo.list && dwOfs != -1 )
-            LstWrite( LSTTYPE_CODE, dwOfs, NULL );
+            LstWrite( LSTTYPE_CODE, dwOfs, NULL ); /* no CodeInfo supplied here */
 
     DebugMsg1(( "RetInstr() exit\n" ));
 

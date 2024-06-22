@@ -896,6 +896,7 @@ static ret_code SetCurrSeg( int i, struct asm_tok tokenarray[] )
 /**************************************************************/
 {
     struct asym *sym;
+    ret_code rc;
 
     sym = SymSearch( tokenarray[0].string_ptr );
     DebugMsg1(("SetCurrSeg(%s) sym=%p\n", tokenarray[0].string_ptr, sym));
@@ -911,10 +912,12 @@ static ret_code SetCurrSeg( int i, struct asm_tok tokenarray[] )
     }
     push_seg( (struct dsym *)sym );
 
+    rc = SetOfssize(); /* v2.18: set offset size BEFORE listing, so it shows correctly */
+
     if ( ModuleInfo.list )
         LstWrite( LSTTYPE_LABEL, 0, NULL );
 
-    return( SetOfssize() );
+    return( rc );
 }
 
 static void UnlinkSeg( struct dsym *dir )
@@ -944,6 +947,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 /*******************************************************/
 {
     char                is_old = FALSE;
+    ret_code            rc;
     char                *token;
     int                 typeidx;
     const struct typeinfo *type;          /* type of option */
@@ -961,6 +965,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
     char                *name;
     struct asym         *sym;
     struct expr         opndx;
+
 
     if ( Parse_Pass != PASS_1 )
         return( SetCurrSeg( i, tokenarray ) );
@@ -1408,10 +1413,12 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 
     push_seg( dir ); /* set CurrSeg */
 
+    rc = SetOfssize(); /* 2.18: call SetOfssize BEFORE LstWrite() */
+
     if ( ModuleInfo.list )
         LstWrite( LSTTYPE_LABEL, 0, NULL );
 
-    return( SetOfssize() );
+    return( rc );
 }
 
 /* sort segments ( a simple bubble sort )
@@ -1655,7 +1662,7 @@ void SegmentInit( int pass )
     ModuleInfo.Ofssize = USE16;
 
 #if FASTPASS
-    if ( pass != PASS_1 && UseSavedState == TRUE ) {
+    if ( UseSavedState == TRUE ) {
         CurrSeg = saved_CurrSeg;
         stkindex = saved_stkindex;
         if ( stkindex )
@@ -1680,7 +1687,7 @@ void SegmentSaveState( void )
     if ( stkindex ) {
         saved_SegStack = LclAlloc( stkindex * sizeof(struct dsym *) );
         memcpy( saved_SegStack, &SegStack, stkindex * sizeof(struct dsym *) );
-        DebugMsg(("SegmentSaveState: saved_segStack=%X\n", saved_SegStack ));
+        DebugMsg1(("SegmentSaveState: saved_segStack=%X\n", saved_SegStack ));
     }
 
     //saved_CurSeg_name  = symCurSeg->string_ptr;

@@ -1186,19 +1186,6 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
             DebugMsg1(("idata_fixup, fixup_type=OFF8\n" ));
             fixup_type = FIX_OFF8;
         }
-#if 0
-    } else if( CodeInfo->mem_type == MT_FAR ) {
-        /* v2.04: to be tested. this code is most likely obsolete.
-         * There's never a PTR16|PTR32 fixup here. Far JMP/CALL are handled
-         * elsewhere, and data items also.
-         */
-        /* temporary */
-        printf("idata_fixup: MT_FAR occured at %s:%" I32_SPEC "u\n", CurrFName[ASM], LineNumber );
-        fixup_type = ( Ofssize ) ? FIX_PTR32 : FIX_PTR16;
-        CodeInfo->isfar = TRUE; /* needed for mark_fixupp() */
-        if ( opndx->Ofssize != USE_EMPTY )
-            CodeInfo->Ofssize = opndx->Ofssize;
-#endif
     } else if( IS_OPER_32( CodeInfo ) ) {
 #if AMD64_SUPPORT
         /* v2.06: changed */
@@ -3014,10 +3001,8 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
              * v2.10: is no longer an issue because the label counter has
              * been moved to module_vars (see global.h).
              */
-            FStoreLine(0);
-            if ( CurrFile[LST] ) {
-                LstWrite( LSTTYPE_LABEL, 0, NULL );
-            }
+            FStoreLine( FSL_NOCMT );
+            LstWrite( LSTTYPE_LABEL, 0, NULL );
             return( NOT_ERROR );
         }
     }
@@ -3077,9 +3062,9 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
                  * the directive will generate lines
                  */
                 if ( ( dirflags & DF_CGEN ) && ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) {
-                    FStoreLine(1);
+                    FStoreLine( FSL_WITHCMT );
                 } else
-                    FStoreLine(0);
+                    FStoreLine( FSL_NOCMT );
             }
 #endif
             if ( tokenarray[i].dirtype > DRT_DATADIR ) {
@@ -3109,7 +3094,8 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
             //if ( ModuleInfo.list && (( line_flags & LOF_LISTED ) == 0 ) && Parse_Pass == PASS_1 )
 #if FASTPASS
             /* v2.08: UseSavedState == FALSE added */
-            if ( ModuleInfo.list && ( Parse_Pass == PASS_1 || ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
+            //if ( ModuleInfo.list && ( Parse_Pass == PASS_1 || ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
+            if ( ModuleInfo.list && ( ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
 #else
             if ( ModuleInfo.list )
 #endif
@@ -3199,7 +3185,7 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
 #endif
             if ( !( ProcStatus & PRST_INSIDE_EPILOGUE ) && ModuleInfo.epiloguemode != PEM_NONE ) {
                 /* v2.07: special handling for RET/IRET */
-                FStoreLine( ( ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) ? 1 : 0 );
+                FStoreLine( ( ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) ? FSL_WITHCMT : FSL_NOCMT );
                 ProcStatus |= PRST_INSIDE_EPILOGUE;
                 temp = RetInstr( i, tokenarray, Token_Count );
                 ProcStatus &= ~PRST_INSIDE_EPILOGUE;
@@ -3212,7 +3198,8 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
         }
     }
 
-    FStoreLine(0); /* must be placed AFTER write_prologue() */
+    /* v2.18: store WITH comment if listing on since we want support more than 1 line in listing */
+    FStoreLine( ModuleInfo.list ? FSL_WITHCMT : FSL_NOCMT ); /* must be placed AFTER write_prologue() */
 
 #ifdef DEBUG_OUT
     instr = tokenarray[i].string_ptr;

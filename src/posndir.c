@@ -113,7 +113,7 @@ ret_code OrgDirective( int i, struct asm_tok tokenarray[] )
             return( EmitError( MUST_BE_IN_SEGMENT_BLOCK ) );
         }
 #if FASTPASS
-        if ( StoreState == FALSE ) FStoreLine(0);
+        if ( StoreState == FALSE ) FStoreLine( FSL_NOCMT );
 #endif
         /* v2.04: added */
         if ( Parse_Pass == PASS_1 && CurrSeg->e.seginfo->FixupList.head )
@@ -235,7 +235,7 @@ ret_code AlignDirective( int i, struct asm_tok tokenarray[] )
         return( AlignInStruct( align_value ));
 
 #if FASTPASS
-    if ( StoreState == FALSE ) FStoreLine(0);
+    if ( StoreState == FALSE ) FStoreLine( FSL_NOCMT );
 #endif
     seg_align = GetCurrSegAlign(); /* # of bytes */
     if( seg_align <= 0 ) {
@@ -257,9 +257,7 @@ ret_code AlignDirective( int i, struct asm_tok tokenarray[] )
         align_value -= seg_align;
         fill_in_objfile_space( align_value );
     }
-    if ( CurrFile[LST] ) {
-        LstWrite( LSTTYPE_DATA, CurrAddr, NULL );
-    }
+    LstWrite( LSTTYPE_DATA, CurrAddr, NULL );
     DebugMsg1(("AlignDirective exit\n"));
     return( NOT_ERROR );
 }

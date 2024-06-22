@@ -77,8 +77,8 @@ extra_c_flags += -oxa -s -DNDEBUG
 !if $(TRMEM)
 extra_c_flags += -of -DTRMEM -DFASTMEM=0
 !endif
-!if $(DJGPP)
-extra_c_flags += -DDJGPP_SUPPORT=1
+!if !$(DJGPP)
+extra_c_flags += -DDJGPP_SUPPORT=0
 !endif
 #########
 

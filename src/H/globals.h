@@ -103,7 +103,7 @@ char *strupr(char *);
 #define COFF_SUPPORT 1 /* support COFF output format             */
 #endif
 #ifndef DJGPP_SUPPORT
-#define DJGPP_SUPPORT 0 /* support for Djgpp COFF variant        */
+#define DJGPP_SUPPORT 1 /* support for Djgpp COFF variant; NOP if COFF isn't active */
 #endif
 #ifndef ELF_SUPPORT
 #define ELF_SUPPORT  1 /* support ELF output format              */
@@ -184,8 +184,8 @@ char *strupr(char *);
 #include "queue.h"
 
 /* JWasm version info */
-#define _JWASM_VERSION_STR_ "2.17"
-#define _JWASM_VERSION_INT_ 217
+#define _JWASM_VERSION_STR_ "2.19"
+#define _JWASM_VERSION_INT_ 219
 #define _JWASM_VERSION_SUFFIX_ ""
 #define _JWASM_VERSION_ _JWASM_VERSION_STR_ _JWASM_VERSION_SUFFIX_
 

@@ -163,7 +163,7 @@ struct asym {
         uint_32         first_size;   /* size of 1st initializer's dimension in bytes */
         /* for SYM_INTERNAL (memtype == NEAR|FAR),
          * SYM_GRP (Ofssize),
-         * SYM_EXTERNAL (Ofssize, comm, weak, isfar, is_ptr, ptr_memtype),
+         * SYM_EXTERNAL (seg_ofssize, iscomm, weak, isfar, is_ptr, ptr_memtype),
          * SYM_STACK (Ofssize, isfar, is_vararg, is_ptr, ptr_memtype ),
          * SYM_TYPE, TYPE_TYPEDEF (Ofssize, isfar, is_ptr, ptr_memtype )
          */

@@ -53,10 +53,14 @@ ret_code StubDir( int i, struct asm_tok tokenarray[] ){ return( ERROR ); }
 ret_code EchoDirective( int i, struct asm_tok tokenarray[] )
 /**********************************************************/
 {
-    if ( Parse_Pass == PASS_1 ) /* display in pass 1 only */
+    if ( Parse_Pass == PASS_1 ) { /* display in pass 1 only */
         if ( Options.preprocessor_stdout == FALSE ) { /* don't print to stdout if -EP is on! */
             printf( "%s\n", tokenarray[i+1].tokpos );
         }
+    }
+#ifdef DEBUG_OUT
+    else DebugMsg1(("EchoDirective - echo suppressed (pass > 1): %s\n", tokenarray[i+1].tokpos));
+#endif
     return( NOT_ERROR );
 }
 
@@ -72,9 +76,7 @@ ret_code IncludeDirective( int i, struct asm_tok tokenarray[] )
 
     DebugMsg1(("IncludeDirective enter\n"));
 
-    if ( CurrFile[LST] ) {
-        LstWriteSrcLine();
-    }
+    if ( ModuleInfo.list ) LstWriteSrcLine();
 
     i++; /* skip directive */
     /* v2.03: allow plain numbers as file name argument */
