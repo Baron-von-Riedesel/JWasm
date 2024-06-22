@@ -87,13 +87,13 @@ const char szDgroup[]  = { "DGROUP" };
 void SetSegAssumeTable( void *savedstate )
 /****************************************/
 {
-    DebugMsg(("SetSegAssumeTable\n" ));
+    DebugMsg1(("SetSegAssumeTable\n" ));
     memcpy( &SegAssumeTable, savedstate, sizeof(SegAssumeTable) );
 }
 void GetSegAssumeTable( void *savedstate )
 /****************************************/
 {
-    DebugMsg(("GetSegAssumeTable\n" ));
+    DebugMsg1(("GetSegAssumeTable\n" ));
     memcpy( savedstate, &SegAssumeTable, sizeof(SegAssumeTable) );
 }
 
@@ -126,7 +126,7 @@ void GetStdAssumeTable( void *savedstate, struct stdassume_typeinfo *ti )
 /***********************************************************************/
 {
     int i;
-    DebugMsg(("GetStdAssumeTable\n" ));
+    DebugMsg1(("GetStdAssumeTable\n" ));
     memcpy( savedstate, &StdAssumeTable, sizeof(StdAssumeTable) );
     for ( i = 0; i < NUM_STDREGS; i++, ti++ ) {
         if ( StdAssumeTable[i].symbol ) {
@@ -414,7 +414,7 @@ ret_code AssumeDirective( int i, struct asm_tok tokenarray[] )
                     /* ensure that directive is rerun in pass 2
                      * so an error msg can be emitted.
                      */
-                    FStoreLine( 0 );
+                    FStoreLine( FSL_NOCMT );
                     info->symbol = opnd.sym;
                 } else if ( ( opnd.sym->state == SYM_SEG || opnd.sym->state == SYM_GRP ) && opnd.instr == EMPTY ) {
                     info->symbol = opnd.sym;

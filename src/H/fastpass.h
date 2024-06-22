@@ -9,17 +9,15 @@
 
 #if FASTPASS
 
-/* equ_item: used for a linked list of assembly time variables. Any variable
- which is defined or modified after SaveState() has been called is to be stored
- here - once! */
+struct lprefix {
+	struct lprefix *next;
+	char line[1];
+};
 
-struct equ_item {
-    struct equ_item *next;
-    struct asym *sym;
-    int lvalue;
-    int hvalue;
-    enum memtype mem_type; /* v2.07: added */
-    bool isdefined;
+struct list_item {
+	struct list_item *next;
+	struct lprefix *lprfx;
+	char line[1];
 };
 
 /* line_item: used for a linked list of preprocessed lines. After SaveState()
@@ -30,24 +28,11 @@ struct equ_item {
 struct line_item {
     struct line_item *next;
     uint_32 lineno:20, srcfile:12;
-    uint_32 list_pos; /* position .LST file */
+    struct list_item *pList;
     char line[1];
 };
 
 extern struct line_item *LineStoreCurr;
-
-/* mod_state: used to store the module state within SaveState()
- */
-
-struct mod_state {
-    bool init;           /* is this struct initialized? */
-    struct {
-        struct equ_item *head; /* the list of modified assembly time variables */
-        struct equ_item *tail;
-    } Equ;
-    unsigned saved_src; /* v2.13: save the current src item */
-    uint_8 modinfo[ sizeof( struct module_info ) - sizeof( struct module_vars ) ];
-};
 
 /* source lines start to be "stored" when one of the following is detected:
  * - an instruction
@@ -75,14 +60,24 @@ void FastpassInit( void );
 void SegmentSaveState( void );
 void AssumeSaveState( void );
 void ContextSaveState( void );
-void StoreLine( const char *, int, uint_32 );
+void StoreLine( const char *, int );
+void DefSavedState( void );
 void SkipSavedState( void );
 struct line_item *RestoreState( void );
 void SaveVariableState( struct asym *sym );
 void FreeLineStore( void );
 
-#define FStoreLine( flags ) if ( Parse_Pass == PASS_1 ) StoreLine( CurrSource, flags, 0 ); else
+struct list_item *ListGetItem( unsigned char bGeneratedCode );
+struct list_item *ListAddItem( char *pLine );
+void ListUpdateItem( struct list_item *pItem, char *pLine );
+void ListAddSubItem( struct list_item *pItem, char *pLine );
+void ListUpdateSubItem( struct list_item *pItem, int, char *pLine );
+void ListFlushAll( void );
+void ListNextGenCode( void );
 
+#define FStoreLine( flags ) if ( Parse_Pass == PASS_1 ) StoreLine( CurrSource, flags )
+
+#define FSL_NOCMT   0
 #define FSL_WITHCMT 1
 
 #else

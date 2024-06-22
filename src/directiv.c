@@ -76,9 +76,7 @@ ret_code IncludeDirective( int i, struct asm_tok tokenarray[] )
 
     DebugMsg1(("IncludeDirective enter\n"));
 
-    if ( CurrFile[LST] ) {
-        LstWriteSrcLine();
-    }
+    if ( ModuleInfo.list ) LstWriteSrcLine();
 
     i++; /* skip directive */
     /* v2.03: allow plain numbers as file name argument */

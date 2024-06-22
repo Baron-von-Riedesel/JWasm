@@ -516,10 +516,6 @@ enum offset_type {
 
 enum line_output_flags {
     LOF_LISTED = 1, /* line written to .LST file */
-#if FASTPASS
-    LOF_SKIPPOS  = 2, /* suppress setting list_pos */
-    //LOF_STORED = 2  /* line stored in line buffer for FASTPASS */
-#endif
 };
 
 /* flags for win64_flags */

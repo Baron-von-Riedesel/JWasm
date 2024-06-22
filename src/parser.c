@@ -2994,14 +2994,13 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
         }
         if ( tokenarray[i].token == T_FINAL ) {
             /* v2.06: this is a bit too late. Should be done BEFORE
-             * CreateLabel, because of '@@'. There's a flag supposed to
-             * be used for this handling, LOF_STORED in line_flags.
+             * CreateLabel, because of '@@'.
              * It's only a problem if a '@@:' is the first line
              * in the code section.
              * v2.10: is no longer an issue because the label counter has
              * been moved to module_vars (see global.h).
              */
-            FStoreLine(0);
+            FStoreLine( FSL_NOCMT );
             LstWrite( LSTTYPE_LABEL, 0, NULL );
             return( NOT_ERROR );
         }
@@ -3064,7 +3063,7 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
                 if ( ( dirflags & DF_CGEN ) && ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) {
                     FStoreLine( FSL_WITHCMT );
                 } else
-                    FStoreLine(0);
+                    FStoreLine( FSL_NOCMT );
             }
 #endif
             if ( tokenarray[i].dirtype > DRT_DATADIR ) {
@@ -3094,7 +3093,8 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
             //if ( ModuleInfo.list && (( line_flags & LOF_LISTED ) == 0 ) && Parse_Pass == PASS_1 )
 #if FASTPASS
             /* v2.08: UseSavedState == FALSE added */
-            if ( ModuleInfo.list && ( Parse_Pass == PASS_1 || ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
+            //if ( ModuleInfo.list && ( Parse_Pass == PASS_1 || ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
+            if ( ModuleInfo.list && ( ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
 #else
             if ( ModuleInfo.list )
 #endif
@@ -3184,7 +3184,7 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
 #endif
             if ( !( ProcStatus & PRST_INSIDE_EPILOGUE ) && ModuleInfo.epiloguemode != PEM_NONE ) {
                 /* v2.07: special handling for RET/IRET */
-                FStoreLine( ( ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) ? FSL_WITHCMT : 0 );
+                FStoreLine( ( ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) ? FSL_WITHCMT : FSL_NOCMT );
                 ProcStatus |= PRST_INSIDE_EPILOGUE;
                 temp = RetInstr( i, tokenarray, Token_Count );
                 ProcStatus &= ~PRST_INSIDE_EPILOGUE;
@@ -3198,7 +3198,7 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
     }
 
     /* v2.18: store WITH comment if listing on since we want support more than 1 line in listing */
-    FStoreLine( ModuleInfo.list ? FSL_WITHCMT : 0); /* must be placed AFTER write_prologue() */
+    FStoreLine( ModuleInfo.list ? FSL_WITHCMT : FSL_NOCMT ); /* must be placed AFTER write_prologue() */
 
 #ifdef DEBUG_OUT
     instr = tokenarray[i].string_ptr;

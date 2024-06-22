@@ -358,7 +358,6 @@ struct proc_info {
     struct asym         *exc_handler;   /* PROC: exc handler set by FRAME */
     int                 ReservedStack;  /* PROC: win64: additional reserved stack */
 #endif
-    uint_32             prolog_list_pos;/* PROC: prologue list pos */
     union {
         unsigned char   flags;
         struct {

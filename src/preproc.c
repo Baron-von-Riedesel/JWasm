@@ -157,7 +157,7 @@ int PreprocessLine( char *line, struct asm_tok tokenarray[] )
             if ( sym = CreateConstant( tokenarray ) ) {
                 if ( sym->state != SYM_TMACRO ) {
 #if FASTPASS
-                    if ( StoreState ) FStoreLine( 0 );
+                    if ( StoreState ) FStoreLine( FSL_NOCMT );
 #endif
                     if ( Options.preprocessor_stdout == TRUE )
                         WritePreprocessedLine( line );

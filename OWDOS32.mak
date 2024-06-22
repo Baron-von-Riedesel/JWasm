@@ -45,7 +45,7 @@ OUTD=Build\OWDOS32R
 !endif
 
 inc_dirs  = -Isrc\H -I$(WATCOM)\H
-c_flags = -q -bc -bt=dos -3r -fpi87 -wcd=115 -D__WATCOM_LFN__
+c_flags = -q -bc -bt=dos -3r -fpi87 -wcd=115 -wcd=303 -D__WATCOM_LFN__
 
 # OW's wlink could be used as well, but jwlink can better handle CONST segments in PE file format;
 # also, it understands "format windows pe hx" ( which simply produces a 'PX' instead of 'PE' binary )

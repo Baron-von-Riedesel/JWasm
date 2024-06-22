@@ -999,7 +999,7 @@ int Tokenize( char *line, unsigned int start, struct asm_tok tokenarray[], unsig
             if ( p.index > 1 &&
                 tokenarray[p.index-1].token == T_COMMA
 #if FASTPASS
-                && ( Parse_Pass == PASS_1 || UseSavedState == FALSE ) /* is it an already preprocessed line? */
+                && ( UseSavedState == FALSE ) /* is it an already preprocessed line? */
 #endif
                 && start == 0 ) {
                 DebugMsg1(("Tokenize: calling IsMultiLine()\n" ));

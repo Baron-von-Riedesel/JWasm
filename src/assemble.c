@@ -62,7 +62,7 @@ jmp_buf jmpenv;
 #define EXPQUAL
 #endif
 
-#define USELSLINE 1 /* must match switch in listing.c! */
+#define USELSLINE 1
 #define EPCOMMENTS 0 /* display comments in -EP output */
 
 //#define ASM_EXT "asm"
@@ -740,6 +740,10 @@ static void PassOneChecks( void )
     int cntUnusedExt = 0;
 #endif
 
+#if FASTPASS
+	DefSavedState(); /* v2.19: set UseSavedState to true AFTER pass one. */
+#endif
+
     /* check for open structures and segments has been done inside the
      * END directive handling already
      * v2.10: now done for PROCs as well, since procedures
@@ -801,12 +805,12 @@ static void PassOneChecks( void )
      * now be fixed in expreval.c, calculate() (undefined symbol in expression will
      * no longer "get lost"); see expr7.asm.
      */
-#if 0
+ #if 0
     if ( SymTables[TAB_UNDEF].head ) {
         DebugMsg(("PassOneChecks: undefined symbols exist, first=%s\n", SymTables[TAB_UNDEF].head->sym.name ));
         SkipSavedState();
     }
-#endif
+ #endif
     /* check if there's an undefined segment reference.
      * This segment was an argument to a group definition then.
      * Just do a full second pass, the GROUP directive will report
@@ -819,7 +823,7 @@ static void PassOneChecks( void )
             break;
         }
     }
-#if COFF_SUPPORT
+ #if COFF_SUPPORT
     /* if there's an item in the safeseh list which is not an
      * internal proc, make a full second pass to emit a proper
      * error msg at the .SAFESEH directive
@@ -830,15 +834,15 @@ static void PassOneChecks( void )
             break;
         }
     }
-#endif
+ #endif
 
     /* scan ALIASes for COFF/ELF */
 
-#if COFF_SUPPORT || ELF_SUPPORT
+ #if COFF_SUPPORT || ELF_SUPPORT
     if ( Options.output_format == OFORMAT_COFF
-#if ELF_SUPPORT
+  #if ELF_SUPPORT
         || Options.output_format == OFORMAT_ELF
-#endif
+  #endif
        ) {
         for( curr = SymTables[TAB_ALIAS].head ; curr != NULL ;curr = curr->next ) {
             struct asym *sym;
@@ -855,7 +859,7 @@ static void PassOneChecks( void )
                 sym->used = TRUE;
         }
     }
-#endif
+ #endif
 
 #endif /* FASTPASS */
 
@@ -904,17 +908,17 @@ static void PassOneChecks( void )
 #if FASTPASS
         if ( curr->sym.altname ) {
             if ( curr->sym.altname->state == SYM_INTERNAL ) {
-#if COFF_SUPPORT || ELF_SUPPORT
+ #if COFF_SUPPORT || ELF_SUPPORT
                 /* for COFF/ELF, the altname must be public or external */
                 if ( curr->sym.altname->ispublic == FALSE &&
                     ( Options.output_format == OFORMAT_COFF
-#if ELF_SUPPORT
+  #if ELF_SUPPORT
                      || Options.output_format == OFORMAT_ELF
-#endif
+  #endif
                     ) ) {
                     SkipSavedState();
                 }
-#endif
+ #endif
             } else if ( curr->sym.altname->state != SYM_EXTERNAL ) {
                 /* do not use saved state, scan full source in second pass */
                 SkipSavedState();
@@ -1009,13 +1013,14 @@ static int OnePass( void )
         RunLineQueue();
 #if FASTPASS
     StoreState = FALSE;
-    if ( Parse_Pass > PASS_1 && UseSavedState == TRUE ) {
+    //if ( Parse_Pass > PASS_1 && UseSavedState == TRUE ) {
+    if ( UseSavedState ) {
         LineStoreCurr = RestoreState();
         while ( LineStoreCurr && ModuleInfo.EndDirFound == FALSE ) {
             /* the source line is modified in Tokenize() if it contains a comment! */
-#if USELSLINE==0
+ #if USELSLINE==0
             strcpy( CurrSource, LineStoreCurr->line );
-#endif
+ #endif
             set_curr_srcfile( LineStoreCurr->srcfile, LineStoreCurr->lineno );
             /* v2.06: list flags now initialized on the top level */
             ModuleInfo.line_flags = 0;
@@ -1024,11 +1029,11 @@ static int OnePass( void )
                 Parse_Pass+1, LineStoreCurr, LineStoreCurr->next, LineStoreCurr->srcfile, GetTopSrcName(),
                 LineStoreCurr->lineno, MacroLevel, LineStoreCurr->line ));
             ModuleInfo.CurrComment = NULL; /* v2.08: added (var is never reset because GetTextLine() isn't called) */
-#if USELSLINE
+ #if USELSLINE
             if ( Token_Count = Tokenize( LineStoreCurr->line, 0, ModuleInfo.tokenarray, TOK_DEFAULT ) )
-#else
+ #else
             if ( Token_Count = Tokenize( CurrSource, 0, ModuleInfo.tokenarray, TOK_DEFAULT ) )
-#endif
+ #endif
                 ParseLine( ModuleInfo.tokenarray );
             LineStoreCurr = LineStoreCurr->next;
         }
@@ -1428,7 +1433,12 @@ int EXPQUAL AssembleModule( const char *source )
     DebugMsg(("AssembleModule(\"%s\") enter\n", source ));
 
     memset( &ModuleInfo, 0, sizeof(ModuleInfo) );
-    DebugCmd( ModuleInfo.cref = TRUE ); /* enable debug displays */
+
+	/* ModuleInfo.cref strangely has 2 meanings:
+	 * a) is copied to symbol->list: so decides if symbol is displayed in symbol list
+	 * b) enables debug displays ( see errmsg.c ).
+	 */
+	DebugCmd( ModuleInfo.cref = TRUE ); /* enable debug displays */
 
 #if 1 //def __SW_BD
     /* fatal errors during assembly won't terminate the program,
@@ -1527,6 +1537,12 @@ int EXPQUAL AssembleModule( const char *source )
             DebugMsg(("%s\n", curr->sym.name ));
         }
     }
+#endif
+
+#if FASTPASS
+	/* v2.19: listing reworked */
+	if ( CurrFile[LST] && UseSavedState )
+		ListFlushAll();
 #endif
 
     if ( ( Parse_Pass > PASS_1 ) && write_to_file )

@@ -4,9 +4,11 @@
    __.__.____, v2.19:
 
    Bugfixes:
-
-   -  format mz: stack segment was never written. That's a fault if it isn't
+   -  format mz: stack segment was never written - a fault if it isn't
       located at the end of the binary; see stack1.asm.
+
+   Other changes:
+   -  write listing reworked.
 
    09.06.2024, v2.18:
 

@@ -23,7 +23,8 @@
  * - contexts ( reused; context.c )
  * - codeview debug info ( dbgcv.c )
  * - library names ( includelib; directiv.c )
- * - src lines for FASTPASS ( fastpass.c )
+ * - src lines if FASTPASS==1 ( fastpass.c )
+ * - list lines if FASTPASS==1 ( fastpass.c )
  * - fixups ( fixup.c )
  * - hll items (reused; .IF, .WHILE, .REPEAT; hll.c )
  * - one big input buffer ( src line buffer, tokenarray, string buffer; input.c )
@@ -162,10 +163,10 @@ void MemFini( void )
 {
 
 #if FASTMEM
-#ifdef DEBUG_OUT
+ #ifdef DEBUG_OUT
     if ( Options.quiet == FALSE )
         printf( "memory used: %u kB\n", (blocks * BLKSIZE - currfree) / 1024 );
-#endif
+ #endif
     while ( pBase ) {
         struct linked_list *pNext = pBase->next;
         BLKFREE( pBase );

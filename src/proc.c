@@ -53,9 +53,6 @@
 ret_code GetNumber( char *string, int *pi, struct asm_tok tokenarray[] );
 
 extern const char szDgroup[];
-#if FASTPASS
-extern uint_32 list_pos;  /* current LST file position */
-#endif
 /*
  * Masm allows nested procedures
  * but they must NOT have params or locals
@@ -1803,7 +1800,7 @@ static void ProcFini( struct dsym *proc )
         ( ModuleInfo.win64_flags & W64F_AUTOSTACKSP ) ) {
         proc->e.procinfo->ReservedStack = sym_ReservedStack->value;
         DebugMsg1(("ProcFini(%s): localsize=%u ReservedStack=%u\n", proc->sym.name, proc->e.procinfo->localsize, proc->e.procinfo->ReservedStack ));
-#if STACKBASESUPP
+ #if STACKBASESUPP
         if ( proc->e.procinfo->fpo ) {
             for ( curr = proc->e.procinfo->locallist; curr; curr = curr->nextlocal ) {
                 DebugMsg1(("ProcFini(%s): FPO, offset for %s %8d -> %8d\n", proc->sym.name, curr->sym.name, curr->sym.offset, curr->sym.offset + proc->e.procinfo->ReservedStack ));
@@ -1814,14 +1811,15 @@ static void ProcFini( struct dsym *proc )
                 curr->sym.offset += proc->e.procinfo->ReservedStack;
             }
         }
-#endif
+ #endif
     }
 
     /* create the .pdata and .xdata stuff */
     if ( proc->e.procinfo->isframe ) {
-#if FASTPASS
-        LstSetPosition(); /* needed if generated code is done BEFORE the line is listed */
-#endif
+ #if FASTPASS
+        if ( UseSavedState && ModuleInfo.list_generated_code ) ListNextGenCode();
+        //LstSetPosition(); /* needed if generated code is done BEFORE the line is listed */
+ #endif
         WriteSEHData( proc );
     }
 #endif
@@ -2119,7 +2117,8 @@ static ret_code write_userdef_prologue( struct asm_tok tokenarray[] )
     char                buffer[MAX_LINE_LEN];
 
 #if FASTPASS
-    if ( Parse_Pass > PASS_1 && UseSavedState )
+    //if ( Parse_Pass > PASS_1 && UseSavedState )
+    if ( UseSavedState )
         return( NOT_ERROR );
 #endif
 
@@ -2503,12 +2502,11 @@ runqueue:
 #endif
 
 #if FASTPASS
-    /* special case: generated code runs BEFORE the line.*/
-    if ( ModuleInfo.list && UseSavedState )
-        if ( Parse_Pass == PASS_1 )
-            info->prolog_list_pos = list_pos;
-        else
-            list_pos = info->prolog_list_pos;
+    /* special case: generated code runs BEFORE the line.
+     * problem: generated code lines aren't in the line store,
+     * but they are in the list store if option -Sg is on.
+     */
+    if ( UseSavedState && ModuleInfo.list_generated_code ) ListNextGenCode();
 #endif
     /* line number debug info also needs special treatment
      * because current line number is the first true src line
@@ -2518,11 +2516,6 @@ runqueue:
     Options.line_numbers = FALSE; /* temporarily disable line numbers */
     RunLineQueue();
     Options.line_numbers = oldlinenumbers;
-
-#if FASTPASS
-    if ( ModuleInfo.list && UseSavedState && (Parse_Pass > PASS_1))
-         LineStoreCurr->list_pos = list_pos;
-#endif
 
     return( NOT_ERROR );
 }

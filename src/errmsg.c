@@ -41,6 +41,7 @@
 #include "msgtext.h"
 #include "listing.h"
 #include "segment.h"
+#include "fastpass.h"
 
 extern void             print_source_nesting_structure( void );
 extern jmp_buf          jmpenv;
@@ -193,13 +194,22 @@ static void PutMsg( FILE *fp, int severity, int msgnum, va_list args )
         fwrite( "\n", 1, 1, fp );
 
         /* if in Pass 1, add the error msg to the listing */
-        if ( CurrFile[LST] &&
-             severity &&
-             Parse_Pass == PASS_1 &&
-             fp == CurrFile[ERR] ) {
-            LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), 0 );
-            /* size of "blank" prefix to be explained! */
-            LstPrintf( "                           %s" NLSTR, buffer );
+        /* v2.19: add the error msg to the listing */
+        if ( CurrFile[LST] && severity && fp == CurrFile[ERR] ) {
+#if FASTPASS
+			if (  UseSavedState ) {
+				struct list_item *item = ListGetItem( ModuleInfo.GeneratedCode );
+				ListAddSubItem( item, buffer );
+			} else if ( StoreState ) {
+				LstWriteSrcLine();
+				ListAddItem( buffer );
+			} else {
+#endif
+                LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), 0 );
+                LstPrintf( "        %s" NLSTR, buffer );
+#if FASTPASS
+			}
+#endif
         }
     }
 }

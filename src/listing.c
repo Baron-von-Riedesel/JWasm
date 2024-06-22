@@ -29,7 +29,6 @@
 #define CODEBYTES 9
 //#define OFSSIZE 8
 #define PREFFMTSTR "25"
-#define USELSLINE 1 /* also in assemble.c! */
 #define SHOWRELOCS 1 /* v2.18: 1=show relocs in code lines */
 #define CODELINE2 1 /* v2.18: 1=emit a second line for code lines if first line cannot render all bytes */
 
@@ -44,10 +43,6 @@
 extern int_32  LastCodeBufSize;
 #if STACKBASESUPP==0
 extern enum special_token basereg[];
-#endif
-
-#if FASTPASS
-uint_32 list_pos; /* current pos in LST file */
 #endif
 
 #define DOTSMAX 32
@@ -116,7 +111,6 @@ static void log_proc(    const struct asym * );
 #ifdef DEBUG_OUT
 static uint_32 cntLstWrite;
 static uint_32 cntLstPrintf;
-static uint_32 cntLstBytes;
 #endif
 
 static const struct print_item cr[] = {
@@ -137,6 +131,14 @@ struct lstleft {
     char buffer[4*8];
     char last;
 };
+
+static void LstNL( void )
+/***********************/
+{
+    if( CurrFile[LST] ) {
+        fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
+    }
+}
 
 /* write a source line to the listing file
  * global variables used inside:
@@ -165,7 +167,10 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
     char    *pSrcline;
     char    *pv;  /* code buffer ptr */
     struct lstleft *pll;
-    struct lstleft ll;
+	struct lstleft ll;
+#if FASTPASS
+	struct list_item *listitem;
+#endif
     //char    buffer2[MAX_LINE_LEN]; /* stores text macro value */
 
     if ( ModuleInfo.list == FALSE || CurrFile[LST] == NULL || ( ModuleInfo.line_flags & LOF_LISTED ) )
@@ -188,27 +193,13 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 
     ModuleInfo.line_flags |= LOF_LISTED;
 
-#if FASTPASS
-    DebugMsg1(("LstWrite( %u, oldofs=%" I32_SPEC "u ): enter [ pos=%" I32_SPEC "u, GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, list_pos, ModuleInfo.GeneratedCode, MacroLevel ));
-#else
     DebugMsg1(("LstWrite( %u, oldofs=%" I32_SPEC "u ): enter [ GeneratedCode=%u, MacroLevel=%u ]\n", type, oldofs, ModuleInfo.GeneratedCode, MacroLevel ));
-#endif
     pSrcline = CurrSource;
 #if FASTPASS
-    if ( ( Parse_Pass > PASS_1 ) && UseSavedState ) {
-        if ( ModuleInfo.GeneratedCode == 0 ) {
-            if ( !( ModuleInfo.line_flags & LOF_SKIPPOS ) )
-                list_pos = LineStoreCurr->list_pos;
- #if USELSLINE /* either use CurrSource + CurrComment or LineStoreCurr->line (see assemble.c, OnePass() */
-            pSrcline = LineStoreCurr->line;
-            if ( ModuleInfo.CurrComment ) { /* if comment was removed, read it! */
-                *( LineStoreCurr->line + strlen( LineStoreCurr->line ) ) = ';';
-                ModuleInfo.CurrComment = NULL;
-            }
- #endif
-            DebugMsg1(("LstWrite: Pass=%u, stored pos=%" I32_SPEC "u\n", Parse_Pass+1, list_pos ));
-        }
-        fseek( CurrFile[LST], list_pos, SEEK_SET );
+    /* v2.19: neither source nor comment are needed if pass > 1 */
+    if ( UseSavedState ) {
+        pSrcline = ""; 
+        ModuleInfo.CurrComment = NULL;
     }
 #endif
 
@@ -242,14 +233,6 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             ; /* write a listing in pass 1 */
 #endif
         } else if ( Parse_Pass == PASS_1 ) { /* changed v1.96 */
-#if CODELINE2
-			/* v2.18: add a second line if codebytes won't fit in the first */
-			if ( type == LSTTYPE_CODE && newofs - oldofs > len ) {
-				ll.next = myalloca( sizeof( struct lstleft ) );
-				ll.next->next = NULL;
-				memset( ll.next->buffer, ' ', sizeof( ll.next->buffer) );
-			}
-#endif
             break;
         }
 
@@ -311,9 +294,10 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 						/* write to second line if no more space in first */
 						ll.next = myalloca( sizeof( struct lstleft ) );
 						ll.next->next = NULL;
-						memset( ll.next->buffer, ' ', sizeof( ll.next->buffer) );
 						*p2 = ' ';
-						p2 = ll.next->buffer + 8;
+						p2 = ll.next->buffer + ((ModuleInfo.Ofssize > USE16) ? 8 : 4);
+						memset( ll.next->buffer, ' ', p2 - ll.next->buffer );
+						ll.next->last = NULLC;
  #else
 						break;
  #endif
@@ -352,9 +336,10 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 						/* write to second line if no more space in first */
 						ll.next = myalloca( sizeof( struct lstleft ) );
 						ll.next->next = NULL;
-						memset( ll.next->buffer, ' ', sizeof( ll.next->buffer) );
 						*p2 = ' ';
-						p2 = ll.next->buffer + 9;
+						p2 = ll.next->buffer + ((ModuleInfo.Ofssize > USE16) ? 8+1 : 4+1);
+						memset( ll.next->buffer, ' ', p2 - ll.next->buffer );
+						ll.next->last = NULLC;
 					} else {
 						if (oidx && *(p2-1) > 'a')
 							*p2++ = ' ';
@@ -441,21 +426,19 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         }
         break;
     default: /* LSTTYPE_MACRO */
-        if ( *pSrcline == NULLC && ModuleInfo.CurrComment == NULL && srcfile == ModuleInfo.srcfile ) {
-            DebugMsg1(("LstWrite: type=%u, writing CRLF\n", type ));
-            fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
-#if FASTPASS
-            list_pos += NLSIZ;
-#endif
-            return;
-        }
+        /* line without token or comment? */
+		if ( Token_Count == 0 && ModuleInfo.CurrComment == NULL && srcfile == ModuleInfo.srcfile ) {
+			ll.buffer[0] = NULLC;
+			p2++;
+		}
         break;
     }
-    *p2 = ' ';
 
 #if FASTPASS
-    if ( Parse_Pass == PASS_1 || UseSavedState == FALSE ) {
+    //if ( Parse_Pass == PASS_1 || UseSavedState == FALSE ) {
+    if ( UseSavedState == FALSE ) {
 #endif
+        *p2 = ' ';
         idx = sizeof( ll.buffer );
         if ( ModuleInfo.GeneratedCode )
             ll.buffer[28] = '*';
@@ -468,48 +451,58 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         }
         ll.last = NULLC;
 #if FASTPASS
-    } else {
-        idx = sizeof(ll.buffer) - 4;
-        ll.buffer[idx] = NULLC;
     }
 #endif
     len = strlen( pSrcline );
     len2 = ( ModuleInfo.CurrComment ? strlen( ModuleInfo.CurrComment ) : 0 );
 
 #if FASTPASS
-    if ( Parse_Pass == PASS_1 || UseSavedState == FALSE ) {
+	if ( StoreState ) {
+		if ( ll.buffer[0] == NULLC ) {
+			listitem = ListAddItem( ll.buffer );
+			DebugMsg1(("LstWrite: ListAddItem(><)=%p\n", listitem ));
+		} else {
+			char buffer[MAX_LINE_LEN+32];
+			sprintf( buffer, "%-32s%s%s", ll.buffer, len ? pSrcline : "", len2 ? ModuleInfo.CurrComment : "" );
+			listitem = ListAddItem( buffer );
+			DebugMsg1(("LstWrite: ListAddItem(>%s<)=%p\n", buffer, listitem ));
+		}
+	} else if ( UseSavedState ) {
+		listitem = ListGetItem( ModuleInfo.GeneratedCode );
+		if ( ll.buffer[0] != NULLC ) {
+			if (ll.next == NULL) *p2 = ' ';
+			ll.buffer[28] = NULLC;
+			ListUpdateItem( listitem, ll.buffer );
+			DebugMsg1(("LstWrite: ListUpdateItem(%p, >%s<)\n", listitem, ll.buffer ));
+		}
+	} else {
 #endif
-        LstPrintf( "%-32s%s%s" NLSTR, ll.buffer, len ? pSrcline : "", len2 ? ModuleInfo.CurrComment : "" );
-        DebugMsg1(("LstWrite: writing (%u b) >%s%s%s<\n", idx + len + len2 + NLSIZ, ll.buffer, pSrcline, len2 ? ModuleInfo.CurrComment : "" ));
+		if ( ll.buffer[0] == NULLC )
+			LstNL();
+		else {
+			LstPrintf( "%-32s%s%s" NLSTR, ll.buffer, len ? pSrcline : "", len2 ? ModuleInfo.CurrComment : "" );
+			DebugMsg1(("LstWrite: writing (%u b) >%s%s%s<\n", idx + len + len2 + NLSIZ, ll.buffer, pSrcline, len2 ? ModuleInfo.CurrComment : "" ));
+		}
 #if FASTPASS
-    } else {
-        fwrite( ll.buffer, 1, idx, CurrFile[LST] );
-        DebugMsg1(("LstWrite: writing (%u b) >%s< len=%u, len2=%u\n", idx, ll.buffer, len, len2 ));
-        list_pos += sizeof( ll.buffer ) + len + len2 + NLSIZ;
- #if CODELINE2
-		if ( ll.next ) /* v2.18: currently just 1 additional line possible if pass > 1 */
-			fseek( CurrFile[LST], list_pos, SEEK_SET );
- #endif
- #ifdef DEBUG_OUT
-        cntLstBytes += idx;
- #endif
-    }
+	}
 #endif
 
-    /* write optional additional lines.
-     * currently works in pass one only.
-     * used to display value of text macros that won't fit in ll.buffer.
-     */
-    for ( pll = ll.next; pll; pll = pll->next ) {
-        fwrite( pll->buffer, 1, sizeof( ll.buffer ), CurrFile[LST] );
-        fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
+    /* write optional additional lines */
+	for ( pll = ll.next, idx = 0; pll; pll = pll->next, idx++ )
 #if FASTPASS
-        list_pos += sizeof( ll.buffer ) + NLSIZ;
-        DebugMsg1(("LstWrite: additional line >%s<, new pos=%" I32_SPEC "u\n", pll->buffer, list_pos ));
-#else
-        DebugMsg1(("LstWrite: additional line >%s<\n", pll->buffer ));
+		if ( StoreState ) {
+			ListAddSubItem( listitem, pll->buffer );
+			DebugMsg1(("LstWrite: ListAddSubItem(>%s<) called\n", pll->buffer ));
+		} else if ( UseSavedState ) {
+			/* may be a new or an existing item! */
+			ListUpdateSubItem( listitem, idx, pll->buffer );
+			DebugMsg1(("LstWrite: ListUpdateSubItem(%u, >%s<) called\n", idx, pll->buffer ));
+		} else
 #endif
-    }
+		{
+			LstPrintf( "%-32s" NLSTR, pll->buffer );
+			DebugMsg1(("LstWrite: additional line >%s<\n", pll->buffer ));
+		}
     return;
 }
 
@@ -529,57 +522,16 @@ void LstPrintf( const char *format, ... )
 /***************************************/
 {
     va_list     args;
-#ifdef DEBUG_OUT
-    uint_32 oldpos;
-#endif
 
     if( CurrFile[LST] ) {
 #ifdef DEBUG_OUT
         cntLstPrintf++;
 #endif
         va_start( args, format );
-#if FASTPASS
-#ifdef DEBUG_OUT
-        oldpos = list_pos;
-#endif
-        list_pos += vfprintf( CurrFile[LST], format, args );
-#ifdef DEBUG_OUT
-        cntLstBytes += list_pos - oldpos;
-#endif
-#else
         vfprintf( CurrFile[LST], format, args );
-#endif
         va_end( args );
     }
 }
-
-static void LstNL( void )
-/***********************/
-{
-    if( CurrFile[LST] ) {
-        fwrite( NLSTR, 1, NLSIZ, CurrFile[LST] );
-#if FASTPASS
-        list_pos += NLSIZ;
-#endif
-    }
-}
-
-/* set the list file's position
- * this is only needed if generated code is to be
- * executed BEFORE the original source line is listed.
- */
-
-#if FASTPASS
-void LstSetPosition( void )
-/*************************/
-{
-    if( CurrFile[LST] && ( Parse_Pass > PASS_1 ) && UseSavedState && ModuleInfo.GeneratedCode == 0 ) {
-        list_pos = LineStoreCurr->list_pos;
-        fseek( CurrFile[LST], list_pos, SEEK_SET );
-        ModuleInfo.line_flags |= LOF_SKIPPOS;
-    }
-}
-#endif
 
 static const char *get_seg_align( const struct seg_info *seg, char *buffer )
 /**************************************************************************/
@@ -1409,19 +1361,17 @@ ret_code ListMacroDirective( int i, struct asm_tok tokenarray[] )
     return( NOT_ERROR );
 }
 
+/* LstInit() - called for each pass */
+
 void LstInit( void )
 /******************/
 {
     //const struct fname_item *fn;
 
-#if FASTPASS
-    list_pos = 0; /* reset listing position */
-#endif
     if ( Parse_Pass == PASS_1 ) {
 #ifdef DEBUG_OUT
         cntLstWrite  = 0;
         cntLstPrintf = 0;
-        cntLstBytes  = 0;
 #endif
     } else {
         if ( CurrFile[LST]
@@ -1443,7 +1393,7 @@ void LstInit( void )
 void LstFini( void )
 /******************/
 {
-    if ( Options.write_listing )
-        printf("LstFini: calls LstWrite/LstPrintf=%" I32_SPEC "u/%" I32_SPEC "u, bytes=%" I32_SPEC "u\n", cntLstWrite, cntLstPrintf, cntLstBytes );
+    if ( Options.write_listing && Options.quiet == FALSE )
+        printf("calls LstWrite/LstPrintf=%" I32_SPEC "u/%" I32_SPEC "u\n", cntLstWrite, cntLstPrintf );
 }
 #endif
