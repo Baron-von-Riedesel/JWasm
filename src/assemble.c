@@ -1143,9 +1143,6 @@ static void ModuleInit( void )
 
     get_module_name(); /* set ModuleInfo.name */
 
-    /* v2.06: ST_PROC has been removed */
-    //SimpleType[ST_PROC].mem_type = MT_NEAR;
-
     memset( SymTables, 0, sizeof( SymTables[0] ) * TAB_LAST );
     ModuleInfo.fmtopt->init( &ModuleInfo );
 

@@ -1614,8 +1614,7 @@ ret_code ProcDir( int i, struct asm_tok tokenarray[] )
 #endif
 
     sym->asmpass = Parse_Pass;
-    if ( ModuleInfo.list )
-        LstWrite( LSTTYPE_LABEL, 0, NULL );
+    if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     if( Options.line_numbers ) {
 #if COFF_SUPPORT
@@ -1823,8 +1822,7 @@ static void ProcFini( struct dsym *proc )
         WriteSEHData( proc );
     }
 #endif
-    if ( ModuleInfo.list )
-        LstWrite( LSTTYPE_LABEL, 0, NULL );
+    if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     /* create the list of locals */
     if ( Parse_Pass == PASS_1 ) {

@@ -180,11 +180,8 @@ static void SetModel( void )
     /* Set @CodeSize */
     if ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) {
         value = 1;
-        /* v2.06: SimpleType[] is obsolete */
-        //SimpleType[ST_PROC].mem_type = MT_FAR;
     } else {
         value = 0;
-        // SimpleType[ST_PROC].mem_type = MT_NEAR; /* this is default */
     }
     sym_CodeSize = AddPredefinedConstant( "@CodeSize", value );
     AddPredefinedText( "@code", SimGetSegName( SIM_CODE ) );

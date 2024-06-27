@@ -427,7 +427,7 @@ ret_code StoreMacro( struct dsym *macro, int i, struct asm_tok tokenarray[], boo
         //if ( ModuleInfo.list && store_data ) {
         if ( ModuleInfo.list ) {
             ModuleInfo.CurrComment = NULL; /* v2.14: reset comment, since line wasn't preprocessed */
-            ModuleInfo.line_flags &= ~LOF_LISTED;
+            ModuleInfo.line_flags = 0;
             LstWrite( LSTTYPE_MACROLINE, 0, buffer );
         }
         ls.input = src;
@@ -471,7 +471,7 @@ ret_code StoreMacro( struct dsym *macro, int i, struct asm_tok tokenarray[], boo
                 /* v2.09: don't query store_data */
                 //if ( ( ls.flags3 & TF3_ISCONCAT ) && ModuleInfo.list && store_data ) {
                 if ( ( ls.flags3 & TF3_ISCONCAT ) && ModuleInfo.list ) {
-                    ModuleInfo.line_flags &= ~LOF_LISTED;
+                    ModuleInfo.line_flags = 0;
                     LstWrite( LSTTYPE_MACROLINE, 0, ls.input );
                 }
                 while( isspace( *ls.input ) ) ls.input++;

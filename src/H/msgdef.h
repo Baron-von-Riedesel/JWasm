@@ -242,7 +242,7 @@ pick( SYNTAX_ERROR_IN_CONTROL_FLOW_DIRECTIVE, "Syntax error in control-flow dire
 pick( INVALID_MODEL_PARAM_FOR_FLAT,      "Invalid .model parameter for flat model" )
 #if BIN_SUPPORT
 pick( FORMAT_DOESNT_SUPPORT_EXTERNALS,   "Output format doesn't support externals: %s" )
-pick( START_LABEL_INVALID,               "Invalid start label for -bin" )
+pick( START_LABEL_INVALID,               "Invalid start label for -%s" )
 #if MZ_SUPPORT
 pick( NO_START_LABEL,                    "No start label defined" )
 pick( NO_STACK,                          "No stack defined" )

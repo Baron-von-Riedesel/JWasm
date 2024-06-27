@@ -1787,7 +1787,7 @@ ret_code InvokeDirective( int i, struct asm_tok tokenarray[] )
         fastcall_tab[ModuleInfo.fctype].invokeend( proc, numParam, value );
     }
 
-    LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), NULL );
+    LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     RunLineQueue();
 

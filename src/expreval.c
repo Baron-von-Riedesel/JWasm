@@ -3418,8 +3418,6 @@ static bool is_expr_item( struct asm_tok *item )
         /* PROC is converted to a type */
         if ( item->tokval == T_PROC ) {
             item->token = T_STYPE;
-            /* v2.06: avoid to use ST_PROC */
-            //item->bytval = ST_PROC;
             item->tokval = ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? T_FAR : T_NEAR );
             return( TRUE );
         }

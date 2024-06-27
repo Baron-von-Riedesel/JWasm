@@ -472,6 +472,7 @@ static ret_code data_item( int *start_pos, struct asm_tok tokenarray[], struct a
 {
     int                 i;
     int                 string_len;
+    uint_32             orgdup; /* v2.19 */
     uint_32             total = 0;
     bool                initwarn = FALSE;
     //unsigned int        count;
@@ -486,7 +487,7 @@ static ret_code data_item( int *start_pos, struct asm_tok tokenarray[], struct a
                no_of_bytes, type_sym ? type_sym->name : "NULL",
                dup, inside_struct, is_float ));
 
-    for ( ; dup; dup-- ) {
+    for ( orgdup = dup; dup; dup-- ) {
     i = *start_pos;
 next_item:  /* <--- continue scan if a comma has been detected */
     /* since v1.94, the expression evaluator won't handle strings
@@ -515,10 +516,11 @@ next_item:  /* <--- continue scan if a comma has been detected */
                  * the type is a TYPEDEF. if the item is a struct member, then
                  * sym is ALWAYS != NULL and the symbol's type can be gained from there.
                  * v2.10: aliases are now already skipped here ( see above ).
+                 * v2.19: added "&& orgdup == dup" to avoid warning being emitted multiple times.
                  */
                 //while ( type_sym->type ) /* skip alias types */
                 //    type_sym = type_sym->type;
-                if( type_sym->typekind == TYPE_TYPEDEF && Parse_Pass == PASS_1 )
+                if( type_sym->typekind == TYPE_TYPEDEF && Parse_Pass == PASS_1 && orgdup == dup )
                     EmitWarn( 2, UNEXPECTED_LITERAL_FOUND_IN_EXPRESSION, tokenarray[i].tokpos );
             }
 

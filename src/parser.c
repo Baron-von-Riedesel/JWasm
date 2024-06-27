@@ -3088,17 +3088,7 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
                     break;
                 }
             }
-            /* v2.0: for generated code it's important that list file is 
-             * written in ALL passes, to update file position! */
-            //if ( ModuleInfo.list && (( line_flags & LOF_LISTED ) == 0 ) && Parse_Pass == PASS_1 )
-#if FASTPASS
-            /* v2.08: UseSavedState == FALSE added */
-            //if ( ModuleInfo.list && ( Parse_Pass == PASS_1 || ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
-            if ( ModuleInfo.list && ( ModuleInfo.GeneratedCode || UseSavedState == FALSE ) )
-#else
-            if ( ModuleInfo.list )
-#endif
-                LstWriteSrcLine();
+            if ( ModuleInfo.list ) LstWriteSrcLine();
             return( temp );
         case T_STYPE:
             DebugMsg1(("ParseLine: T_STYPE >%s<\n", tokenarray[i].string_ptr ));
@@ -3133,7 +3123,7 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
     /* v2.07: moved because special handling is needed for RET/IRET */
     //FStoreLine(); /* must be placed AFTER write_prologue() */
 
-    if ( CurrFile[LST] ) oldofs = GetCurrOffset();
+    if ( ModuleInfo.list ) oldofs = GetCurrOffset();
 
     /* init CodeInfo */
     CodeInfo.prefix.ins         = EMPTY;
@@ -3499,7 +3489,11 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
 
     /* now call the code generator */
 
-    return( codegen( &CodeInfo, oldofs ) );
+    if ( ERROR == codegen( &CodeInfo ) )
+        return( ERROR );
+
+    LstWrite( LSTTYPE_CODE, oldofs, &CodeInfo );
+    return( NOT_ERROR );
 }
 
 /* process a file. introduced in v2.11 */

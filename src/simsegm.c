@@ -199,7 +199,8 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
 
     DebugMsg1(("SimplifiedSegDir(%s) enter\n", tokenarray[i].string_ptr ));
 
-    LstWrite( LSTTYPE_DIRECTIVE, 0, NULL );
+	/* v2.19: just source line if generated lines will follow */
+	if ( ModuleInfo.list_generated_code ) LstWriteSrcLine();
 
     if( ModuleInfo.model == MODEL_NONE ) {
         EmitError( MODEL_IS_NOT_DECLARED );
@@ -307,6 +308,9 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
     }
 
     RunLineQueue();
+
+    /* v2.19 */
+	if ( !ModuleInfo.list_generated_code ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     DebugMsg1(("SimplifiedSegDir exit\n"));
     return( NOT_ERROR );

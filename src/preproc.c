@@ -32,8 +32,10 @@ int_32 cntppl1;    /* count preprocessed lines 2 */
 int_32 cntppl2;    /* count lines NOT handled by preprocessor */
 #endif
 
-/* preprocessor directive or macro procedure is preceded
- * by a code label.
+/* WriteCodeLabel() - called by
+ * - PreprocessLine()
+ * - ExpandToken()
+ * if preprocessor directive or macro procedure is preceded by a code label.
  */
 ret_code WriteCodeLabel( char *line, struct asm_tok tokenarray[] )
 /****************************************************************/
@@ -41,12 +43,19 @@ ret_code WriteCodeLabel( char *line, struct asm_tok tokenarray[] )
     int oldcnt;
     int oldtoken;
     char oldchar;
+    ret_code rc;
 
     if ( tokenarray[0].token != T_ID ) {
         return( EmitErr( SYNTAX_ERROR_EX, tokenarray[0].string_ptr ) );
     }
-    /* ensure the listing is written with the FULL source line */
-    LstWrite( LSTTYPE_LABEL, 0, NULL );
+
+	/* v2.19: Write the listing after ParseLine() has been called -
+	 * because the listing is to contain the full source line AND
+	 * ParseLine() must have called FStoreLine().
+	 */
+	//LstWrite( LSTTYPE_LABEL, 0, NULL );
+	ModuleInfo.line_flags = LOF_LISTED; /* prevents ParseLine() from listing the line */
+
     /* v2.04: call ParseLine() to parse the "label" part of the line */
     oldcnt = Token_Count;
     oldtoken = tokenarray[2].token;
@@ -54,13 +63,17 @@ ret_code WriteCodeLabel( char *line, struct asm_tok tokenarray[] )
     Token_Count = 2;
     tokenarray[2].token = T_FINAL;
     *tokenarray[2].tokpos = NULLC;
-    ParseLine( tokenarray );
+    rc = ParseLine( tokenarray );
     if ( Options.preprocessor_stdout == TRUE )
         WritePreprocessedLine( line );
     Token_Count = oldcnt;
     tokenarray[2].token = oldtoken;
     *tokenarray[2].tokpos = oldchar;
-    return( NOT_ERROR );
+
+    /* v2.19: now write listing */
+	ModuleInfo.line_flags = 0;
+	LstWrite( LSTTYPE_LABEL, 0, NULL );
+    return( rc );
 }
 
 /* PreprocessLine() is the "preprocessor".

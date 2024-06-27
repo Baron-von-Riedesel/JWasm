@@ -1003,8 +1003,7 @@ ret_code HllStartDir( int i, struct asm_tok tokenarray[] )
     hll->next = HllStack;
     HllStack = hll;
 
-    if ( ModuleInfo.list )
-        LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), NULL );
+    if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     if ( is_linequeue_populated() ) /* might be NULL! (".if 1") */
         RunLineQueue();
@@ -1117,8 +1116,7 @@ ret_code HllEndDir( int i, struct asm_tok tokenarray[] )
         EmitErr( SYNTAX_ERROR_EX, tokenarray[i].tokpos );
         rc = ERROR;
     }
-    if ( ModuleInfo.list )
-        LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), NULL );
+    if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     /* v2.11: always run line-queue if it's not empty. */
     if ( is_linequeue_populated() )
@@ -1239,8 +1237,7 @@ ret_code HllExitDir( int i, struct asm_tok tokenarray[] )
         rc = ERROR;
     }
 
-    if ( ModuleInfo.list )
-        LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), NULL );
+    if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     /* v2.11: always run line-queue if it's not empty. */
     if ( is_linequeue_populated() )

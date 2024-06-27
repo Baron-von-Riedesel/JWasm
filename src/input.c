@@ -961,6 +961,9 @@ void InputPassInit( void )
     CurrSource = srclinebuffer;
     *CurrSource = NULLC;
     StringBufferEnd = token_stringbuf;
+#ifdef DEBUG_OUT
+    Token_Count = 0;
+#endif
     return;
 }
 

@@ -833,7 +833,6 @@ ret_code GetQualifiedType( int *pi, struct asm_tok tokenarray[], struct qualifie
     for ( tmp = i; tokenarray[tmp].token != T_FINAL && tokenarray[tmp].token != T_COMMA; tmp++ )
         if ( tokenarray[tmp].token == T_DIRECTIVE && tokenarray[tmp].tokval == T_PROC ) {
             tokenarray[tmp].token = T_STYPE;
-            /* v2.06: avoid to use ST_PROC */
             tokenarray[tmp].tokval = ( ( SIZE_CODEPTR & ( 1 << ModuleInfo.model ) ) ? T_FAR : T_NEAR );
         }
     /* with NEAR/FAR, there are several syntax variants allowed:

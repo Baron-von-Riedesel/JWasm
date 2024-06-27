@@ -38,7 +38,6 @@
 #include "fpfixup.h"
 #include "segment.h"
 #include "input.h"
-#include "listing.h"
 #include "reswords.h"
 
 extern const struct opnd_class opnd_clstab[];
@@ -870,8 +869,8 @@ static ret_code check_operand_2( struct code_info *CodeInfo, enum operand_type o
     return( ERROR );
 }
 
-ret_code codegen( struct code_info *CodeInfo, uint_32 oldofs )
-/*************************************************************
+ret_code codegen( struct code_info *CodeInfo )
+/*********************************************
  * - codegen() will look up the assembler opcode table and try to find
  *   a matching first operand;
  * - if one is found then it will call check_operand_2() to determine
@@ -929,7 +928,6 @@ ret_code codegen( struct code_info *CodeInfo, uint_32 oldofs )
         /* v2.06: simplified */
         if ( tbl_op1 == OP_NONE && opnd1 == OP_NONE ) {
             output_opc( CodeInfo );
-            LstWrite( LSTTYPE_CODE, oldofs, CodeInfo );
             return( NOT_ERROR );
         } else if ( opnd1 & tbl_op1 ) {
             /* for immediate operands, the idata type has sometimes
@@ -955,7 +953,6 @@ ret_code codegen( struct code_info *CodeInfo, uint_32 oldofs )
                 break;
             }
             if( retcode == NOT_ERROR ) {
-                LstWrite( LSTTYPE_CODE, oldofs, CodeInfo );
                 return( NOT_ERROR );
             }
         }
@@ -963,7 +960,6 @@ ret_code codegen( struct code_info *CodeInfo, uint_32 oldofs )
     } while ( CodeInfo->pinstr->first == FALSE );
 
     DebugMsg(("codegen: no matching format found\n"));
-    EmitError( INVALID_INSTRUCTION_OPERANDS );
-    return( ERROR );
+    return ( EmitError( INVALID_INSTRUCTION_OPERANDS ) );
 }
 

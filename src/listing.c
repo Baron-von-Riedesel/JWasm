@@ -177,6 +177,9 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         return;
     if ( ModuleInfo.GeneratedCode && ( ModuleInfo.list_generated_code == FALSE ) )
         return;
+    /* v2.19: if first pass listing, don't adjust offsets in later passes */
+    if ( Options.first_pass_listing && Parse_Pass > PASS_1 )
+        return;
     if ( MacroLevel ) {
         switch ( ModuleInfo.list_macro ) {
         case LM_NOLISTMACRO:
@@ -210,24 +213,16 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 
     switch ( type ) {
     case LSTTYPE_DATA:
-        if ( Parse_Pass == PASS_1 && Options.first_pass_listing == FALSE ) {
-            break;
-        }
-        /* no break */
     case LSTTYPE_CODE:
         if ( CurrSeg == NULL ) {
             DebugMsg(("LstWrite: LSTTYPE_CODE/LSTTYPE_DATA with CurrSeg==NULL!\n" ));
             break;
         }
 
-        newofs = GetCurrOffset();
         p2 += sprintf( p2, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
-        len = ( ModuleInfo.Ofssize > USE16) ? CODEBYTES : CODEBYTES + 2; /* in 16-bit, there's room for 2 more bytes */
 
-        //if ( write_to_file == FALSE )
         if ( Options.first_pass_listing ) {
-            if ( Parse_Pass > PASS_1 )
-                break;
+            break;
 #ifdef DEBUG_OUT
         } else if ( Options.max_passes == 1 ) {
             ; /* write a listing in pass 1 */
@@ -235,6 +230,8 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         } else if ( Parse_Pass == PASS_1 ) { /* changed v1.96 */
             break;
         }
+        newofs = GetCurrOffset();
+        len = ( ModuleInfo.Ofssize > USE16) ? CODEBYTES : CODEBYTES + 2; /* in 16-bit, there's room for 2 more bytes */
 
         /* e.seginfo->written set to FALSE in SetCurrOffset().
          * used for _BSS segments
@@ -418,13 +415,6 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
          * data_item() render what's to be displayed.
          */
         break;
-    case LSTTYPE_DIRECTIVE:
-        if ( CurrSeg || value ) {
-            /* v2.18: print 4-digit offset in 16-bit mode */
-            //p2 += sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
-            p2 += sprintf( ll.buffer, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
-        }
-        break;
     default: /* LSTTYPE_MACRO */
         /* line without token or comment? */
 		if ( Token_Count == 0 && ModuleInfo.CurrComment == NULL && srcfile == ModuleInfo.srcfile ) {
@@ -438,7 +428,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
     //if ( Parse_Pass == PASS_1 || UseSavedState == FALSE ) {
     if ( UseSavedState == FALSE ) {
 #endif
-        *p2 = ' ';
+        if (ll.next == NULL) *p2 = ' ';
         idx = sizeof( ll.buffer );
         if ( ModuleInfo.GeneratedCode )
             ll.buffer[28] = '*';
@@ -500,7 +490,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
 		} else
 #endif
 		{
-			LstPrintf( "%-32s" NLSTR, pll->buffer );
+			LstPrintf( "%s" NLSTR, pll->buffer );
 			DebugMsg1(("LstWrite: additional line >%s<\n", pll->buffer ));
 		}
     return;

@@ -470,9 +470,9 @@ static uint_32 GetImageSize( bool memimage )
     bool first;
     uint_32 vsize = 0;
     uint_32 size = 0;
+    uint_32 tmp = 0;
 
     for( curr = SymTables[TAB_SEG].head, first = TRUE; curr; curr = curr->next ) {
-        uint_32 tmp;
         if ( curr->e.seginfo->segtype == SEGTYPE_ABS || curr->e.seginfo->information )
             continue;
         if ( memimage == FALSE ) {
@@ -485,13 +485,19 @@ static uint_32 GetImageSize( bool memimage )
                     break; /* done, skip rest of segments! */
             }
         }
-        tmp = curr->e.seginfo->fileoffset + (curr->sym.max_offset - curr->e.seginfo->start_loc );
+        /* v2.19: better calculation of memory image size for -bin,
+         * but still not correct ( stack is missing, alignment ignored ).
+         */
+        if ( memimage && ( curr->e.seginfo->segtype == SEGTYPE_BSS  ) )
+            tmp += curr->sym.max_offset - curr->e.seginfo->start_loc;
+        else
+            tmp = curr->e.seginfo->fileoffset + (curr->sym.max_offset - curr->e.seginfo->start_loc );
         if ( first == FALSE )
             vsize += curr->e.seginfo->start_loc;
         if ( memimage )
             tmp += vsize;
-        DebugMsg(("GetImageSize(%s): fileofs=%" I32_SPEC "Xh, max_offs=%" I32_SPEC "Xh start=%" I32_SPEC "Xh\n",
-                  curr->sym.name, curr->e.seginfo->fileoffset, curr->sym.max_offset, curr->e.seginfo->start_loc ));
+        DebugMsg(("GetImageSize(%s): fileofs=%" I32_SPEC "Xh, max_offs=%" I32_SPEC "Xh start=%" I32_SPEC "Xh vsize=%" I32_SPEC "Xh tmp=%" I32_SPEC "Xh\n",
+                  curr->sym.name, curr->e.seginfo->fileoffset, curr->sym.max_offset, curr->e.seginfo->start_loc, vsize, tmp ));
         if ( size < tmp )
             size = tmp;
         first = FALSE;
@@ -1900,7 +1906,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
     if ( modinfo->sub_format == SFORMAT_NONE ) {
         if ( modinfo->g.start_label ) {
             if ( cp.entryoffset == -1 || cp.entryseg != modinfo->g.start_label->segment ) {
-                return( EmitError( START_LABEL_INVALID ) );
+                return( EmitErr( START_LABEL_INVALID, "bin" ) );
             }
         }
     }
@@ -1959,6 +1965,9 @@ static ret_code bin_write_module( struct module_info *modinfo )
                 pMZ->e_ip = (addr & 0xF ) + modinfo->g.start_label->offset; /* IP */
                 pMZ->e_cs = addr >> 4; /* CS */
             }
+            /* v2.19: error if CS:IP doesn't fit in 20-bit */
+            if ( addr >= 0x100000 || modinfo->g.start_label->offset >= 0x10000 )
+                EmitErr( START_LABEL_INVALID, "mz" );
             /* v2.12: warn if entry point is in a 32-/64-bit segment */
             if ( curr->e.seginfo->Ofssize > USE16 )
                 EmitWarn( 2, START_LABEL_NOT_16BIT );

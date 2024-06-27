@@ -205,7 +205,7 @@ static void PutMsg( FILE *fp, int severity, int msgnum, va_list args )
 				ListAddItem( buffer );
 			} else {
 #endif
-                LstWrite( LSTTYPE_DIRECTIVE, GetCurrOffset(), 0 );
+                LstWrite( LSTTYPE_LABEL, 0, NULL );
                 LstPrintf( "        %s" NLSTR, buffer );
 #if FASTPASS
 			}
@@ -265,7 +265,7 @@ int EmitErr( int msgnum, ... )
     va_list args1, args2;
 
 #ifdef DEBUG_OUT
-    printf( "%s\n", ModuleInfo.tokenarray ? ModuleInfo.tokenarray[0].tokpos : "" );
+    if ( Token_Count ) printf( "%s\n", ModuleInfo.tokenarray[0].tokpos );
 #endif
     va_start( args1, msgnum );
     va_start( args2, msgnum );
@@ -293,7 +293,7 @@ void EmitWarn( int level, int msgnum, ... )
 
     if( level <= Options.warning_level ) {
 #ifdef DEBUG_OUT
-        printf( "%s\n", ModuleInfo.tokenarray ? ModuleInfo.tokenarray[0].tokpos : "" );
+        if (Token_Count) printf( "%s\n", ModuleInfo.tokenarray[0].tokpos );
 #endif
         va_start( args1, msgnum );
         va_start( args2, msgnum );

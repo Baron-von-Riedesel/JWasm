@@ -877,10 +877,10 @@ ret_code EndsDir( int i, struct asm_tok tokenarray[] )
     if( i != 1 ) {
         return( EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr ) );
     }
-    if ( Parse_Pass != PASS_1 ) {
-        if ( ModuleInfo.list )
-            LstWrite( LSTTYPE_LABEL, 0, NULL );
-    }
+    /* v2.19: call LstWrite() in all passes */
+    //if ( Parse_Pass != PASS_1 ) {
+        if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
+    //}
     if ( CloseSeg( tokenarray[0].string_ptr ) == ERROR )
         return( ERROR );
     i++;
@@ -914,8 +914,7 @@ static ret_code SetCurrSeg( int i, struct asm_tok tokenarray[] )
 
     rc = SetOfssize(); /* v2.18: set offset size BEFORE listing, so it shows correctly */
 
-    if ( ModuleInfo.list )
-        LstWrite( LSTTYPE_LABEL, 0, NULL );
+    if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     return( rc );
 }
@@ -1415,8 +1414,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 
     rc = SetOfssize(); /* 2.18: call SetOfssize BEFORE LstWrite() */
 
-    if ( ModuleInfo.list )
-        LstWrite( LSTTYPE_LABEL, 0, NULL );
+    if ( ModuleInfo.list ) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     return( rc );
 }
