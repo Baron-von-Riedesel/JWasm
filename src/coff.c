@@ -1132,8 +1132,13 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
                  * 0 - ORG must be written by moving the file pointer!
                  */
                 if ( section->e.seginfo->start_loc ) {
-                    fseek( CurrFile[OBJ], section->e.seginfo->start_loc, SEEK_CUR );
-                    DebugMsg(("coff_write_data(%s, %Xh): fseek() called for start_loc=%X\n", section->sym.name, offset, section->e.seginfo->start_loc ));
+					/* v2.19: write null bytes instead of fseek() */
+					//fseek( CurrFile[OBJ], section->e.seginfo->start_loc, SEEK_CUR );
+					char nullbyt = NULLC;
+					uint_32 i;
+					for ( i = section->e.seginfo->start_loc; i ; i--)
+						fwrite( &nullbyt, 1, 1, CurrFile[OBJ] );
+                    DebugMsg(("coff_write_data(%s, %Xh): null bytes written for start_loc=%X\n", section->sym.name, offset, section->e.seginfo->start_loc ));
                     size -= section->e.seginfo->start_loc;
                 }
 

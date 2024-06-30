@@ -1230,7 +1230,13 @@ static ret_code elf_write_data( struct module_info *modinfo, struct elfmod *em )
         size = curr->sym.max_offset - curr->e.seginfo->start_loc;
         DebugMsg(("elf_write_data(%s): program data at ofs=%X, size=%X\n", curr->sym.name, curr->e.seginfo->fileoffset, size ));
         if ( curr->e.seginfo->segtype != SEGTYPE_BSS && size != 0 ) {
-            fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset + curr->e.seginfo->start_loc, SEEK_SET );
+			/* v2.19: write null bytes if start_loc != 0 */
+			//fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset + curr->e.seginfo->start_loc, SEEK_SET );
+			char nullbyt = NULLC;
+			uint_32 i;
+			for ( i = curr->e.seginfo->start_loc; i ; i--)
+				fwrite( &nullbyt, 1, 1, CurrFile[OBJ] );
+			fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
             /**/myassert( curr->e.seginfo->CodeBuffer );
             if ( fwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
                 WriteError();

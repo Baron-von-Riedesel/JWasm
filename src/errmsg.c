@@ -197,7 +197,7 @@ static void PutMsg( FILE *fp, int severity, int msgnum, va_list args )
         /* v2.19: add the error msg to the listing */
         if ( CurrFile[LST] && severity && fp == CurrFile[ERR] ) {
 #if FASTPASS
-			if (  UseSavedState ) {
+			if (  UseSavedState && LineStoreCurr ) {
 				struct list_item *item = ListGetItem( ModuleInfo.GeneratedCode );
 				ListAddSubItem( item, buffer );
 			} else if ( StoreState ) {

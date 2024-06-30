@@ -6,9 +6,13 @@
    Bugfixes:
    -  format mz: stack segment was never written - a fault if it isn't
       located at the end of the binary; see stack1.asm.
+   -  format mz,pe: start offset for first segment may have resulted in
+      an invalid binary; see org1.asm & org2.asm.
 
    Other changes:
    -  write listing reworked.
+   -  option -pe: add segments with combine type stack - they may contain
+      initialized data.
 
    09.06.2024, v2.18:
 

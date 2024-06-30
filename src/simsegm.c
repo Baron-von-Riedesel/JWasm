@@ -199,8 +199,10 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
 
     DebugMsg1(("SimplifiedSegDir(%s) enter\n", tokenarray[i].string_ptr ));
 
+    type = GetSflagsSp( tokenarray[i].tokval );
+
 	/* v2.19: just source line if generated lines will follow */
-	if ( ModuleInfo.list_generated_code ) LstWriteSrcLine();
+	if ( ModuleInfo.list_generated_code || type == SIM_STACK ) LstWriteSrcLine();
 
     if( ModuleInfo.model == MODEL_NONE ) {
         EmitError( MODEL_IS_NOT_DECLARED );
@@ -208,7 +210,6 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
     }
 
     //type = tokenarray[i].value;
-    type = GetSflagsSp( tokenarray[i].tokval );
     i++; /* get past the directive token */
 
     if( type == SIM_STACK ) {
@@ -310,7 +311,7 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
     RunLineQueue();
 
     /* v2.19 */
-	if ( !ModuleInfo.list_generated_code ) LstWrite( LSTTYPE_LABEL, 0, NULL );
+	if ( (!ModuleInfo.list_generated_code) && ( type != SIM_STACK )) LstWrite( LSTTYPE_LABEL, 0, NULL );
 
     DebugMsg1(("SimplifiedSegDir exit\n"));
     return( NOT_ERROR );

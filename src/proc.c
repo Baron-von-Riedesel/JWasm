@@ -3031,19 +3031,17 @@ ret_code RetInstr( int i, struct asm_tok tokenarray[], int count )
     if ( ModuleInfo.epiloguemode == PEM_MACRO ) {
 #if FASTPASS
         /* don't run userdefined epilogue macro if pass > 1 */
+        /* v2.19: UseSavedState is 1 only if pass > 1 */
         if ( UseSavedState ) {
-            if ( Parse_Pass > PASS_1 ) {
-                DebugMsg(( "RetInstr() exit\n" ));
-                //return( NOT_ERROR );
-                return( ParseLine( tokenarray ) );
-            }
-            /* handle the current line as if it is REPLACED by the macro content */
-            *(LineStoreCurr->line) = ';';
+            DebugMsg1(( "RetInstr() exit, calling ParseLine(%s)\n", tokenarray[0].tokpos ));
+            return( ParseLine( tokenarray ) );
         }
+        /* handle the current line (the "ret") as if it is REPLACED by the macro content */
+        if ( StoreState ) *(LineStoreCurr->line) = ';';
 #endif
 #ifdef DEBUG_OUT
         rc = write_userdef_epilogue( is_iret, tokenarray );
-        DebugMsg(( "RetInstr() exit\n" ));
+        DebugMsg1(( "RetInstr() exit\n" ));
         return( rc );
 #else
         return( write_userdef_epilogue( is_iret, tokenarray ) );

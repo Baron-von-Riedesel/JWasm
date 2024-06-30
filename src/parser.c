@@ -1108,6 +1108,11 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
                     opndx->mem_type = MT_NEAR;
                 /* v2.04: curly brackets added */
                 if ( CodeInfo->token == T_PUSHW ) {
+                    /* v2.19: calling SizeFromMemtype() for offsets isn't reliable
+                     * since mem_type is usually MT_EMPTY
+                     */
+                    if ( opndx->instr == T_OFFSET && Ofssize > USE16 && Parse_Pass == PASS_2 )
+                        EmitWarn( 2, MAGNITUDE_OF_OFFSET_EXCEEDS_16BIT );
                     if ( SizeFromMemtype( opndx->mem_type, Ofssize, opndx->type ) < 2 )
                         opndx->mem_type = MT_WORD;
                 } else if ( CodeInfo->token == T_PUSHD ) {

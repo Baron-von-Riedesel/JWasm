@@ -81,6 +81,7 @@ static struct list_item *ListStoreCurr;
 
 bool StoreState;
 bool UseSavedState;
+static bool ReqSavedState; /* v2.19 */
 
 /*
  * save the current status (happens in pass one only) and
@@ -175,7 +176,8 @@ void StoreLine( const char *srcline, int flags )
 void DefSavedState( void )
 /*************************/
 {
-    UseSavedState = StoreState;
+    UseSavedState = ( StoreState && ReqSavedState );
+    StoreState = FALSE;
 }
 /* an error has been detected in pass one. it should be
  reported in pass 2, so ensure that a full source scan is done then
@@ -185,7 +187,7 @@ void SkipSavedState( void )
 /*************************/
 {
     DebugMsg(("SkipSavedState called\n"));
-    UseSavedState = FALSE;
+    ReqSavedState = FALSE;
 }
 
 /* for FASTPASS, just pass 1 is a full pass, the other passes
@@ -398,6 +400,7 @@ void FastpassInit( void )
     LineStore.head = NULL;
     LineStore.tail = NULL;
     UseSavedState = FALSE;
+    ReqSavedState = TRUE;
 }
 
 #endif

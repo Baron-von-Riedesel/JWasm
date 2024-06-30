@@ -86,7 +86,6 @@ struct calc_param {
     struct asym *entryseg; /* -bin only: segment of first segment */
     uint_32 imagestart;    /* -bin: start offset (of first segment), else 0 */
 #if PE_SUPPORT
-    uint_8 isPE;           /* 1=binary format is PE */
     uint_32 rva;           /* -pe: current RVA */
     union {
         uint_32 imagebase;    /* -pe: image base */
@@ -117,7 +116,9 @@ static const enum seg_type dosseg_order[] = {
 
 static const enum seg_type flat_order[] = {
     //SEGTYPE_HDR, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
-    SEGTYPE_HDR, SEGTYPE_UNDEF, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
+    /* v2.19: add segments with combine type stack - they may contain initialized data */
+    //SEGTYPE_HDR, SEGTYPE_UNDEF, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
+    SEGTYPE_HDR, SEGTYPE_UNDEF, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_STACK, SEGTYPE_RSRC, SEGTYPE_RELOC
 };
 #define SIZE_PEFLAT ( sizeof( flat_order ) / sizeof( flat_order[0] ) )
 
@@ -259,7 +260,11 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     /* v2.12: never check group for PE format */
     if ( ModuleInfo.sub_format == SFORMAT_PE ) {
         offset = cp->rva;
-        cp->rva += curr->sym.max_offset - curr->e.seginfo->start_loc;
+		/* v2.19: subtract start_loc for first segment only */
+		/* v2.19: never subtract start_loc */
+		//cp->rva += curr->sym.max_offset - curr->e.seginfo->start_loc;
+		//cp->rva += cp->first ? ( curr->sym.max_offset - curr->e.seginfo->start_loc ) : curr->sym.max_offset;
+		cp->rva += curr->sym.max_offset;
         DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh\n", curr->sym.name, offset ));
     } else {
 #endif
@@ -326,17 +331,24 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     /* v2.16: don't update fileoffset for BSS segments in PE, no matter what segments
      * might follow.
      */
+	/* v2.19: subtract start_loc for -bin and first seg only */
+	switch ( ModuleInfo.sub_format ) {
 #if PE_SUPPORT
-    if ( cp->isPE && curr->e.seginfo->segtype == SEGTYPE_BSS )
-        ;
-    else
+	case SFORMAT_PE:
+		if ( curr->e.seginfo->segtype == SEGTYPE_BSS )
+			;
+		else
+			cp->fileoffset += curr->sym.max_offset;
+		break;
 #endif
 #if MZ_SUPPORT
-		/* v2.19: changed */
-		cp->fileoffset += (ModuleInfo.sub_format == SFORMAT_MZ ) ? curr->sym.max_offset : curr->sym.max_offset - curr->e.seginfo->start_loc;
-#else
-        cp->fileoffset += curr->sym.max_offset - curr->e.seginfo->start_loc;
+	case SFORMAT_MZ:
+		cp->fileoffset += curr->sym.max_offset;
+		break;
 #endif
+	default:
+		cp->fileoffset += ( cp->first ? curr->sym.max_offset - curr->e.seginfo->start_loc : curr->sym.max_offset );
+	}
 
     //if ( cp->first && ModuleInfo.sub_format == SFORMAT_NONE ) {
     if ( ModuleInfo.sub_format == SFORMAT_NONE ) {
@@ -460,7 +472,7 @@ static int GetSegRelocs( uint_16 *pDst )
 
 /* get image size - doesn't modify fields in segment table.
  * memimage=FALSE: get size without uninitialized segments (BSS and STACK)
- * memimage=TRUE: get full size
+ * memimage=TRUE: get full size (-mz only)
  */
 
 static uint_32 GetImageSize( bool memimage )
@@ -468,9 +480,7 @@ static uint_32 GetImageSize( bool memimage )
 {
     struct dsym *curr;
     bool first;
-    uint_32 vsize = 0;
     uint_32 size = 0;
-    uint_32 tmp = 0;
 
     for( curr = SymTables[TAB_SEG].head, first = TRUE; curr; curr = curr->next ) {
         if ( curr->e.seginfo->segtype == SEGTYPE_ABS || curr->e.seginfo->information )
@@ -485,21 +495,12 @@ static uint_32 GetImageSize( bool memimage )
                     break; /* done, skip rest of segments! */
             }
         }
-        /* v2.19: better calculation of memory image size for -bin,
-         * but still not correct ( stack is missing, alignment ignored ).
-         */
-        if ( memimage && ( curr->e.seginfo->segtype == SEGTYPE_BSS  ) )
-            tmp += curr->sym.max_offset - curr->e.seginfo->start_loc;
-        else
-            tmp = curr->e.seginfo->fileoffset + (curr->sym.max_offset - curr->e.seginfo->start_loc );
-        if ( first == FALSE )
-            vsize += curr->e.seginfo->start_loc;
-        if ( memimage )
-            tmp += vsize;
-        DebugMsg(("GetImageSize(%s): fileofs=%" I32_SPEC "Xh, max_offs=%" I32_SPEC "Xh start=%" I32_SPEC "Xh vsize=%" I32_SPEC "Xh tmp=%" I32_SPEC "Xh\n",
-                  curr->sym.name, curr->e.seginfo->fileoffset, curr->sym.max_offset, curr->e.seginfo->start_loc, vsize, tmp ));
-        if ( size < tmp )
-            size = tmp;
+		size = curr->e.seginfo->fileoffset + curr->sym.max_offset;
+        /* for format -bin, skip the first start_loc */
+        if ( first && ModuleInfo.sub_format == SFORMAT_NONE )
+            size -= curr->e.seginfo->start_loc;
+        DebugMsg(("GetImageSize(%s): fileofs=%" I32_SPEC "Xh, max_offs=%" I32_SPEC "Xh start=%" I32_SPEC "Xh size=%" I32_SPEC "Xh\n",
+                  curr->sym.name, curr->e.seginfo->fileoffset, curr->sym.max_offset, curr->e.seginfo->start_loc, size ));
         first = FALSE;
     }
     DebugMsg(("GetImageSize(%u)=%" I32_SPEC "Xh\n", memimage, size ));
@@ -1016,7 +1017,8 @@ static void pe_create_section_table( void )
             DebugMsg(("pe_create_section_table: items in object table: %u\n", objs ));
             objtab->sym.max_offset = sizeof(struct IMAGE_SECTION_HEADER) * objs;
             /* alloc space for 1 more section (.reloc) */
-            objtab->e.seginfo->CodeBuffer = LclAlloc( objtab->sym.max_offset + sizeof(struct IMAGE_SECTION_HEADER) );
+            objtab->e.seginfo->CodeBuffer = LclAlloc( sizeof(struct IMAGE_SECTION_HEADER) * (objs + 1 ) );
+            memset( objtab->e.seginfo->CodeBuffer, 0, sizeof(struct IMAGE_SECTION_HEADER) * (objs + 1 ) );
         }
     }
 }
@@ -1548,8 +1550,6 @@ static void pe_set_values( struct calc_param *cp )
             curr->e.seginfo->lname_idx = i;
     }
 
-    cp->isPE = TRUE;
-
     /* assign RVAs to sections */
 
     for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
@@ -1647,9 +1647,12 @@ static void pe_set_values( struct calc_param *cp )
         else
             section->Characteristics |= pe_get_characteristics( curr );
 
-        if ( curr->e.seginfo->segtype != SEGTYPE_BSS ) {
+		/* v2.19: also handle uninitialized stack segments */
+		//if ( curr->e.seginfo->segtype != SEGTYPE_BSS ) {
+		if ( curr->e.seginfo->segtype == SEGTYPE_BSS || ( curr->e.seginfo->segtype == SEGTYPE_STACK && curr->e.seginfo->bytes_written == 0 ))
+			;
+		else
             section->SizeOfRawData += curr->sym.max_offset;
-        }
 
         /* v2.10: this calculation is not correct */
         //section->Misc.VirtualSize += curr->sym.max_offset;
@@ -1803,10 +1806,12 @@ static ret_code bin_write_module( struct module_info *modinfo )
     int i;
     int bFirst;
     uint_32 sizeheap;
+    uint_32 sizemem;
+    uint_32 startRVA; /* v2.19 */
+    uint_32 currRVA;  /* v2.19 */
 #if MZ_SUPPORT
     struct IMAGE_DOS_HEADER *pMZ;
     uint_16 reloccnt;
-    uint_32 sizemem;
     struct dsym *stack = NULL;
     uint_8  *hdrbuf;
 #endif
@@ -1847,7 +1852,6 @@ static ret_code bin_write_module( struct module_info *modinfo )
     /* set starting offsets for all sections */
 
 #if PE_SUPPORT
-    cp.isPE = FALSE;
     cp.rva = 0;
     if ( modinfo->sub_format == SFORMAT_PE ) {
         if ( ModuleInfo.model == MODEL_NONE ) {
@@ -1967,7 +1971,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
             }
             /* v2.19: error if CS:IP doesn't fit in 20-bit */
             if ( addr >= 0x100000 || modinfo->g.start_label->offset >= 0x10000 )
-                EmitErr( START_LABEL_INVALID, "mz" );
+                return( EmitErr( START_LABEL_INVALID, "mz" ) );
             /* v2.12: warn if entry point is in a 32-/64-bit segment */
             if ( curr->e.seginfo->Ofssize > USE16 )
                 EmitWarn( 2, START_LABEL_NOT_16BIT );
@@ -2021,18 +2025,16 @@ static ret_code bin_write_module( struct module_info *modinfo )
         if ( modinfo->sub_format == SFORMAT_PE &&
             ( curr->e.seginfo->segtype == SEGTYPE_BSS || curr->e.seginfo->information ) )
             size = 0;
-		else
+        else
 #endif
-			/* v2.05: changed */
-			/* v2.19: don't do this for MZ */
+            /* v2.05: changed */
+			/* v2.19: subtract start_loc only if -bin AND first segment */
 			//size = curr->sym.max_offset - curr->e.seginfo->start_loc;
-#if MZ_SUPPORT
-			size = ( modinfo->sub_format == SFORMAT_MZ ) ? curr->sym.max_offset : curr->sym.max_offset - curr->e.seginfo->start_loc;
-#else
-			size = curr->sym.max_offset - curr->e.seginfo->start_loc;
-#endif
-        //size = sizemem;
-        sizemem = bFirst ? size : curr->sym.max_offset;
+			if ( bFirst && modinfo->sub_format == SFORMAT_NONE )
+				size = curr->sym.max_offset - curr->e.seginfo->start_loc;
+			else
+				size = curr->sym.max_offset;
+		sizemem = bFirst ? size : curr->sym.max_offset;
         /* if no bytes have been written to the segment, check if there's
          * any further segments with bytes set. If no, skip write! */
         if ( curr->e.seginfo->bytes_written == 0 ) {
@@ -2048,6 +2050,12 @@ static ret_code bin_write_module( struct module_info *modinfo )
             }
         }
 #if SECTORMAP
+		/* v2.19: avoid to call GetImageSize(TRUE) for -bin below */
+		if ( bFirst )
+			startRVA = curr->e.seginfo->start_offset + curr->e.seginfo->start_loc;
+		else
+			currRVA = curr->e.seginfo->start_offset + ( curr->e.seginfo->group ? curr->e.seginfo->group->offset & 0xf : 0 );
+
         /* v2.05: changed
          * print name, fileoffset, RVA, size (in file), sizemem
          */
@@ -2060,7 +2068,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
                    * Its a listing problem only, the binary is correct!!!
                    */
                   //bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
-                  bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset + ( curr->e.seginfo->group ? curr->e.seginfo->group->offset & 0xf : 0 ),
+                  bFirst ? startRVA : currRVA,
                   size, sizemem );
  #if 1
         DebugMsg(("bin_write_module(%s): binary map. start_ofs=%X grpofs=%X\n",  curr->sym.name,
@@ -2069,20 +2077,31 @@ static ret_code bin_write_module( struct module_info *modinfo )
 #endif
         if ( size ) { /* v2.13: write in any case, even if bss segment */
             fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
-            if ( curr->e.seginfo->CodeBuffer ) {
-                DebugMsg(("bin_write_module(%s): write %" I32_SPEC "Xh bytes at offset %" I32_SPEC "Xh, initialized bytes=%" I32_SPEC "u, RVA=%" I32_SPEC "Xh, buffer=%p\n",
-                      curr->sym.name,
-                      size,
-                      curr->e.seginfo->fileoffset,
-                      curr->e.seginfo->bytes_written,
-                      bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
-                      curr->e.seginfo->CodeBuffer ));
+			if ( curr->e.seginfo->CodeBuffer ) {
+				/* v2.19 write null bytes if start_loc != 0 */
+				if ( bFirst && modinfo->sub_format == SFORMAT_NONE )
+					;
+				else if ( curr->e.seginfo->start_loc ) {
+					char nullbyt = NULLC;
+					uint_32 i;
+					DebugMsg(("bin_write_module(%s): write %" I32_SPEC "Xh 00 bytes to reach start_loc"" \n", curr->sym.name, curr->e.seginfo->start_loc ));
+					for ( i = curr->e.seginfo->start_loc; i ; i--)
+						fwrite( &nullbyt, 1, 1, CurrFile[OBJ] );
+					size = size - curr->e.seginfo->start_loc;
+				}
+				DebugMsg(("bin_write_module(%s): write %" I32_SPEC "Xh bytes at offset %" I32_SPEC "Xh, initialized bytes=%" I32_SPEC "u, RVA=%" I32_SPEC "Xh, buffer=%p\n",
+						  curr->sym.name,
+						  size,
+						  curr->e.seginfo->fileoffset,
+						  curr->e.seginfo->bytes_written,
+						  bFirst ? curr->e.seginfo->start_offset + curr->e.seginfo->start_loc : curr->e.seginfo->start_offset,
+						  curr->e.seginfo->CodeBuffer ));
 #ifdef __I86__
-                if ( hfwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
-                    WriteError();
+				if ( hfwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
+					WriteError();
 #else
-                if ( fwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
-                    WriteError();
+				if ( fwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
+					WriteError();
 #endif
             } else {
                 char nullbyt = '\0';
@@ -2096,6 +2115,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
         bFirst = FALSE;
     }
 #if PE_SUPPORT && RAWSIZE_ROUND
+    /* align last section to file alignment */
     if ( modinfo->sub_format == SFORMAT_PE ) {
         size = ftell( CurrFile[OBJ] );
         if ( size & ( cp.rawpagesize - 1 ) ) {
@@ -2119,7 +2139,10 @@ static ret_code bin_write_module( struct module_info *modinfo )
         sizeheap = cp.rva;
     else
  #endif
-        sizeheap = GetImageSize( TRUE );
+		/* v2.19: GetImageSize(TRUE) has problems with -bin */
+		//sizeheap = GetImageSize( TRUE );
+		sizeheap = currRVA + sizemem - startRVA;
+
     LstPrintf( szTotal, " ", sizetotal, sizeheap );
 #endif
     DebugMsg(("bin_write_module: exit\n"));

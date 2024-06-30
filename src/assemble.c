@@ -740,10 +740,6 @@ static void PassOneChecks( void )
     int cntUnusedExt = 0;
 #endif
 
-#if FASTPASS
-	DefSavedState(); /* v2.19: set UseSavedState to true AFTER pass one. */
-#endif
-
     /* check for open structures and segments has been done inside the
      * END directive handling already
      * v2.10: now done for PROCs as well, since procedures
@@ -943,6 +939,13 @@ static void PassOneChecks( void )
     }
 #endif
 
+#if FASTPASS
+	/* v2.19: modify UseSavedState AFTER pass one only.
+	 * Also, calling DefSavedState() must be done here, AFTER all pass one checks
+	 */
+	DefSavedState();
+#endif
+
     if ( ModuleInfo.g.error_count == 0 ) {
 
         /* make all symbols of type SYM_INTERNAL, which aren't
@@ -1012,7 +1015,6 @@ static int OnePass( void )
     if ( is_linequeue_populated() )
         RunLineQueue();
 #if FASTPASS
-    StoreState = FALSE;
     //if ( Parse_Pass > PASS_1 && UseSavedState == TRUE ) {
     if ( UseSavedState ) {
         LineStoreCurr = RestoreState();
