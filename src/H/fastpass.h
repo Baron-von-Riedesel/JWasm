@@ -60,7 +60,7 @@ void FastpassInit( void );
 void SegmentSaveState( void );
 void AssumeSaveState( void );
 void ContextSaveState( void );
-void StoreLine( const char *, int );
+void StoreLine( const char * );
 void DefSavedState( void );
 void SkipSavedState( void );
 struct line_item *RestoreState( void );
@@ -75,10 +75,11 @@ void ListUpdateSubItem( struct list_item *pItem, int, char *pLine );
 void ListFlushAll( void );
 void ListNextGenCode( void );
 
-#define FStoreLine( flags ) if ( Parse_Pass == PASS_1 ) StoreLine( CurrSource, flags )
+#define FStoreLine( flags ) if ( Parse_Pass == PASS_1 ) StoreLine( CurrSource )
 
-#define FSL_NOCMT   0
-#define FSL_WITHCMT 1
+/* v2.19: obsolete */
+//#define FSL_NOCMT   0
+//#define FSL_WITHCMT 1
 
 #else
 

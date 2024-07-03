@@ -117,12 +117,15 @@ static void SaveState( void )
 }
 
 /* flags: b0: 1=store line with comment
+ * v2.19: flags obsolete.
  */
 
-void StoreLine( const char *srcline, int flags )
-/**********************************************/
+//void StoreLine( const char *srcline, int flags )
+void StoreLine( const char *srcline )
+/***********************************/
 {
-    int i,j;
+    //int i,j;
+    int i;
     char *p;
 
 #ifdef DEBUG_OUT
@@ -135,8 +138,10 @@ void StoreLine( const char *srcline, int flags )
         SaveState();
 
     i = strlen( srcline );
-    j = ( ( ( flags & FSL_WITHCMT ) && ModuleInfo.CurrComment ) ? strlen( ModuleInfo.CurrComment ) : 0 );
-    LineStoreCurr = LclAlloc( i + j + sizeof( struct line_item ) );
+	/* v2.19: storing comment no longer needed */
+	//j = ( ( ( flags & FSL_WITHCMT ) && ModuleInfo.CurrComment ) ? strlen( ModuleInfo.CurrComment ) : 0 );
+    //LineStoreCurr = LclAlloc( i + j + sizeof( struct line_item ) );
+    LineStoreCurr = LclAlloc( i + sizeof( struct line_item ) );
     LineStoreCurr->next = NULL;
     LineStoreCurr->lineno = GetLineNumber();
     LineStoreCurr->pList = NULL; /* v2.19 */
@@ -145,10 +150,11 @@ void StoreLine( const char *srcline, int flags )
     } else {
         LineStoreCurr->srcfile = get_curr_srcfile();
     }
-    if ( j ) {
-        memcpy( LineStoreCurr->line, srcline, i );
-        memcpy( LineStoreCurr->line + i, ModuleInfo.CurrComment, j + 1 );
-    } else
+	/* v2.19: storing comment no longer needed */
+    //if ( j ) {
+    //    memcpy( LineStoreCurr->line, srcline, i );
+    //    memcpy( LineStoreCurr->line + i, ModuleInfo.CurrComment, j + 1 );
+    //} else
         memcpy( LineStoreCurr->line, srcline, i + 1 );
 
     DebugMsg1(("StoreLine(>%s<): cur=%X\n", LineStoreCurr->line, LineStoreCurr ));

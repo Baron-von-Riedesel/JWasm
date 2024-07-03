@@ -8,6 +8,7 @@
       located at the end of the binary; see stack1.asm.
    -  format mz,pe: start offset for first segment may have resulted in
       an invalid binary; see org1.asm & org2.asm.
+   -  fastcall 32-bit (MS style): registers may have hold float arguments.
 
    Other changes:
    -  write listing reworked.

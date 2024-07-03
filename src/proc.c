@@ -301,6 +301,9 @@ static int ms32_pcheck( struct dsym *proc, struct dsym *paranode, int *used )
     char regname[32];
     int size = SizeFromMemtype( paranode->sym.mem_type, paranode->sym.Ofssize, paranode->sym.type );
 
+	/* v2.19: ignore float args */
+	if ( paranode->sym.mem_type & MT_FLOAT )
+		return( 0 );
     /* v2.07: 16-bit has 3 register params (AX,DX,BX) */
     //if ( size > CurrWordSize || *used >= 2 )
     if ( size > CurrWordSize || *used >= ms32_maxreg[ModuleInfo.Ofssize] )

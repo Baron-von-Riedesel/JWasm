@@ -3063,11 +3063,12 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
             if ( StoreState || ( dirflags & DF_STORE ) ) {
                 /* v2.07: the comment must be stored as well
                  * if a listing (with -Sg) is to be written and
-                 * the directive will generate lines
+                 * the directive will generate lines.
+                 * v2.19: obsolete, comment is never stored.
                  */
-                if ( ( dirflags & DF_CGEN ) && ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) {
-                    FStoreLine( FSL_WITHCMT );
-                } else
+                //if ( ( dirflags & DF_CGEN ) && ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) {
+                //    FStoreLine( FSL_WITHCMT );
+                //} else
                     FStoreLine( FSL_NOCMT );
             }
 #endif
@@ -3179,7 +3180,9 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
 #endif
             if ( !( ProcStatus & PRST_INSIDE_EPILOGUE ) && ModuleInfo.epiloguemode != PEM_NONE ) {
                 /* v2.07: special handling for RET/IRET */
-                FStoreLine( ( ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) ? FSL_WITHCMT : FSL_NOCMT );
+                /* v2.19: comment is never stored, so flags are obsolete */
+                //FStoreLine( ( ModuleInfo.CurrComment && ModuleInfo.list_generated_code ) ? FSL_WITHCMT : FSL_NOCMT );
+                FStoreLine( FSL_NOCMT );
                 ProcStatus |= PRST_INSIDE_EPILOGUE;
                 temp = RetInstr( i, tokenarray, Token_Count );
                 ProcStatus &= ~PRST_INSIDE_EPILOGUE;
@@ -3193,7 +3196,9 @@ ret_code ParseLine( struct asm_tok tokenarray[] )
     }
 
     /* v2.18: store WITH comment if listing on since we want support more than 1 line in listing */
-    FStoreLine( ModuleInfo.list ? FSL_WITHCMT : FSL_NOCMT ); /* must be placed AFTER write_prologue() */
+    /* v2.19: comment is never stored, so flags are obsolete */
+    //FStoreLine( ModuleInfo.list ? FSL_WITHCMT : FSL_NOCMT ); /* must be placed AFTER write_prologue() */
+    FStoreLine( FSL_NOCMT ); /* must be placed AFTER write_prologue() */
 
 #ifdef DEBUG_OUT
     instr = tokenarray[i].string_ptr;

@@ -495,7 +495,7 @@ static uint_32 GetImageSize( bool memimage )
                     break; /* done, skip rest of segments! */
             }
         }
-		size = curr->e.seginfo->fileoffset + curr->sym.max_offset;
+        size = curr->e.seginfo->fileoffset + curr->sym.max_offset;
         /* for format -bin, skip the first start_loc */
         if ( first && ModuleInfo.sub_format == SFORMAT_NONE )
             size -= curr->e.seginfo->start_loc;

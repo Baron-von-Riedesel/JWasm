@@ -148,7 +148,7 @@ static int ms32_param( struct dsym const *proc, int index, struct dsym *param, b
 {
     enum special_token const *pst;
 
-    DebugMsg1(("ms32_param(proc=%s, ofs=%u, index=%u, param=%s) fcscratch=%u\n", proc->sym.name, proc->sym.Ofssize, index, param->sym.name, fcscratch ));
+    DebugMsg1(("ms32_param(proc=%s, ofssize=%u) index=%u, param=(%s,memtype=%X) fcscratch=%u\n", proc->sym.name, proc->sym.Ofssize, index, param->sym.name, param->sym.mem_type, fcscratch ));
     if ( param->sym.state != SYM_TMACRO )
         return( 0 );
     if ( GetSymOfssize( &proc->sym ) == USE16 ) {
