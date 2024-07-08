@@ -40,7 +40,7 @@
 extern char *GetMacroLine( struct macro_instance *, char * );
 
 int           MacroLocals;     /* counter for LOCAL names */
-uint_8        MacroLevel;      /* current macro nesting level */
+//uint_8        MacroLevel;      /* current macro nesting level */
 
 static const char __digits[16] = {"0123456789ABCDEF"};
 

@@ -42,13 +42,6 @@
 */
 #define LABELOPT 1
 
-#if 0 /* v1.96: disabled */
-#define SkipFixup() \
-    fixup->nextbp = sym->fixup; \
-    sym->fixup = fixup
-#else
-#define SkipFixup()
-#endif
 static void DoPatch( struct asym *sym, struct fixup *fixup )
 /**********************************************************/
 {
@@ -61,11 +54,9 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
     struct fixup        *fixup2;
 #endif
 
-    /* all relative fixups should occure only at first pass and they signal forward references
-     * they must be removed after patching or skiped ( next processed as normal fixup )
-     */
+    /* all "backpatch" fixups should occur only at pass one and they signal forward references. */
 
-    DebugMsg(("DoPatch(%u, %s): fixup sym=%s type=%u ofs=%" I32_SPEC "Xh loc=%" I32_SPEC "Xh opt=%u def_seg=%s\n",
+    DebugMsg1(("DoPatch(%u, %s): fixup sym=%s type=%u ofs=%" I32_SPEC "Xh loc=%" I32_SPEC "Xh opt=%u def_seg=%s\n",
               Parse_Pass + 1, sym->name,
               fixup->sym ? fixup->sym->name : "NULL",
               fixup->type,
@@ -76,16 +67,16 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
     seg = GetSegm( sym );
     if( seg == NULL || fixup->def_seg != seg ) {
         /* if fixup location is in another segment, backpatch is possible, but
-         * complicated and it's a pretty rare case, so nothing's done.
+         * not implemented since calculation of new size is non-trivial.
          */
-        DebugMsg(("DoPatch: skipped due to seg incompat: %s - %s\n",
+        DebugMsg1(("DoPatch: segs differ: %s - %s\n",
                   fixup->def_seg ? fixup->def_seg->sym.name : "NULL",
                   seg ? seg->sym.name : "NULL" ));
-        SkipFixup();
         return;
     }
 
-    if( Parse_Pass == PASS_1 ) {
+	/* v2.19: DoPatch() is now generally called in pass one only */
+    //if( Parse_Pass == PASS_1 ) {
         if( sym->mem_type == MT_FAR && fixup->option == OPTJ_CALL ) {
             /* convert near call to push cs + near call,
              * (only at first pass) */
@@ -94,7 +85,6 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
             sym->offset++;  /* a PUSH CS will be added */
             /* todo: insert LABELOPT block here */
             OutputByte( 0 ); /* it's pass one, nothing is written */
-            FreeFixup( fixup );
             return;
         //} else if( sym->mem_type == MT_NEAR ) {
         } else {
@@ -102,7 +92,6 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
             switch( fixup->type ) {
             case FIX_RELOFF32:
             case FIX_RELOFF16:
-                FreeFixup( fixup );
                 DebugMsg(("DoPatch: FIX_RELOFF32/FIX_RELOFF16, return\n"));
                 return;
             case FIX_OFF8:  /* push <forward reference> */
@@ -113,7 +102,7 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
                 }
             }
         }
-    }
+    //}
     size = 0;
     switch( fixup->type ) {
     case FIX_RELOFF32:
@@ -192,14 +181,15 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
                      * label reference and the label. This should reduce the
                      * number of passes to 2 for not too complex sources.
                      */
-                    if ( Parse_Pass == PASS_1 ) /* v2.04: added, just to be safe */
+                    /* v2.19: no check for pass one needed */
+                    //if ( Parse_Pass == PASS_1 ) /* v2.04: added, just to be safe */
                     for ( fixup2 = seg->e.seginfo->FixupList.head; fixup2; fixup2 = fixup2->nextrlc ) {
                         if ( fixup2->sym == sym )
                             continue;
                         if ( fixup2->locofs <= fixup->locofs )
                             break;
                         fixup2->locofs += size;
-                        DebugMsg(("for sym=%s fixup loc %" I32_SPEC "X changed to %" I32_SPEC "X\n", fixup2->sym->name, fixup2->locofs - size, fixup2->locofs ));
+                        DebugMsg(("DoPatch: for sym=%s fixup loc %" I32_SPEC "X changed to %" I32_SPEC "X\n", fixup2->sym->name, fixup2->locofs - size, fixup2->locofs ));
                     }
 #else
                     DebugMsg(("DoPatch: sym %s, offset changed %" I32_SPEC "X -> %" I32_SPEC "X\n", sym->name, sym->offset, sym->offset + size));
@@ -220,16 +210,14 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
         }
 #ifdef DEBUG_OUT
         else
-            DebugMsg(("DoPatch, loc=%" I32_SPEC "X: displacement still short: %Xh\n", fixup->locofs, disp ));
+            DebugMsg1(("DoPatch, loc=%" I32_SPEC "X: displacement still short: %Xh\n", fixup->locofs, disp ));
 #endif
         /* v2.04: fixme: is it ok to remove the fixup?
          * it might still be needed in a later backpatch.
          */
-        FreeFixup( fixup );
         break;
     default:
         DebugMsg(("DoPatch: default branch, unhandled fixup type=%u\n", fixup->type ));
-        SkipFixup();
         break;
     }
     return;
@@ -239,36 +227,32 @@ ret_code BackPatch( struct asym *sym )
 /************************************/
 /*
  * patching for forward reference labels in Jmp/Call instructions;
- * called by LabelCreate(), ProcDef() and data_dir(), that is, whenever
- * a (new) label is defined. The new label is the <sym> parameter.
- * During the process, the label's offset might be changed!
+ * called by
+ * - LabelCreate() [label.c]
+ * - ProcDef()     [proc.c]
+ * - data_dir()    [data.c]
+ * - SetValue()    [equate.c]
+ * that is, whenever a (new) label is defined. The new label is the
+ * <sym> argument. During the process, the label's offset might be changed!
  *
- * field sym->fixup is a "descending" list of forward references
+ * field sym->bp_fixup is a "descending" list of forward references
  * to this symbol. These fixups are only generated during pass 1.
  */
 {
-    struct fixup     *fixup;
-    struct fixup     *next;
+	if ( Parse_Pass == PASS_1 ) {
+		struct fixup     *fixup;
 #ifdef DEBUG_OUT
-    uint_32 oldofs = sym->offset;
+		uint_32 oldofs = sym->offset;
 #endif
-
-    DebugMsg1(("BackPatch(%s): location=%s:%" I32_SPEC "X, bp_fixup=%p\n", sym->name, sym->segment ? sym->segment->name : "!NULL!", sym->offset, sym->bp_fixup ));
-
-    for( fixup = sym->bp_fixup; fixup; fixup = next ) {
-        next = fixup->nextbp;
-        DoPatch( sym, fixup );
-    }
-    /* fixme: to clear field bp_fixup may cause memory leaks, since not all fixups are freed here.
-     * usually no problem, because FASTMEM is true ( that is, LclFree() is a NOP ).
-     * the problem is that these fixups are in 2 queues, one starts in sym.bp_fixup,
-     * the other start in CurrSeg.FixupList.
-     */
-    sym->bp_fixup = NULL;
+		DebugMsg1(("BackPatch(%s): location=%s:%" I32_SPEC "X, bp_fixup=%p\n", sym->name, sym->segment ? sym->segment->name : "!NULL!", sym->offset, sym->bp_fixup ));
+		for( fixup = sym->bp_fixup; fixup; fixup = fixup->nextbp )
+			DoPatch( sym, fixup );
+		//FreeFixupQ( sym ); /* v2.19 obsolete */
 #ifdef DEBUG_OUT
-    if ( oldofs != sym->offset )
-        DebugMsg1(("BackPatch(%s) exit, new ofs=%X\n", sym->name, sym->offset ));
+		if ( oldofs != sym->offset )
+			DebugMsg1(("BackPatch(%s) exit, new ofs=%X\n", sym->name, sym->offset ));
 #endif
+	}
     return( NOT_ERROR );
 }
 

@@ -44,7 +44,9 @@
 "-Sg\0"             "Display generated code in listing\0"
 "-Sn\0"             "Suppress symbol-table listing\0"
 "-Sx\0"             "List false conditionals\0"
+#ifndef __I86__
 "-Sz\0"             "Suppress assembly result in listing\0" /* v2.13 */
+#endif
 "-w\0"              "Same as /W0 /WX\0"
 "-W<number>\0"      "Set warning level number (default=2, max=4)\0"
 "-WX\0"             "Treat all warnings as errors\0"

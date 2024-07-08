@@ -43,6 +43,10 @@
 int_8   Frame_Type;   /* curr fixup frame type: SEG|GRP|EXT|ABS|NONE; see omfspec.h */
 uint_16 Frame_Datum;  /* curr fixup frame value */
 
+#ifdef DEBUG_OUT
+static uint_32 cnt = 0;
+#endif
+
 struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_options option )
 /*********************************************************************************************/
 /*
@@ -59,16 +63,20 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
  * Global vars Frame_Type and Frame_Datum "should" be set.
  */
 {
-#ifdef DEBUG_OUT
-    static uint_32 cnt = 0;
-#endif
     struct fixup     *fixup;
 
-    fixup = LclAlloc( sizeof( struct fixup ) );
+	/* v2.19: fixup heap implemented */
+    if ( ModuleInfo.g.FixupHeap ) {
+        fixup = ModuleInfo.g.FixupHeap;
+        ModuleInfo.g.FixupHeap = fixup->nextrlc;
+    } else
+        fixup = LclAlloc( sizeof( struct fixup ) );
 #ifdef TRMEM
     fixup->marker = 'XF';
     DebugMsg1(("CreateFixup, pass=%u: fix=%p sym=%s\n", Parse_Pass+1, fixup, sym ? sym->name : "NULL" ));
 #endif
+    fixup->nextbp = NULL;
+    fixup->nextrlc = NULL;
     fixup->flags = 0; /* v2.14: moved up here so count won't be overwritten */
 
     /* add the fixup to the symbol's linked list (used for backpatch)
@@ -78,12 +86,9 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
 #ifdef DEBUG_OUT
         if ( Options.nobackpatch == FALSE )
 #endif
-        if ( sym ) { /* changed v1.96 */
+        if ( sym && sym->isdefined == FALSE ) { /* changed v1.96 */
             fixup->nextbp = sym->bp_fixup;
             sym->bp_fixup = fixup;
-#if FASTMEM==0
-            fixup->count++;
-#endif
         }
         /* v2.03: in pass one, create a linked list of
          * fixup locations for a segment. This is to improve
@@ -96,9 +101,6 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
         if ( CurrSeg ) {
             fixup->nextrlc = CurrSeg->e.seginfo->FixupList.head;
             CurrSeg->e.seginfo->FixupList.head = fixup;
-#if FASTMEM==0
-            fixup->count++;
-#endif
         }
     }
     /* initialize locofs member with current offset.
@@ -113,49 +115,67 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
     fixup->def_seg = CurrSeg;           /* may be NULL (END directive) */
     fixup->sym = sym;
 
-    DebugMsg1(("CreateFixup(sym=%s type=%u, opt=%u) cnt=%" I32_SPEC "u, loc=%" I32_SPEC "Xh frame_type/datum=%u/%u\n",
-        sym ? sym->name : "NULL", type, option, ++cnt, fixup->locofs, fixup->frame_type, fixup->frame_datum ));
+    DebugMsg1(("CreateFixup(sym=%s type=%u, opt=%u)=%p [cnt=%" I32_SPEC "u, loc=%" I32_SPEC "Xh frame_type/datum=%u/%u CurrSeg=%s]\n",
+               sym ? sym->name : "NULL", type, option, fixup, ++cnt, fixup->locofs, fixup->frame_type, fixup->frame_datum, CurrSeg ? CurrSeg->sym.name : "NULL" ));
     return( fixup );
 }
 
-/* remove a fixup from the segment's fixup queue */
-
-void FreeFixup( struct fixup *fixup )
-/***********************************/
+void FixupRelease( struct fixup *fixup )
+/**************************************/
 {
-    struct dsym *dir;
-    struct fixup *fixup2;
-
-    if ( Parse_Pass == PASS_1 ) {
-        dir = fixup->def_seg;
-        if ( dir ) {
-            if ( fixup == dir->e.seginfo->FixupList.head ) {
-                dir->e.seginfo->FixupList.head = fixup->nextrlc;
-#if FASTMEM==0
-                fixup->count--;
+	struct fixup *tmp;
+	if ( fixup ) {
+#ifdef DEBUG_OUT
+		cnt--;
 #endif
-            } else {
-                for ( fixup2 = dir->e.seginfo->FixupList.head; fixup2; fixup2 = fixup2->nextrlc ) {
-                    if ( fixup2->nextrlc == fixup ) {
-                        fixup2->nextrlc = fixup->nextrlc;
-#if FASTMEM==0
-                        fixup->count--;
+		for ( tmp = fixup; tmp->nextrlc; tmp = tmp->nextrlc )
+#ifdef DEBUG_OUT
+			cnt--
 #endif
-                        break;
-                    }
-                }
-            }
-        }
-    }
-#if FASTMEM==0
-    DebugMsg1(("FreeFixup( %p ), count=%u, def_seg=%p\n", fixup, fixup->count, fixup->def_seg ));
-    if ( !fixup->count ) {
-        LclFree( fixup );
-    }
-#else
-    LclFree( fixup );
-#endif
+			;
+		tmp->nextrlc = ModuleInfo.g.FixupHeap;
+		ModuleInfo.g.FixupHeap = fixup;
+	}
+    DebugMsg1(("FixupRelease(0x%p) [cnt=%" I32_SPEC "u]\n", fixup, cnt ));
 }
+
+#if 0 /* v2.19: obsolete */
+/* free a symbol's backpatch queue.
+ * called by BackPatch(), SymFree(), PassOneChecks().
+ */
+void FreeFixupQ( struct asym *sym )
+/*********************************/
+{
+	struct fixup *fixup;
+
+	if ( Parse_Pass != PASS_1 )
+		return;
+	for( fixup = sym->bp_fixup ; fixup; ) {
+		struct fixup *next = fixup->nextbp;
+		struct dsym *dir = fixup->def_seg;
+		DebugMsg1(("FreeFixup( %p ), def_seg=%s\n", fixup, dir ? dir->sym.name : "NULL" ));
+		if ( dir ) {
+			if ( fixup == dir->e.seginfo->FixupList.head ) {
+				DebugMsg1(("FreeFixup( %p ), seg=%s, head\n", fixup, dir->sym.name ));
+				dir->e.seginfo->FixupList.head = fixup->nextrlc;
+				FixupRelease( fixup );
+			} else {
+				struct fixup *fixup2;
+				for ( fixup2 = dir->e.seginfo->FixupList.head; fixup2; fixup2 = fixup2->nextrlc ) {
+					if ( fixup2->nextrlc == fixup ) {
+						DebugMsg1(("FreeFixup( %p ), seg=%s\n", fixup, dir->sym.name ));
+						fixup2->nextrlc = fixup->nextrlc;
+						FixupRelease( fixup );
+						break;
+					}
+				}
+			}
+		}
+		fixup = next;
+	}
+	sym->bp_fixup = NULL;
+}
+#endif
 
 /*
  * Set global variables Frame_Type and Frame_Datum.
@@ -217,6 +237,9 @@ void SetFixupFrame( const struct asym *sym, char ign_grp )
  * Store fixup information in segment's fixup linked list.
  * please note: forward references for backpatching are written in PASS 1 -
  * they no longer exist when store_fixup() is called.
+ * For format omf, the fixup list is cleared whenever a FIXUPP record has been
+ * written ( omf_write_ledata() ). This prevents to use fixups for LSTTYPE_DATA
+ * in listings and hence is to be changed...
  */
 
 void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )

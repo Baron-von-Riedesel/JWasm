@@ -478,19 +478,9 @@ static void omf_write_ledata( struct dsym *seg )
 
         /* process Fixup, if any */
         if( seg->e.seginfo->FixupList.head != NULL ) {
-#if FASTMEM==0
-            struct fixup *fix;
-            struct fixup *next;
-#endif
             omf_write_fixupp( seg, 0 );
             omf_write_fixupp( seg, 1 );
-#if FASTMEM==0
-            for( fix = seg->e.seginfo->FixupList.head; fix; ) {
-                next = fix->nextrlc;
-                LclFree( fix );
-                fix = next;
-            }
-#endif
+            FixupRelease( seg->e.seginfo->FixupList.head );
             seg->e.seginfo->FixupList.head = seg->e.seginfo->FixupList.tail = NULL;
         }
     }
@@ -1579,9 +1569,11 @@ static ret_code omf_write_module( struct module_info *modinfo )
     if ( Options.debug_symbols )
         omf_write_debug_tables();
     omf_write_modend( modinfo->g.start_fixup, modinfo->g.start_displ );
-#if FASTMEM==0
-    LclFree( modinfo->g.start_fixup );
-#endif
+	/* v2.19 */
+	if ( modinfo->g.start_fixup ) {
+		FixupRelease( modinfo->g.start_fixup );
+		modinfo->g.start_fixup = NULL;
+	}
 
 #if TRUNCATE
     /* under some very rare conditions, the object
@@ -1645,9 +1637,9 @@ static ret_code omf_write_header_initial( struct module_info *modinfo )
     /* if( Options.no_dependencies == FALSE ) */
     if( Options.line_numbers )
         omf_write_autodep(); /* write dependency COMENT records ( known by Borland & OW ) */
-    if( ModuleInfo.segorder == SEGORDER_DOSSEG )
+    if( modinfo->segorder == SEGORDER_DOSSEG )
         omf_write_dosseg(); /* write dosseg COMENT records */
-    else if( ModuleInfo.segorder == SEGORDER_ALPHA )
+    else if( modinfo->segorder == SEGORDER_ALPHA )
         SortSegments( 1 );
     omf_write_lib(); /* write default lib COMENT records */
     omf_write_lnames(); /* write LNAMES records */
@@ -1676,7 +1668,7 @@ static ret_code omf_write_header_initial( struct module_info *modinfo )
      * comment record is NOT to be present if
      * the MODEND record contains a starting address!
      */
-    if ( !ModuleInfo.g.start_fixup )
+    if ( !modinfo->g.start_fixup )
         omf_end_of_pass1();
     end_of_header = ftell( CurrFile[OBJ] );
     return( NOT_ERROR );

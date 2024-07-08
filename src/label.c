@@ -187,12 +187,8 @@ struct asym *CreateLabel( const char *name, enum memtype mem_type, struct qualif
 //  DebugMsg(("CreateLabel(%s): ofs=%X\n", sym->name, sym->offset));
 
     if( Parse_Pass != PASS_1 && sym->offset != addr ) {
-#ifdef DEBUG_OUT
-        if ( !ModuleInfo.PhaseError )
-            DebugMsg(("CreateLabel: Phase error, pass %u, sym >%s< first time, new=%" I32_SPEC "X - old=%" I32_SPEC "X\n", Parse_Pass+1, sym->name, sym->offset, addr));
-        else
-            DebugMsg(("CreateLabel: pass %u, sym >%s< changed, new=%" I32_SPEC "X - old=%" I32_SPEC "X\n", Parse_Pass+1, sym->name, sym->offset, addr));
-#endif
+        DebugMsg1(("CreateLabel(%s): phase error, pass %u, offset new/old=%" I32_SPEC "X/%" I32_SPEC "X %s\n",
+                sym->name, Parse_Pass+1, sym->offset, addr, ModuleInfo.PhaseError ? "" : "[first]" ));
         ModuleInfo.PhaseError = TRUE;
     }
     BackPatch( sym );

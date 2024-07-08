@@ -131,8 +131,9 @@ struct global_options Options = {
     /* list_macro            */     LM_LISTMACRO,
     /* no_symbol_listing     */     FALSE,
     /* first_pass_listing    */     FALSE,
+#ifndef __I86__
     /* no_final_msg_listing  */     FALSE, /* v2.13 */
-
+#endif
     /* all_symbols_public    */     FALSE,
     /* safeseh               */     FALSE,
     /* ignore_include        */     FALSE,
@@ -627,7 +628,9 @@ static struct cmdloption const cmdl_options[] = {
     { "Sg",     optofs( list_generated_code ), Set_True },
     { "Sn",     optofs( no_symbol_listing   ), Set_True },
     { "Sx",     optofs( listif              ), Set_True },
+#ifndef __I86__
     { "Sz",     optofs( no_final_msg_listing), Set_True }, /* v2.13 */
+#endif
 #if COFF_SUPPORT
     { "safeseh",optofs( safeseh ),        Set_True },
 #endif

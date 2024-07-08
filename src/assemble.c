@@ -104,7 +104,7 @@ unsigned int            Parse_Pass;     /* assembly pass */
 //unsigned int            GeneratedCode; /* v2.10: moved to ModuleInfo */
 struct qdesc            LinnumQueue;    /* queue of line_num_info items */
 
-bool write_to_file;     /* write object module */
+//bool write_to_file;     /* write object module */
 
 
 #if 0
@@ -879,19 +879,11 @@ static void PassOneChecks( void )
             continue;
         }
 
-#if FASTMEM==0
-        /* v2.05: clear fixup list (used for backpatching in pass one) */
-        if ( curr->sym.bp_fixup ) {
-            struct fixup *c;
-            struct fixup *n;
-            for( c = curr->sym.bp_fixup ; c; ) {
-                n = c->nextbp;
-                LclFree( c );
-                c = n;
-            }
-            curr->sym.bp_fixup = NULL;
-        }
-#endif
+        /* v2.05: clear fixup list (used for backpatching in pass one)
+         * v2.19: obsolete
+         */
+        //if ( curr->sym.bp_fixup )
+        //    FreeFixupQ( &curr->sym );
 
         if ( curr->sym.iscomm == TRUE )
             continue;
@@ -922,9 +914,9 @@ static void PassOneChecks( void )
         }
 #endif
     }
+    DebugMsg(("PassOneChecks: removed unused externals: %u\n", cntUnusedExt ));
 
 #ifdef DEBUG_OUT
-    DebugMsg(("PassOneChecks: removed unused externals: %u\n", cntUnusedExt ));
     DebugMsg(("PassOneChecks: forward references:\n"));
     for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
         int i;
@@ -1059,6 +1051,7 @@ static int OnePass( void )
         PassOneChecks();
 
     ClearSrcStack();
+    SegmentFini( FALSE );
 
     return( 1 );
 }
@@ -1378,7 +1371,7 @@ static void AssembleFini( void )
 /******************************/
 {
     int i;
-    SegmentFini();
+    SegmentFini( TRUE );
     SymFini();
     ResWordsFini( TRUE ); /* v2.17: restore keywords disabled by option nokeyword */
 #ifdef DEBUG_OUT
@@ -1567,11 +1560,13 @@ int EXPQUAL AssembleModule( const char *source )
     if ( Options.quiet == FALSE )
         printf( "%s\n", CurrSource );
 
+#ifndef __I86__
     /* v2.13: suppress the final msg (mostly useful for regression tests) */
     //if ( CurrFile[LST] ) {
     if ( CurrFile[LST] && Options.no_final_msg_listing == FALSE ) {
         LstPrintf( "%s" NLSTR, CurrSource );
     }
+#endif
 #if 1 //def __SW_BD
 done:
 #endif

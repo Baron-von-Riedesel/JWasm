@@ -1513,38 +1513,29 @@ ret_code SegmentModuleExit( void )
 
 /* this is called once per module after the last pass is finished */
 
-void SegmentFini( void )
-/**********************/
+void SegmentFini( int bFinal )
+/****************************/
 {
-#if FASTMEM==0
     struct dsym    *curr;
-#endif
 
     DebugMsg(("SegmentFini() enter\n"));
-#if FASTMEM==0
-    for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
-        struct fixup *fix;
-        DebugMsg(("SegmentFini: segment %s\n", curr->sym.name ));
-        for ( fix = curr->e.seginfo->FixupList.head; fix ; ) {
-            struct fixup *next = fix->nextrlc;
-            DebugMsg(("SegmentFini: free fixup %p [sym=%s, count=%u]\n", fix, fix->sym ? fix->sym->name : "NULL", fix->count ));
-            /* v2.14: problem is that a fixup may be in two linked lists after step 1;
-             * hence only free the fixup if nextbp is NULL.
-             */
-            fix->count--;
-            if ( !fix->count )
-                LclFree( fix );
-            fix = next;
-        }
-    }
-#endif
+	/* v2.19: release fixups to heap */
+	for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
+		DebugMsg(("SegmentFini: segment %s\n", curr->sym.name ));
+		if ( curr->e.seginfo->FixupList.head ) {
+			FixupRelease( curr->e.seginfo->FixupList.head );
+			curr->e.seginfo->FixupList.head = curr->e.seginfo->FixupList.tail = NULL;
+		}
+	}
 
+	if ( bFinal ) {
 #if FASTPASS
-    if ( saved_SegStack ) {
-        LclFree( saved_SegStack );
-    }
+		if ( saved_SegStack ) {
+			LclFree( saved_SegStack );
+		}
 #endif
-    FreeLnameQueue();
+		FreeLnameQueue();
+	}
     DebugMsg(("SegmentFini() exit\n"));
 }
 
@@ -1652,8 +1643,7 @@ void SegmentInit( int pass )
         curr->e.seginfo->bytes_written = 0;
 
         //if ( Options.output_format != OFORMAT_OMF ) {
-        curr->e.seginfo->FixupList.head = NULL;
-        curr->e.seginfo->FixupList.tail = NULL;
+        curr->e.seginfo->FixupList.head = curr->e.seginfo->FixupList.tail = NULL;
         //}
     }
 

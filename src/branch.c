@@ -80,7 +80,7 @@ static void jumpExtend( struct code_info *CodeInfo, int far_flag )
     if( Parse_Pass == PASS_2 )
         EmitWarn( 4, EXTENDING_JUMP );
 
-    DebugMsg(("jumpExtend(far=%u), pass=%u, curr offset=%X, Ofssize=%u\n", far_flag, Parse_Pass + 1, GetCurrOffset(), CodeInfo->Ofssize ));
+    DebugMsg(("jumpExtend(far=%u), pass=%u, curr offset=%X, Ofssize=%d\n", far_flag, Parse_Pass + 1, GetCurrOffset(), CodeInfo->Ofssize ));
     if( far_flag ) {
         if ( CodeInfo->prefix.opsiz ) {
             /* it's 66 EA OOOO SSSS or 66 EA OOOOOOOO SSSS */
@@ -192,8 +192,8 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
         return( NOT_ERROR );
 #endif
     }
-    DebugMsg1(("process_branch(%" I32_SPEC "X, %s): opnd.explicit=%u/memtype=%X/Ofssize=%u CI.memtype=%X sym.state=%u/mem_type=%Xh/ofs=%" I32_SPEC "X/seg=%s\n",
-              GetCurrOffset(), sym->name, opndx->explicit, opndx->mem_type, opndx->Ofssize, CodeInfo->mem_type,
+    DebugMsg1(("process_branch(%s, ofs=%" I32_SPEC "X): opnd.explicit=%u/memtype=%X/Ofssize=%d CI.memtype=%X sym.state=%u/mem_type=%Xh/ofs=%" I32_SPEC "X/seg=%s\n",
+              sym->name, GetCurrOffset(), opndx->explicit, opndx->mem_type, opndx->Ofssize, CodeInfo->mem_type,
               sym->state, sym->mem_type, sym->offset, sym->segment ? sym->segment->name : "NULL" ));
 
     state = sym->state;

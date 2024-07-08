@@ -420,19 +420,12 @@ void SymFree( struct asym *sym )
 {
     //DebugMsg(("SymFree: free %p, name=%s, state=%u\n", sym, sym->name, sym->state));
     free_ext( sym );
+
+    /* v2.19: obsolete */
+    //if ( sym->state != SYM_EXTERNAL ) /* external backpatches are cleared in PassOneChecks() */
+    //    FreeFixupQ( sym );
+
 #if FASTMEM==0
-    if ( sym->state != SYM_EXTERNAL ) { /* external backpatches are cleared in PassOneChecks() */
-        struct fixup *fix;
-        for( fix = sym->bp_fixup ; fix; ) {
-            struct fixup *next = fix->nextbp;
-            DebugMsg(("SymFree: free backpatch fixup %p [count=%u]\n", fix, fix->count ));
-            /* v2.14: free fixup only if not referenced anymore */
-            fix->count--;
-            if ( !fix->count )
-                LclFree( fix );
-            fix = next;
-        }
-    }
     if ( sym->name_size ) LclFree( sym->name );
 #endif
     LclFree( sym );

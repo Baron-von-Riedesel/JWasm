@@ -613,7 +613,9 @@ struct global_options {
     enum listmacro list_macro;           /* -Sa option  */
     bool        no_symbol_listing;       /* -Sn option  */
     bool        first_pass_listing;      /* -Sf option  */
+#ifndef __I86__
     bool        no_final_msg_listing;    /* -Sz option (v2.13) */
+#endif
     bool        all_symbols_public;      /* -Zf option  */
     bool        safeseh;                 /* -safeseh option */
     uint_8      ignore_include;          /* -X option */
@@ -653,6 +655,7 @@ struct dll_desc {
 struct src_item;
 struct hll_item;
 struct context;
+struct fixup;
 
 struct fname_item {
     char    *fname;
@@ -665,6 +668,11 @@ struct fname_item {
 };
 
 struct module_info;
+
+/* members of module_vars are handled differently if FASTPASS is active.
+ * Unlike the other members in module_info, they are NOT restored by
+ * RestoreState() in fastpass.c.
+ */
 
 struct module_vars {
     unsigned            error_count;     /* total of errors so far */
@@ -707,6 +715,7 @@ struct module_vars {
     struct context      *SavedContexts;
     int                 cntSavedContexts;
 #endif
+    struct fixup        *FixupHeap;       /* v2.19: stack of free <struct fixup>-items */
     /* v2.10: moved here from module_info due to problems if @@: occured on the very first line */
     unsigned            anonymous_label; /* "anonymous label" counter */
 #if STACKBASESUPP
@@ -719,12 +728,13 @@ struct module_vars {
 #if PE_SUPPORT
     uint_8              pe_flags;        /* for PE */
 #endif
+    bool                Write_to_File;   /* 1=write the object module */
 };
 
 struct format_options;
 
 struct module_info {
-    struct module_vars  g;
+    struct module_vars  g;               /* must be first member - see fastpass.c */
     char                *proc_prologue;  /* prologue macro if PEM_MACRO */
     char                *proc_epilogue;  /* epilogue macro if PEM_MACRO */
 #if DLLIMPORT
@@ -799,6 +809,7 @@ struct module_info {
     unsigned char       prologuemode;    /* current PEM_ enum value for OPTION PROLOGUE */
     unsigned char       epiloguemode;    /* current PEM_ enum value for OPTION EPILOGUE */
     unsigned char       invoke_exprparm; /* flag: forward refs for INVOKE params ok? */
+    uint_8              macro_level;     /* macro nesting level */
 #if CVOSUPP
     unsigned char       cv_opt;          /* option codeview */
 #endif
@@ -826,6 +837,8 @@ struct module_info {
 #define CurrFName       ModuleInfo.g.curr_fname
 #define CurrSeg         ModuleInfo.currseg
 #define CurrWordSize    ModuleInfo.wordsize
+#define write_to_file   ModuleInfo.g.Write_to_File
+#define MacroLevel      ModuleInfo.macro_level
 
 struct format_options {
     void (*init)( struct module_info * );
@@ -837,12 +850,11 @@ struct format_options {
 
 extern struct global_options Options;
 extern struct module_info    ModuleInfo;
-extern unsigned int          Parse_Pass;    /* assembly pass */
-//extern unsigned int          GeneratedCode;  /* v2.10: moved to struct module_info */
-extern uint_8                MacroLevel;    /* macro nesting level */
-extern bool                  write_to_file; /* 1=write the object module */
 
-/* Information about source, object, listing and error files */
+extern unsigned int          Parse_Pass;    /* assembly pass */
+//extern unsigned int          GeneratedCode; /* v2.10: moved to struct module_info */
+//extern uint_8                MacroLevel;    /* v2.19: moved to struct module_info */
+//extern bool                  write_to_file; /* v2.19: moved to struct module_vars */
 //extern FILE                  *CurrFile[];   /* ASM, ERR, OBJ and LST */
 //extern char                  *CurrFName[];  /* ASM, ERR, OBJ and LST */
 

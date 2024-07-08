@@ -228,6 +228,11 @@ ret_code EndDirective( int i, struct asm_tok tokenarray[] )
     /* v2.10: check for open PROCedures */
     ProcCheckOpen();
 
+    /* v2.19 close open segments before calling idata_fixup(). This sets
+     * CurrSeg = NULL if simplified segment directives are ON.
+     */
+    SegmentModuleExit();
+
     /* check type of start label. Must be a symbolic code label, internal or external */
     if ( opndx.kind == EXPR_ADDR && opndx.indirect == FALSE &&
         ( opndx.mem_type == MT_NEAR || opndx.mem_type == MT_FAR || ( opndx.mem_type == MT_EMPTY && opndx.instr == T_OFFSET ) ) &&
@@ -246,9 +251,8 @@ ret_code EndDirective( int i, struct asm_tok tokenarray[] )
             CodeInfo.flags = 0;
             CodeInfo.mem_type = MT_EMPTY;
             idata_fixup( &CodeInfo, 0, &opndx );
-#if FASTMEM==0
-            LclFree( ModuleInfo.g.start_fixup );
-#endif
+            if ( ModuleInfo.g.start_fixup )
+                FixupRelease( ModuleInfo.g.start_fixup );
             ModuleInfo.g.start_fixup = CodeInfo.opnd[0].InsFixup;
             ModuleInfo.g.start_displ = opndx.value;
         } else {
@@ -277,8 +281,8 @@ ret_code EndDirective( int i, struct asm_tok tokenarray[] )
         return( EmitError( OPERAND_MUST_BE_RELOCATABLE ) );
     }
 
-    /* close open segments */
-    SegmentModuleExit();
+    /* close open segments; v2.19 moved */
+    //SegmentModuleExit();
 
     if ( ModuleInfo.g.EndDirHook )
         ModuleInfo.g.EndDirHook( &ModuleInfo );
