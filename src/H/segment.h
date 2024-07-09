@@ -43,7 +43,7 @@ extern struct asym      *CreateIntSegment( const char *, const char *, uint_8, u
 /* get symbol's segment index, from the symbol itself */
 extern unsigned         GetSegIdx( const struct asym * );
 extern void             SegmentInit( int );     /* init segments */
-extern void             SegmentFini( int );     /* exit segments */
+extern void             SegmentFini( void );    /* exit segments */
 extern struct asym      *GetGroup( const struct asym * );
 extern uint_32          GetCurrSegAlign( void );
 extern ret_code         SetOfssize( void );

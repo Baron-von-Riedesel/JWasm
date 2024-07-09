@@ -1511,31 +1511,36 @@ ret_code SegmentModuleExit( void )
     return( NOT_ERROR );
 }
 
-/* this is called once per module after the last pass is finished */
+/* SegmentFini() is called once per module
+ * after the last pass and after the object/binary has been written
+ */
 
-void SegmentFini( int bFinal )
-/****************************/
+void SegmentFini( void )
+/**********************/
 {
-    struct dsym    *curr;
-
     DebugMsg(("SegmentFini() enter\n"));
-	/* v2.19: release fixups to heap */
-	for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
-		DebugMsg(("SegmentFini: segment %s\n", curr->sym.name ));
-		if ( curr->e.seginfo->FixupList.head ) {
-			FixupRelease( curr->e.seginfo->FixupList.head );
-			curr->e.seginfo->FixupList.head = curr->e.seginfo->FixupList.tail = NULL;
-		}
-	}
-
-	if ( bFinal ) {
-#if FASTPASS
-		if ( saved_SegStack ) {
-			LclFree( saved_SegStack );
-		}
+#if FASTMEM==0
+	struct dsym  *curr;
+	struct fixup *fixup;
+	struct fixup *tmp;
 #endif
-		FreeLnameQueue();
+
+#if FASTMEM==0
+	/* v2.19: release fixups to heap */
+	for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next )
+		if ( curr->e.seginfo->FixupList.head ) FixupRelease( curr->e.seginfo->FixupList.head );
+
+	for ( fixup = ModuleInfo.g.FixupHeap; fixup; fixup = tmp ) {
+		tmp = fixup->nextrlc;
+		LclFree( fixup );
 	}
+#endif
+#if FASTPASS
+	if ( saved_SegStack ) {
+		LclFree( saved_SegStack );
+	}
+#endif
+	FreeLnameQueue();
     DebugMsg(("SegmentFini() exit\n"));
 }
 
@@ -1581,6 +1586,14 @@ void SegmentInit( int pass )
         else
             strcpy( ModuleInfo.code_class, "CODE" );
 #endif
+    } else {
+        /* v2.19: release fixups to heap */
+        for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
+            if ( curr->e.seginfo->FixupList.head ) {
+                FixupRelease( curr->e.seginfo->FixupList.head );
+                curr->e.seginfo->FixupList.head = curr->e.seginfo->FixupList.tail = NULL;
+            }
+        }
     }
 
     /*

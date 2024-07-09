@@ -93,8 +93,8 @@ enum fixup_options {
 };
 
 struct fixup {
-    struct fixup         *nextbp;       /* PASS 1: linked list backpatch */
-    struct fixup         *nextrlc;      /* PASS >1: linked list relocs */
+    struct fixup         *nextrlc;      /* link to next reloc (in segment or heap) */
+    struct fixup         *nextbp;       /* PASS 1 only: link to next forward ref of symbol */
 #ifdef TRMEM
     uint_16              marker;
 #endif
@@ -113,7 +113,7 @@ struct fixup {
 #endif
             unsigned char loader_resolved:1;        /* operator LROFFSET */
             unsigned char orgoccured:1;             /* v2.04 ORG occured behind this fix */
-            unsigned char size:4;                   /* v2.18 */
+            unsigned char size:4;                   /* v2.18 for listing */
 #if FASTMEM==0
             //unsigned char count:2;                  /* v2.14 ref count; v2.19: obsolete */
 #endif
@@ -130,10 +130,9 @@ struct fixup {
     struct asym             *sym;
 };
 
-extern struct fixup  *CreateFixup( struct asym *sym, enum fixup_types fixup_type, enum fixup_options fixup_option );
-extern void          SetFixupFrame( const struct asym *sym, char );
+extern struct fixup  *FixupCreate( struct asym *sym, enum fixup_types fixup_type, enum fixup_options fixup_option );
 extern void          FixupRelease( struct fixup * ); /* v2.19 */
-//extern void          FreeFixupQ( struct asym * sym );
+extern void          SetFixupFrame( const struct asym *sym, char );
 extern void          store_fixup( struct fixup *, struct dsym *, int_32 * );
 
 extern ret_code      BackPatch( struct asym *sym );

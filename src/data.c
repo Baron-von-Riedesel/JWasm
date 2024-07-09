@@ -1065,7 +1065,7 @@ next_item:  /* <--- continue scan if a comma has been detected */
             else
                 set_frame( opndx.sym );
             /* uses Frame and Frame_Datum  */
-            fixup = CreateFixup( opndx.sym, fixup_type, OPTJ_NONE );
+            fixup = FixupCreate( opndx.sym, fixup_type, OPTJ_NONE );
             //store_fixup( fixup, &opndx.value ); /* may fail, but ignore error! */
         }
         OutputBytes( (unsigned char *)&opndx.value, no_of_bytes, fixup );

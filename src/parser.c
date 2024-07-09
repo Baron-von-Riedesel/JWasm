@@ -1255,8 +1255,8 @@ ret_code idata_fixup( struct code_info *CodeInfo, unsigned CurrOpnd, struct expr
     else
         set_frame( opndx->sym );
 
-    //DebugMsg1(("idata_fixup: calling CreateFixup(%s, %u)\n", opndx->sym->name, fixup_type ));
-    CodeInfo->opnd[CurrOpnd].InsFixup = CreateFixup( opndx->sym, fixup_type, fixup_option );
+    //DebugMsg1(("idata_fixup: calling FixupCreate(%s, %u)\n", opndx->sym->name, fixup_type ));
+    CodeInfo->opnd[CurrOpnd].InsFixup = FixupCreate( opndx->sym, fixup_type, fixup_option );
 
     if ( opndx->instr == T_LROFFSET )
         CodeInfo->opnd[CurrOpnd].InsFixup->loader_resolved = TRUE;
@@ -1812,8 +1812,8 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
          * anyways.
          */
         if ( CodeInfo->token != T_XLAT && CodeInfo->token != T_XLATB ) {
-            //DebugMsg1(("memory_operand: calling CreateFixup(%s, fixup=%u) [CodeInfo->memtype=%Xh]\n", sym ? sym->name : "NULL", fixup_type, CodeInfo->mem_type));
-            CodeInfo->opnd[CurrOpnd].InsFixup = CreateFixup( sym, fixup_type, OPTJ_NONE );
+            //DebugMsg1(("memory_operand: calling FixupCreate(%s, fixup=%u) [CodeInfo->memtype=%Xh]\n", sym ? sym->name : "NULL", fixup_type, CodeInfo->mem_type));
+            CodeInfo->opnd[CurrOpnd].InsFixup = FixupCreate( sym, fixup_type, OPTJ_NONE );
         }
     }
 #ifdef DEBUG_OUT

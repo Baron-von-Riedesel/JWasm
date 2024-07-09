@@ -866,16 +866,16 @@ static void cv_write_symbol( struct dbgcv *cv, struct asym *sym )
         /* COFF has no "far" fixups. Instead Masm creates a
          * section-relative fixup + a section fixup.
          */
-        fixup = CreateFixup( sym, FIX_OFF32_SECREL, OPTJ_NONE );
+        fixup = FixupCreate( sym, FIX_OFF32_SECREL, OPTJ_NONE );
         fixup->locofs = cv->symbols->e.seginfo->current_loc;
         store_fixup( fixup, cv->symbols, (int_32 *)cv->ps );
-        fixup = CreateFixup( sym, FIX_SEG, OPTJ_NONE );
+        fixup = FixupCreate( sym, FIX_SEG, OPTJ_NONE );
         //fixup->locofs += sizeof( int_32 );
         fixup->locofs = cv->symbols->e.seginfo->current_loc + ( rlctype == FIX_PTR32 ? sizeof( int_32 ) : sizeof ( int_16 ) );
         store_fixup( fixup, cv->symbols, (int_32 *)cv->ps );
     } else {
 #endif
-        fixup = CreateFixup( sym, rlctype, OPTJ_NONE );
+        fixup = FixupCreate( sym, rlctype, OPTJ_NONE );
         fixup->locofs = cv->symbols->e.seginfo->current_loc;
         /* todo: for OMF, delay fixup store until checkflush has been called! */
         store_fixup( fixup, cv->symbols, (int_32 *)cv->ps );

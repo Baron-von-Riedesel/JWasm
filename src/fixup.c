@@ -47,7 +47,7 @@ uint_16 Frame_Datum;  /* curr fixup frame value */
 static uint_32 cnt = 0;
 #endif
 
-struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_options option )
+struct fixup *FixupCreate( struct asym *sym, enum fixup_types type, enum fixup_options option )
 /*********************************************************************************************/
 /*
  * called when an instruction operand or a data item is relocatable:
@@ -73,7 +73,7 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
         fixup = LclAlloc( sizeof( struct fixup ) );
 #ifdef TRMEM
     fixup->marker = 'XF';
-    DebugMsg1(("CreateFixup, pass=%u: fix=%p sym=%s\n", Parse_Pass+1, fixup, sym ? sym->name : "NULL" ));
+    DebugMsg1(("FixupCreate, pass=%u: fix=%p sym=%s\n", Parse_Pass+1, fixup, sym ? sym->name : "NULL" ));
 #endif
     fixup->nextbp = NULL;
     fixup->nextrlc = NULL;
@@ -115,7 +115,7 @@ struct fixup *CreateFixup( struct asym *sym, enum fixup_types type, enum fixup_o
     fixup->def_seg = CurrSeg;           /* may be NULL (END directive) */
     fixup->sym = sym;
 
-    DebugMsg1(("CreateFixup(sym=%s type=%u, opt=%u)=%p [cnt=%" I32_SPEC "u, loc=%" I32_SPEC "Xh frame_type/datum=%u/%u CurrSeg=%s]\n",
+    DebugMsg1(("FixupCreate(sym=%s type=%u, opt=%u)=%p [cnt=%" I32_SPEC "u, loc=%" I32_SPEC "Xh frame_type/datum=%u/%u CurrSeg=%s]\n",
                sym ? sym->name : "NULL", type, option, fixup, ++cnt, fixup->locofs, fixup->frame_type, fixup->frame_datum, CurrSeg ? CurrSeg->sym.name : "NULL" ));
     return( fixup );
 }
@@ -138,44 +138,6 @@ void FixupRelease( struct fixup *fixup )
 	}
     DebugMsg1(("FixupRelease(0x%p) [cnt=%" I32_SPEC "u]\n", fixup, cnt ));
 }
-
-#if 0 /* v2.19: obsolete */
-/* free a symbol's backpatch queue.
- * called by BackPatch(), SymFree(), PassOneChecks().
- */
-void FreeFixupQ( struct asym *sym )
-/*********************************/
-{
-	struct fixup *fixup;
-
-	if ( Parse_Pass != PASS_1 )
-		return;
-	for( fixup = sym->bp_fixup ; fixup; ) {
-		struct fixup *next = fixup->nextbp;
-		struct dsym *dir = fixup->def_seg;
-		DebugMsg1(("FreeFixup( %p ), def_seg=%s\n", fixup, dir ? dir->sym.name : "NULL" ));
-		if ( dir ) {
-			if ( fixup == dir->e.seginfo->FixupList.head ) {
-				DebugMsg1(("FreeFixup( %p ), seg=%s, head\n", fixup, dir->sym.name ));
-				dir->e.seginfo->FixupList.head = fixup->nextrlc;
-				FixupRelease( fixup );
-			} else {
-				struct fixup *fixup2;
-				for ( fixup2 = dir->e.seginfo->FixupList.head; fixup2; fixup2 = fixup2->nextrlc ) {
-					if ( fixup2->nextrlc == fixup ) {
-						DebugMsg1(("FreeFixup( %p ), seg=%s\n", fixup, dir->sym.name ));
-						fixup2->nextrlc = fixup->nextrlc;
-						FixupRelease( fixup );
-						break;
-					}
-				}
-			}
-		}
-		fixup = next;
-	}
-	sym->bp_fixup = NULL;
-}
-#endif
 
 /*
  * Set global variables Frame_Type and Frame_Datum.

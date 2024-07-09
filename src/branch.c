@@ -472,7 +472,7 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
             //return( EmitError( INVALID_OPERAND_SIZE ) );
 #endif
         }
-        CodeInfo->opnd[OPND1].InsFixup = CreateFixup( sym, fixup_type, fixup_option );
+        CodeInfo->opnd[OPND1].InsFixup = FixupCreate( sym, fixup_type, fixup_option );
         return( NOT_ERROR );
     }  /* end if FAR JMP/CALL */
 
@@ -633,6 +633,6 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
             }
         }
     } /* end switch (CodeInfo->token) */
-    CodeInfo->opnd[OPND1].InsFixup = CreateFixup( sym, fixup_type, fixup_option );
+    CodeInfo->opnd[OPND1].InsFixup = FixupCreate( sym, fixup_type, fixup_option );
     return( NOT_ERROR );
 }

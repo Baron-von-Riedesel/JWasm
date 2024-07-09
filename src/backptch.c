@@ -247,7 +247,6 @@ ret_code BackPatch( struct asym *sym )
 		DebugMsg1(("BackPatch(%s): location=%s:%" I32_SPEC "X, bp_fixup=%p\n", sym->name, sym->segment ? sym->segment->name : "!NULL!", sym->offset, sym->bp_fixup ));
 		for( fixup = sym->bp_fixup; fixup; fixup = fixup->nextbp )
 			DoPatch( sym, fixup );
-		//FreeFixupQ( sym ); /* v2.19 obsolete */
 #ifdef DEBUG_OUT
 		if ( oldofs != sym->offset )
 			DebugMsg1(("BackPatch(%s) exit, new ofs=%X\n", sym->name, sym->offset ));

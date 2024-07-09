@@ -879,12 +879,6 @@ static void PassOneChecks( void )
             continue;
         }
 
-        /* v2.05: clear fixup list (used for backpatching in pass one)
-         * v2.19: obsolete
-         */
-        //if ( curr->sym.bp_fixup )
-        //    FreeFixupQ( &curr->sym );
-
         if ( curr->sym.iscomm == TRUE )
             continue;
         /* optional alternate symbol must be INTERNAL or EXTERNAL.
@@ -1051,7 +1045,6 @@ static int OnePass( void )
         PassOneChecks();
 
     ClearSrcStack();
-    SegmentFini( FALSE );
 
     return( 1 );
 }
@@ -1371,7 +1364,7 @@ static void AssembleFini( void )
 /******************************/
 {
     int i;
-    SegmentFini( TRUE );
+    SegmentFini();
     SymFini();
     ResWordsFini( TRUE ); /* v2.17: restore keywords disabled by option nokeyword */
 #ifdef DEBUG_OUT
