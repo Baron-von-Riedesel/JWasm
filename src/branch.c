@@ -243,9 +243,12 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
 #endif
                     symseg->e.seginfo->group == CurrSeg->e.seginfo->group )
                     ;
-                /* v2.05: added SegOverride condition */
+				/* v2.05: added SegOverride condition
+				 * v2.19: no error in pass one ( a GROUP directive might follow that "fixes" the error )
+				 */
                 //else if ( opndx->mem_type == MT_NEAR ) {
-                else if ( opndx->mem_type == MT_NEAR && SegOverride == NULL ) {
+                //else if ( opndx->mem_type == MT_NEAR && SegOverride == NULL ) {
+                else if ( Parse_Pass > PASS_1 && opndx->mem_type == MT_NEAR && SegOverride == NULL ) {
                     DebugMsg(("process_branch: error, opndx.mem_type is MT_NEAR\n" ));
                     return( EmitError( CANNOT_HAVE_IMPLICIT_FAR_JUMP_OR_CALL_TO_NEAR_LABEL ) );
                 }

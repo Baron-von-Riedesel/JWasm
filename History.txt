@@ -9,12 +9,17 @@
    -  format mz,pe: start offset for first segment may have resulted in
       an invalid binary; see org1.asm & org2.asm.
    -  fastcall 32-bit (MS style): registers may have hold float arguments.
+   -  no 'implicit far jmp/call to near label' error in pass one; see
+      group7.asm.
 
    Other changes:
    -  write listing reworked.
    -  option -pe: add segments with combine type stack - they may contain
       initialized data.
    -  JWasmr.exe: option -Sz removed.
+   -  PUSHW will emit warning "magnitude of offset exceeds 16-bit" if
+      operand is a 32-bit offset.
+   
 
    09.06.2024, v2.18:
 

@@ -3,6 +3,8 @@
 ;--- Uses JWasm's bin output format, so no linker needed.
 ;--- assemble: JWasm -bin -Fo Win32_5.exe Win32_5.ASM
 
+;--- v2.19: sample is currently broken - the ALIGNx sections are no longer excluded from binary
+
     .386
     option casemap:none
 
