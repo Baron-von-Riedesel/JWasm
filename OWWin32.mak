@@ -135,6 +135,11 @@ segment CONST2 readonly
 !endif
 <<
 
+# the DOS binary ( with statically linke Win32 emulation )
+# cstrtwhx.obj: created from modified cstrtwnt.asm;
+# if HX's InitW3ow.obj is used instead, a warning (multiple start addresses)
+# will be emitted.
+
 $(OUTD)/$(name)d.exe: $(OUTD)/main.obj $(proj_obj)
 	$(LINK) @<<
 $(LOPTD)
@@ -145,12 +150,13 @@ format windows pe runtime console
 !endif
 file { $(OUTD)/main.obj $(proj_obj) } name $@
 Libpath $(WATCOM)\lib386\nt;$(WATCOM)\lib386
-Libfile cstrtwhx.obj
 libpath $(HXDIR)\lib
+Libfile $(HXDIR)\Lib\InitW3OW.obj
+disable 1030
 Library imphlp.lib, dkrnl32s.lib, HXEmu387.lib
 reference EMUInit
 op quiet, stack=0x40000, heapsize=0x40000, map=$^*, stub=$(HXDIR)\Bin\loadpex.bin
-sort global op statics
+op statics
 !ifndef WLINK
 segment CONST readonly
 segment CONST2 readonly
@@ -160,6 +166,8 @@ segment CONST2 readonly
 #	$(HXDIR)\Bin\pestub.exe -x -z -n $@
 	pestub.exe -x -z -n $@
 !endif
+
+#Libfile cstrtwhx.obj
 
 $(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
 	$(CC) src\msgtext.c

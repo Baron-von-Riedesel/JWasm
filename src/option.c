@@ -190,12 +190,24 @@ OPTFUNC( SetNoReadonly )
     return( NOT_ERROR );
 }
 
+/* OPTION OLDMACROS */
+
+OPTFUNC( SetOldmacros )
+/*********************/
+{
+    ModuleInfo.oldmacros = TRUE;
+    /* v2.19: option still unsupported - error changed to a warning */
+    if ( Parse_Pass == PASS_1)
+         EmitWarn( 2, DIRECTIVE_IGNORED, "option oldmacros" );
+    return( NOT_ERROR );
+}
+
 /* OPTION NOOLDMACROS */
 
 OPTFUNC( SetNoOldmacros )
 /***********************/
 {
-    /* default, nothing to do */
+    ModuleInfo.oldmacros = FALSE;
     return( NOT_ERROR );
 }
 
@@ -852,7 +864,7 @@ static const struct asm_option optiontab[] = {
     { "NOLJMP",       SetNoLJmp      },
     { "READONLY",     SetReadonly    },
     { "NOREADONLY",   SetNoReadonly  },
-    { "OLDMACROS",    Unsupported    },
+    { "OLDMACROS",    SetOldmacros   },
     { "NOOLDMACROS",  SetNoOldmacros },
     { "EXPR16",       Unsupported    },
     { "EXPR32",       SetExpr32      },

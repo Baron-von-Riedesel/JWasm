@@ -27,6 +27,8 @@
 #include "fastpass.h"
 #include "listing.h"
 
+#include "myassert.h"
+
 #if FASTPASS
 
 /* rework listing for v2.19.
@@ -274,8 +276,13 @@ struct list_item *ListGetItem( uint_8 bGeneratedCode )
 {
 	if ( bGeneratedCode ) {
 		ListStoreCurr = ListStoreCurr->next;
-	} else
-		ListStoreCurr = LineStoreCurr->pList;
+    } else {
+        ListStoreCurr = LineStoreCurr->pList;
+#ifdef DEBUG_OUT
+        if (!ListStoreCurr) DebugMsg1(("ListGetItem: ListStoreCurr==NULL, Line=%s [%p]\n", LineStoreCurr->line, LineStoreCurr ));
+        /**/myassert( ListStoreCurr);
+#endif
+    }
 
 	return ListStoreCurr;
 }

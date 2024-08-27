@@ -773,6 +773,7 @@ struct module_info {
     unsigned            m510:1;          /* option m510 */
     unsigned            scoped:1;        /* option scoped */
     unsigned            oldstructs:1;    /* option oldstructs */
+    unsigned            oldmacros:1;     /* v2.19: option oldmacros */
     unsigned            emulator:1;      /* option emulator */
     unsigned            setif2:1;        /* option setif2 */
     unsigned            list:1;          /* .list/.nolist */

@@ -411,10 +411,10 @@ ret_code AssumeDirective( int i, struct asm_tok tokenarray[] )
                 if ( opnd.sym == NULL || opnd.indirect == TRUE || opnd.value ) {
                     return( EmitError( SEGMENT_GROUP_OR_SEGREG_EXPECTED ) );
                 } else if ( opnd.sym->state == SYM_UNDEFINED ) {
-                    /* ensure that directive is rerun in pass 2
-                     * so an error msg can be emitted.
-                     */
-                    FStoreLine( FSL_NOCMT );
+#if FASTPASS
+                    /* ensure that directive is rerun in pass 2 so an error msg can be emitted. */
+                    if ( StoreState == FALSE ) FStoreLine( FSL_NOCMT );
+#endif
                     info->symbol = opnd.sym;
                 } else if ( ( opnd.sym->state == SYM_SEG || opnd.sym->state == SYM_GRP ) && opnd.instr == EMPTY ) {
                     info->symbol = opnd.sym;
@@ -444,6 +444,7 @@ ret_code AssumeDirective( int i, struct asm_tok tokenarray[] )
     if ( i < Token_Count ) {
         return( EmitErr( SYNTAX_ERROR_EX, tokenarray[i].tokpos ) );
     }
+    DebugMsg1(("AssumeDirective: exit, no error\n"));
     return( NOT_ERROR );
 }
 

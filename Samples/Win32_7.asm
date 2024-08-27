@@ -17,7 +17,7 @@ GetStdHandle  proto :dword
 ExitProcess   proto :dword
    option dllimport:<user32>
 MessageBoxA   proto :dword, :dword, :dword, :dword
-   option dllimport:<none>
+   option dllimport:none
 
     .CONST
 

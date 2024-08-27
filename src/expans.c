@@ -134,10 +134,10 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
     int         i;
     //int         start = idx-1;
     int         parmidx;
-    int         skipcomma;
     int         varargcnt;
     int         bracket_level = -1;/* () level (needed for macro functions) */
     int         parm_end_delim;   /* parameter end delimiter */
+    bool        skipcomma;
     //char        addprefix;
     char        *ptr;
     char        *parmstrings;
@@ -218,7 +218,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
     /* v2.08: allow T_FINAL to be chained, lastidx==0 is true final */
     tokenarray[Token_Count].lastidx = 0;
 
-    for( varargcnt = 0, skipcomma = 0; parmidx < info->parmcnt; parmidx++ ) {
+    for( varargcnt = 0, skipcomma = FALSE; parmidx < info->parmcnt; parmidx++ ) {
 
         /* v2.09: don't skip comma if it was the last argument.
          * this will a) make a trailing comma trigger warning 'too many arguments...'
@@ -226,7 +226,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
          */
         if ( tokenarray[idx].token == T_COMMA && skipcomma )
             idx++;
-        skipcomma = 1;
+        skipcomma = TRUE;
 
         if ( tokenarray[idx].token == T_FINAL ||
             tokenarray[idx].token == parm_end_delim ||
@@ -534,7 +534,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                         }
                         *currparm = NULLC;
                     }
-                    skipcomma = 0;
+                    skipcomma = FALSE;
                 }
                 varargcnt++;
             } else if ( *currparm ) {
