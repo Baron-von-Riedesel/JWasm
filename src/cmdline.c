@@ -709,8 +709,11 @@ is_quote:
             //if ( *str == NULLC || *str == ' ' || *str == '\t' )
             if ( *str == NULLC )
                 break;
-            /* v2.10: don't stop for white spaces if filename is expected and true cmdline is parsed */
-            if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type != '@' ) )
+            /* v2.10: don't stop for white spaces if type = '@' (filename expected) and true cmdline is parsed
+             * v2.19: don't stop for white spaces if type = '$' ( useful for -D option )
+             */
+            //if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type != '@' ) )
+            if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type == 0 ) )
                 break;
             if ( type == 0 )
                 if ( *str == '-'

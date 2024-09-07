@@ -11,6 +11,8 @@
    -  fastcall 32-bit (MS style): registers may have hold float arguments.
    -  no 'implicit far jmp/call to near label' error in pass one; see
       group7.asm.
+   -  option -D: accept white spaces if option is enclosed in double quotes
+      ( Masm compatible ).
 
    Other changes:
    -  write listing reworked.
