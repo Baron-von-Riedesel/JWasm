@@ -157,7 +157,7 @@ char *DefaultDir[NUM_FILE_TYPES] = { NULL, NULL, NULL, NULL };
 
 static unsigned         OptValue;  /* value of option's numeric argument  */
 static char             *OptName;  /* value of option's name argument     */
-static const char       *cmdsave[MAX_RSP_NESTING]; /* response files */
+static const char       *cmdsave[MAX_RSP_NESTING]; /* response files: old cmdline ptr */
 static const char       *cmdbuffers[MAX_RSP_NESTING]; /* response files */
 static int              rspidx = 0; /* response file level */
 
@@ -719,9 +719,9 @@ static struct cmdloption const cmdl_options[] = {
 };
 
 enum nametype {
-    NT_SIMPLE = '0',      /* simple item ( -0..-10 ) */
-    NT_FILENAME = '@',    /* filename ( -Fd, -Fi, -Fl, -Fo, -Fw, -I ) */
-    NT_IDENTIFIER = '$'   /* (macro) identifier [=value] ( -D, -nc, -nd, -nm, -nt ) */
+    NTYPE_SIMPLE = '0',      /* simple item ( -0..-10 ) */
+    NTYPE_FILENAME = '@',    /* filename ( -Fd, -Fi, -Fl, -Fo, -Fw, -I ) */
+    NTYPE_IDENTIFIER = '$'   /* (macro) identifier [=value] ( -D, -nc, -nd, -nm, -nt ) */
 };
 
 /*  get a filename, identifier, simple item */
@@ -754,10 +754,10 @@ is_quote:
             if ( *str == NULLC )
                 break;
             /* v2.10: don't stop for white spaces if type = '@' (filename expected) and true cmdline is parsed
-             * v2.19: don't stop for white spaces if type != NT_SIMPLE ; useful for -D option
+             * v2.19: don't stop for white spaces if type != NTYPE_SIMPLE ; useful for -D option
              */
-            //if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type != NT_FILENAME ) )
-            if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type == NT_SIMPLE ) )
+            //if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type != NTYPE_FILENAME ) )
+            if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type == NTYPE_SIMPLE ) )
                 break;
             if ( type == 0 )
                 if ( *str == '-'
@@ -784,8 +784,8 @@ is_quote:
  * so check if it is a file and, if yes, read it.
  */
 
-static char *ReadParamFile( const char *name )
-/********************************************/
+static char *ReadRspFile( const char *name )
+/******************************************/
 {
     char        *env;
     char        *str;
@@ -793,7 +793,7 @@ static char *ReadParamFile( const char *name )
     int         len;
     char        ch;
 
-    DebugMsg(("ReadParamFile(%s) enter\n"));
+    DebugMsg(("ReadRspFile(%s) enter\n"));
 
     env = NULL;
     file = fopen( name, "rb" );
@@ -892,7 +892,7 @@ static void ProcessOption( const char **cmdline, char *buffer )
     if ( *p >= '0' && *p <= '9' ) {
         p = GetNumberArg( p ); /* get number value into OptValue */
         if ( OptValue < sizeof(cpuoption) / sizeof(cpuoption[0]) ) {
-            p = GetNameToken( buffer, p, 16, NT_SIMPLE ); /* get optional 'p' */
+            p = GetNameToken( buffer, p, 16, NTYPE_SIMPLE ); /* get optional 'p' */
             *cmdline = p;
             SetCpuCmdline( cpuoption[OptValue], buffer );
             return;
@@ -1010,16 +1010,16 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
                 return( NULL );
             }
             str++;
-#if 1 /* v2.06: was '0' in v2.05, now '1' again since it didn't work with quoted names */
-            /* todo: might be unnecessary since v.2.10, since GetNameToken() handles spaces inside filenames differently */
+#if 0       /* v2.19: back to 0, obsolete */
+            /* v2.06: was 0 in v2.05, now 1 again since it didn't work with quoted names */
             if ( rspidx ) {
-                cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
+                cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NTYPE_FILENAME );
             } else {
                 strcpy( paramfile, str ); /* fixme: no overflow check */
                 cmdsave[rspidx] = str + strlen(str);
             }
 #else
-            cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
+            cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NTYPE_FILENAME );
 #endif
             cmdbuffers[rspidx] = NULL;
             str = NULL;
@@ -1031,7 +1031,7 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
                 str = getenv( paramfile );
             if( str == NULL ) {
                 /* name isn't an environment variable - so assume it's a file name */
-                str = ReadParamFile( paramfile );
+                str = ReadRspFile( paramfile );
                 cmdbuffers[rspidx] = str;
                 if ( str == NULL ) {
                     str = cmdsave[rspidx];
@@ -1039,6 +1039,7 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
                 }
             }
             rspidx++;
+            DebugMsg(("ParseCmdLine: env_var/rsp_file(%s), index=%u\n", paramfile, rspidx ));
             break;
 
         case '"': /* v2.19: if response file, handle options in double quotes */
@@ -1067,9 +1068,10 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
 #if BUILD_TARGET
             set_default_build_target();
 #endif
-#if 1 /* v2.06: activated (was removed in v2.05). Needed for quoted filenames */
+#if 0       /* v2.19: back to 0, obsolete */
+            /* v2.06: activated (was removed in v2.05). Needed for quoted filenames */
             if ( rspidx ) {
-                str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
+                str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NTYPE_FILENAME );
                 get_fname( OPTN_ASM_FN, paramfile );
             } else {
                 int len;
@@ -1078,9 +1080,8 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
                 str += len;
             }
 #else
-            str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
-            Options.names[ASM] = MemAlloc( strlen( paramfile ) + 1 );
-            strcpy( Options.names[ASM], paramfile );
+            str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NTYPE_FILENAME );
+            get_fname( OPTN_ASM_FN, paramfile );
 #endif
             DebugMsg(("ParseCmdLine: file=>%s< rest=>%s<\n", Options.names[ASM], str ? str : "NULL" ));
             (*pCntArgs)++;

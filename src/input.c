@@ -1001,6 +1001,7 @@ void InputFini( void )
 #endif
     ModuleInfo.tokenarray = NULL;
 #ifdef DEBUG_OUT
+    Token_Count = 0; /* v2.19: this var is referenced in EmitErr()/EmitWarn() in debug version */
     token_stringbuf = NULL;
     StringBufferEnd = NULL;
     commentbuffer = NULL;

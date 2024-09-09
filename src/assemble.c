@@ -445,6 +445,7 @@ static void add_cmdline_tmacros( void )
         }
 
         /* there's no check whether the name is a reserved word!
+         * Masm also doesn't check!
          */
         if( is_valid_identifier( name ) == ERROR ) {
             DebugMsg(("add_cmdline_tmacros: name >%s< invalid\n", name ));
@@ -460,7 +461,11 @@ static void add_cmdline_tmacros( void )
                 sym->predefined = TRUE;
                 sym->string_ptr = value;
             } else
-                EmitErr( SYMBOL_ALREADY_DEFINED, name );
+                /* v2.19: text macros can be redefined, so better emit "type conflict"
+                 * if symbol is of different type.
+                 */
+                //EmitErr( SYMBOL_ALREADY_DEFINED, name );
+                EmitErr( SYMBOL_TYPE_CONFLICT, name );
         }
     }
     return;
