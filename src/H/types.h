@@ -2,7 +2,7 @@
 /* prototypes of TYPES.C */
 
 #ifndef _TYPES_H_INCLUDED
-#define _TYPES_H_INCLUDED_
+#define _TYPES_H_INCLUDED
 
 /* qualified_type us used for parsing a qualified type. */
 struct qualified_type {

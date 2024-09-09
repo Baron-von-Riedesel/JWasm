@@ -165,7 +165,7 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
     char    *p1;
     char    *p2;
     char    *pSrcline;
-    char    *pv;  /* code buffer ptr */
+    uint_8  *pv;  /* code buffer ptr */
     struct lstleft *pll;
 	struct lstleft ll;
 #if FASTPASS

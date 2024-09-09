@@ -158,6 +158,7 @@ void PrintUsage( void )
 {
     const char *p;
     write_logo();
+    printf( "%s\n", MsgGetEx( MSG_USAGE ) );
     for ( p = usage; *p != '\n'; ) {
         const char *p2 = p + strlen( p ) + 1;
         printf("%-20s %s\n", p, p2 );

@@ -206,7 +206,8 @@ static char *GetAFileName( void )
 #define GetAFileName() OptName
 #endif
 
-#if BUILD_TARGET
+#if BUILD_TARGET /* obsolete */
+
 static void SetTargName( char *name, unsigned len )
 /*************************************************/
 {
@@ -219,6 +220,47 @@ static void SetTargName( char *name, unsigned len )
     Options.names[OPTN_BUILD_TARGET] = MemAlloc( len + 1 );
     strcpy( Options.names[OPTN_BUILD_TARGET], name );
     _strupr( Options.names[OPTN_BUILD_TARGET] );
+}
+
+#define MAX_OS_NAME_SIZE 7
+
+static void set_default_build_target( void )
+/******************************************/
+{
+
+    if( Options.names[OPTN_BUILD_TARGET] == NULL ) {
+        Options.names[OPTN_BUILD_TARGET] = MemAlloc( MAX_OS_NAME_SIZE + 1 );
+#if defined(__OSI__)
+        if( __OS == OS_DOS ) {
+            strcpy( Options.names[OPTN_BUILD_TARGET], "DOS" );
+        } else if( __OS == OS_OS2 ) {
+            strcpy( Options.names[OPTN_BUILD_TARGET], "OS2" );
+        } else if( __OS == OS_NT ) {
+            strcpy( Options.names[OPTN_BUILD_TARGET], "NT" );
+        } else if( __OS == OS_WIN ) {
+            strcpy( Options.names[OPTN_BUILD_TARGET], "WINDOWS" );
+        } else {
+            strcpy( Options.names[OPTN_BUILD_TARGET], "XXX" );
+        }
+#elif defined(__QNX__)
+        strcpy( Options.names[OPTN_BUILD_TARGET], "QNX" );
+#elif defined(__LINUX__)
+        strcpy( Options.names[OPTN_BUILD_TARGET], "LINUX" );
+#elif defined(__BSD__)
+        strcpy( Options.names[OPTN_BUILD_TARGET], "BSD" );
+#elif defined(__OSX__) || defined(__APPLE__)
+        strcpy( Options.names[OPTN_BUILD_TARGET], "OSX" );
+#elif defined(__DOS__)
+        strcpy( Options.names[OPTN_BUILD_TARGET], "DOS" );
+#elif defined(__OS2__)
+        strcpy( Options.names[OPTN_BUILD_TARGET], "OS2" );
+#elif defined(__NT__)
+        strcpy( Options.names[OPTN_BUILD_TARGET], "NT" );
+#else
+        #error unknown host OS
+#endif
+    }
+    return;
 }
 #endif
 
@@ -676,18 +718,20 @@ static struct cmdloption const cmdl_options[] = {
 //    { NULL,     0,        0 }
 };
 
-/*
- * get a "name"
- * type=@ : filename ( -Fd, -Fi, -Fl, -Fo, -Fw, -I )
- * type=$ : (macro) identifier [=value] ( -D, -nc, -nd, -nm, -nt )
- * type=0 : something else ( -0..-10 )
- */
-static const char *GetNameToken( char *dst, const char *str, int max, char type )
-/*******************************************************************************/
+enum nametype {
+    NT_SIMPLE = '0',      /* simple item ( -0..-10 ) */
+    NT_FILENAME = '@',    /* filename ( -Fd, -Fi, -Fl, -Fo, -Fw, -I ) */
+    NT_IDENTIFIER = '$'   /* (macro) identifier [=value] ( -D, -nc, -nd, -nm, -nt ) */
+};
+
+/*  get a filename, identifier, simple item */
+
+static const char *GetNameToken( char *dst, const char *str, int max, enum nametype type )
+/****************************************************************************************/
 {
     bool equatefound = FALSE;
 
-    DebugMsg(("GetNameToken( %.*s, %u, '%c' ) enter, rspidx=%u\n", max, str, max, type, rspidx ));
+    DebugMsg(("GetNameToken( %.*s, %u, type=%c ) enter, rspidx=%u\n", max, str, max, type, rspidx ));
     //while( isspace( *str ) ) ++str;  /* no spaces allowed! */
 is_quote:
     if( *str == '"' ) {
@@ -710,10 +754,10 @@ is_quote:
             if ( *str == NULLC )
                 break;
             /* v2.10: don't stop for white spaces if type = '@' (filename expected) and true cmdline is parsed
-             * v2.19: don't stop for white spaces if type = '$' ( useful for -D option )
+             * v2.19: don't stop for white spaces if type != NT_SIMPLE ; useful for -D option
              */
-            //if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type != '@' ) )
-            if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type == 0 ) )
+            //if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type != NT_FILENAME ) )
+            if ( ( *str == ' ' || *str == '\t' ) && ( rspidx || type == NT_SIMPLE ) )
                 break;
             if ( type == 0 )
                 if ( *str == '-'
@@ -757,7 +801,7 @@ static char *ReadParamFile( const char *name )
         /* v2.10: changed to fatal error */
         //EmitErr( CANNOT_OPEN_FILE, name, ErrnoStr() );
         Fatal( CANNOT_OPEN_FILE, name, ErrnoStr() );
-        return( NULL );
+        return( NULL );  /* Fatal() shouldn't return, but to be safe ... */
     }
     len = 0;
     if ( fseek( file, 0, SEEK_END ) == 0 ) {
@@ -846,28 +890,32 @@ static void ProcessOption( const char **cmdline, char *buffer )
      * the value can be >= 10.
      */
     if ( *p >= '0' && *p <= '9' ) {
-        p = GetNumberArg( p );
-        if ( OptValue < sizeof(cpuoption)/sizeof(cpuoption[0]) ) {
-            p = GetNameToken( buffer, p, 16, 0 ); /* get optional 'p' */
+        p = GetNumberArg( p ); /* get number value into OptValue */
+        if ( OptValue < sizeof(cpuoption) / sizeof(cpuoption[0]) ) {
+            p = GetNameToken( buffer, p, 16, NT_SIMPLE ); /* get optional 'p' */
             *cmdline = p;
             SetCpuCmdline( cpuoption[OptValue], buffer );
             return;
         }
         p = *cmdline; /* v2.11: restore option pointer */
     }
+
+    /* scan option table */
+
     for( i = 0; i < ( sizeof(cmdl_options) / sizeof(cmdl_options[0]) ); i++ ) {
-        //DebugMsg(("ProcessOption(%s): %s\n", p, opt ));
+        //DebugMsg(("ProcessOption(%s): %s\n", p, cmdl_options[i].name ));
         if( *p == *cmdl_options[i].name ) {
             for ( opt = cmdl_options[i].name+1, j = 1 ; isalnum(*opt) && *opt == p[j]; opt++, j++ );
-            /* make sure end of option is reached */
+            /* end of option name reached? */
             if ( isalnum(*opt) )
                 continue;
+            /* ok, option found */
             p += j;
             OptValue = cmdl_options[i].value;
             //DebugMsg(("ProcessOption(%s): Option found\n", p ));
             for( ;; opt++) {
                 switch ( *opt ) {
-                //case '*': /* don't know what this is supposed to do? */
+                //case '*': /* don't know what this was supposed to do? */
                 case NULLC:
                     if ( !IsOptionDelimiter( *p ) )
                         goto opt_error_exit;
@@ -882,24 +930,14 @@ static void ProcessOption( const char **cmdline, char *buffer )
                 case '$':      /* collect an identifer+value */
                 case '@':      /* collect a filename */
                     OptName = buffer;
-#if 0  /* v2.05: removed */
-                    if ( rspidx )
-                        p = GetNameToken( buffer, p, FILENAME_MAX - 1, *opt );
-                    else {
-                        j = strlen( p );
-                        memcpy( buffer, p, (j >= FILENAME_MAX) ? FILENAME_MAX : j + 1 );
-                        p += j;
-                    }
-#else
                     /* v2.10: spaces in filename now handled inside GetNameToken() */
                     p = GetNameToken( buffer, p, FILENAME_MAX - 1, *opt );
-#endif
                     break;
                 case '=':    /* collect an optional '=' */
                     if ( *p == '=' || *p == '#' )
                         p++;
                     break;
-                case '^':    /* skip spaces before argument */
+                case '^':  /* skip spaces before argument */
                     while ( isspace(*p) ) p++;
                     if ( *p == NULLC ) {
                         p = getnextcmdstring( cmdline );
@@ -923,50 +961,6 @@ opt_error_exit:
     *cmdline = "";
     return;
 }
-
-#if BUILD_TARGET
-
-#define MAX_OS_NAME_SIZE 7
-
-static void set_default_build_target( void )
-/******************************************/
-{
-
-    if( Options.names[OPTN_BUILD_TARGET] == NULL ) {
-        Options.names[OPTN_BUILD_TARGET] = MemAlloc( MAX_OS_NAME_SIZE + 1 );
-#if defined(__OSI__)
-        if( __OS == OS_DOS ) {
-            strcpy( Options.names[OPTN_BUILD_TARGET], "DOS" );
-        } else if( __OS == OS_OS2 ) {
-            strcpy( Options.names[OPTN_BUILD_TARGET], "OS2" );
-        } else if( __OS == OS_NT ) {
-            strcpy( Options.names[OPTN_BUILD_TARGET], "NT" );
-        } else if( __OS == OS_WIN ) {
-            strcpy( Options.names[OPTN_BUILD_TARGET], "WINDOWS" );
-        } else {
-            strcpy( Options.names[OPTN_BUILD_TARGET], "XXX" );
-        }
-#elif defined(__QNX__)
-        strcpy( Options.names[OPTN_BUILD_TARGET], "QNX" );
-#elif defined(__LINUX__)
-        strcpy( Options.names[OPTN_BUILD_TARGET], "LINUX" );
-#elif defined(__BSD__)
-        strcpy( Options.names[OPTN_BUILD_TARGET], "BSD" );
-#elif defined(__OSX__) || defined(__APPLE__)
-        strcpy( Options.names[OPTN_BUILD_TARGET], "OSX" );
-#elif defined(__DOS__)
-        strcpy( Options.names[OPTN_BUILD_TARGET], "DOS" );
-#elif defined(__OS2__)
-        strcpy( Options.names[OPTN_BUILD_TARGET], "OS2" );
-#elif defined(__NT__)
-        strcpy( Options.names[OPTN_BUILD_TARGET], "NT" );
-#else
-        #error unknown host OS
-#endif
-    }
-    return;
-}
-#endif
 
 /* parse cmdline:
  * - process cmdline options
@@ -1019,19 +1013,24 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
 #if 1 /* v2.06: was '0' in v2.05, now '1' again since it didn't work with quoted names */
             /* todo: might be unnecessary since v.2.10, since GetNameToken() handles spaces inside filenames differently */
             if ( rspidx ) {
-                cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, '@' );
+                cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
             } else {
                 strcpy( paramfile, str ); /* fixme: no overflow check */
                 cmdsave[rspidx] = str + strlen(str);
             }
 #else
-            cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, '@' );
+            cmdsave[rspidx] = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
 #endif
             cmdbuffers[rspidx] = NULL;
             str = NULL;
+
+            /* first it's checked if the name is an environment variable;
+             * to be removed, since NOT Masm-compatible.
+             */
             if ( paramfile[0] )
                 str = getenv( paramfile );
             if( str == NULL ) {
+                /* name isn't an environment variable - so assume it's a file name */
                 str = ReadParamFile( paramfile );
                 cmdbuffers[rspidx] = str;
                 if ( str == NULL ) {
@@ -1041,13 +1040,36 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
             }
             rspidx++;
             break;
+
+        case '"': /* v2.19: if response file, handle options in double quotes */
+            if ( rspidx && ( *(str+1) == '-' || *(str+1) == '/' )) {
+                char *p;
+                str++;str++;
+                for ( p = (char *)str; *p && *p != '"'; p++ )
+                    if ( *p == '\\' && *(p+1) != NULLC )
+                        p++;
+                if ( *p == '"' ) {
+                    int i = rspidx;
+                    *p = NULLC;
+                    *cmdline = str;
+                    rspidx = 0; /* don't stop if white spaces detected */
+                    ProcessOption( cmdline, paramfile );
+                    rspidx = i;
+                    (*pCntArgs)++;
+                    *p = ' ';
+                    str = *cmdline;
+                    break;
+                }
+            }
+            /* fall thru */
+
         default: /* collect  file name */
 #if BUILD_TARGET
             set_default_build_target();
 #endif
 #if 1 /* v2.06: activated (was removed in v2.05). Needed for quoted filenames */
             if ( rspidx ) {
-                str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, '@' );
+                str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
                 get_fname( OPTN_ASM_FN, paramfile );
             } else {
                 int len;
@@ -1056,7 +1078,7 @@ char * EXPQUAL ParseCmdline( const char **cmdline, int *pCntArgs )
                 str += len;
             }
 #else
-            str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, '@' );
+            str = GetNameToken( paramfile, str, sizeof( paramfile ) - 1, NT_FILENAME );
             Options.names[ASM] = MemAlloc( strlen( paramfile ) + 1 );
             strcpy( Options.names[ASM], paramfile );
 #endif

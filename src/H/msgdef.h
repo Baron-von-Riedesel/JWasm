@@ -6,7 +6,7 @@
  * v2.06: Japanese texts removed.
  * v2.07: listing texts moved to ltext.h
  */
-pick( MSG_USAGE,              "usage: JWasm [ options ] filelist [@env_var]\n" "Run \"JWasm -?\" or \"JWasm -h\" for more info\n" )
+pick( MSG_USAGE,              "usage: JWasm [ options ] filelist [@{env_var | file}]\n" )
 pick( MSG_ASSEMBLY_RESULTS,   "%s: %lu lines, %u passes, %u ms, %u warnings, %u errors" )
 pick( MSG_JWASM,              "JWasm v" _JWASM_VERSION_ ", " __DATE__ )
 pick( MSG_JWASM2,             "Masm-compatible assembler.\n" "Portions Copyright (c) 1992-2002 Sybase, Inc. All Rights Reserved.\n" "Source code is available under the Sybase Open Watcom Public License.\n" )
@@ -25,7 +25,7 @@ pick( TXT_ALIASNAME,          "alias" ) /* v2.10: added */
 
 /* error/warning message text constants */
 
-pick( msg_unused2,          "" )
+pick( MSG_USAGE2,             "Run \"JWasm -?\" or \"JWasm -h\" for more info\n" )
 pick( msg_unused3,          "" )
 pick( msg_unused4,          "" )
 pick( msg_unused5,          "" )
