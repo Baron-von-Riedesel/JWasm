@@ -708,8 +708,9 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
         case FIX_OFF32:
 #if PE_SUPPORT && AMD64_SUPPORT
             if ( seg && seg->e.seginfo->Ofssize == USE64 ) {
-                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_OFF32, sym=%s\n", curr->sym.name, fixup->locofs, seg ? seg->sym.name : "NULL" ));
-                if (value64 >= 0x80000000 )
+                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_OFF32, sym=%s value64=%" I64_SPEC "X\n", curr->sym.name, fixup->locofs, seg ? seg->sym.name : "NULL", value64 ));
+                /* 32-bit direct fixup is an error if image base is beyond 4G */
+                if (value64 >= 0x80000000 ) /* todo: explain why it's 2G, not 4G */
                     EmitErr( ADDR32_IN64BIT, fixup->sym ? fixup->sym->name : "?", curr->sym.name, fixup->locofs );
             }
 #endif
@@ -839,6 +840,8 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
 
 #if PE_SUPPORT
 
+/* pe_create_MZ_header() called by pe_enddirhook() */
+
 static void pe_create_MZ_header( struct module_info *modinfo )
 /************************************************************/
 {
@@ -948,6 +951,8 @@ void pe_create_PE_header( void )
 
 #define CHAR_READONLY ( IMAGE_SCN_MEM_READ >> 24 )
 
+/* pe_create_section_table() called by pe_enddirhook() when the END directive is handled */
+
 static void pe_create_section_table( void )
 /*****************************************/
 {
@@ -1049,6 +1054,8 @@ static int compare_exp( const void *p1, const void *p2 )
 {
     return( strcmp( ((struct expitem *)p1)->name, ((struct expitem *)p2)->name ) );
 }
+
+/* pe_emit_export_data() called by pe_enddirhook() */
 
 static void pe_emit_export_data( void )
 /*************************************/
@@ -1395,12 +1402,6 @@ static void pe_set_base_relocs( struct dsym *reloc )
     }
 }
 
-#if AMD64_SUPPORT
-#define GHF( x ) ( ( ModuleInfo.defOfssize == USE64 ) ? ph64->x : ph32->x )
-#else
-#define GHF( x ) ph32->x
-#endif
-
 /*
  * set values in PE header
  * including data directories:
@@ -1423,8 +1424,8 @@ struct codedata {
 /* finish a section in a PE.
  */
 
-void pe_finish_section( struct IMAGE_SECTION_HEADER *section, struct calc_param *cp, struct codedata *cd )
-/********************************************************************************************************/
+static void pe_finish_section( struct IMAGE_SECTION_HEADER *section, struct calc_param *cp, struct codedata *cd )
+/***************************************************************************************************************/
 {
 #if RAWSIZE_ROUND /* AntiVir TR/Crypt.XPACK Gen */
     section->SizeOfRawData += cp->rawpagesize - 1;
@@ -1452,11 +1453,207 @@ void pe_finish_section( struct IMAGE_SECTION_HEADER *section, struct calc_param 
     return;
 }
 
+/* v2.19: handle linker directives in info section ".drectve". */
+
+union pexx {
+    struct IMAGE_PE_HEADER32 *pe32;
+#if AMD64_SUPPORT
+    struct IMAGE_PE_HEADER64 *pe64;
+#endif
+};
+
+static int pe_lnkcmd_stub( union pexx pe, char *buffer )
+/******************************************************/
+{
+    FILE        *file;
+    uint_32     len;
+    char        *pStub;
+    struct dsym *mzhdrseg;
+    struct IMAGE_DOS_HEADER mzhdr;
+
+    DebugMsg(("pe_lnkcmd_stub: file=>%s<\n", buffer ));
+    if ( NULL == ( file = fopen( buffer, "rb" ) ) )
+        return( EmitErr( CANNOT_OPEN_FILE, buffer, ErrnoStr() ) );
+    /* result of fread() "should" not be ignored */
+    fread( &mzhdr, 1, sizeof( mzhdr), file );
+    if ( mzhdr.e_magic != 0x5a4d || mzhdr.e_cparhdr != 4 ) {
+        EmitErr( INVALID_STUB_FORMAT, buffer );
+        fclose( file );
+        return( 1 );
+    }
+    len = (mzhdr.e_cp - 1 ) * 0x200 + mzhdr.e_cblp;
+    pStub = LclAlloc( (len + 3) & ~3 );
+    memset( pStub, 0, (len + 3) & ~3 );
+    memcpy( pStub, &mzhdr, sizeof( mzhdr ) );
+    fread( pStub + sizeof( mzhdr ), 1, len - sizeof( mzhdr ), file );
+    fclose( file );
+    mzhdrseg  = ( struct dsym *)SymSearch( hdrname "1" );
+    if ( mzhdrseg ) {
+        DebugMsg(("pe_lnkcmd_stub: filesize=%u\n", len ));
+        mzhdrseg->e.seginfo->CodeBuffer = pStub;
+        mzhdrseg->sym.max_offset = (len + 3) & ~3;
+        mzhdrseg->e.seginfo->FixupList.head = NULL; /* disable fixup handling for this segment */
+        return( 0 );
+    }
+    return( 1 );
+}
+
+static int pe_lnkcmd_subsystem( union pexx pe, char *buffer )
+/***********************************************************/
+{
+    int subsys;
+    subsys = IMAGE_SUBSYSTEM_UNKNOWN;
+    if ( !_stricmp( buffer, "native" ) ) {
+        subsys = IMAGE_SUBSYSTEM_NATIVE;
+    } else if ( !_stricmp( buffer, "windows" ) ) {
+        subsys = IMAGE_SUBSYSTEM_WINDOWS_GUI;
+    } else if ( !_stricmp( buffer, "console" ) ) {
+        subsys = IMAGE_SUBSYSTEM_WINDOWS_CUI;
+    }
+    if ( subsys != IMAGE_SUBSYSTEM_UNKNOWN ) {
+#if AMD64_SUPPORT
+        if ( ModuleInfo.defOfssize == USE64 )
+            pe.pe64->OptionalHeader.Subsystem = subsys;
+        else
+#endif
+            pe.pe32->OptionalHeader.Subsystem = subsys;
+        return( 0 );
+    }
+    return( -1 );
+}
+
+static int pe_lnkcmd_base( union pexx pe, char *buffer )
+/******************************************************/
+{
+    uint_64 num[2];
+    int i = strlen(buffer);
+    if ( !_memicmp( buffer, "0x", 2 ) ) {
+        myatoi128( buffer+2, num, 16, i - 2 );
+    } else
+        myatoi128( buffer, num, 10, i );
+
+    /* base != 0, fits in 64-bits, page aligned? */
+    if ( num[0] == 0 || num[1] || ( num[0] & 0xfff ) )
+        return( 1 );
+
+#if AMD64_SUPPORT
+    if ( ModuleInfo.defOfssize == USE64 )
+        pe.pe64->OptionalHeader.ImageBase = num[0];
+    else
+#endif
+    {
+        if ( num[0] > 0xfffff000 )
+            return( 1 );
+        pe.pe32->OptionalHeader.ImageBase = (uint_32)num[0];
+    }
+
+    return( 0 );
+}
+
+static int pe_lnkcmd_fixed( union pexx pe, char *buffer )
+/*******************************************************/
+{
+    pe.pe32->FileHeader.Characteristics |= IMAGE_FILE_RELOCS_STRIPPED;
+    return( 0 );
+}
+
+static int pe_lnkcmd_fixedno( union pexx pe, char *buffer )
+/*********************************************************/
+{
+    pe.pe32->FileHeader.Characteristics &= ~IMAGE_FILE_RELOCS_STRIPPED;
+    return( 0 );
+}
+
+static int pe_lnkcmd_largeaddressaware( union pexx pe, char *buffer )
+/*******************************************************************/
+{
+    pe.pe32->FileHeader.Characteristics |= IMAGE_FILE_LARGE_ADDRESS_AWARE;
+    return( 0 );
+}
+
+static int pe_lnkcmd_largeaddressawareno( union pexx pe, char *buffer )
+/*********************************************************************/
+{
+    pe.pe32->FileHeader.Characteristics &= ~IMAGE_FILE_LARGE_ADDRESS_AWARE;
+    return( 0 );
+}
+
+static int pe_lnkcmd_dll( union pexx pe, char *buffer )
+/*****************************************************/
+{
+    pe.pe32->FileHeader.Characteristics |= IMAGE_FILE_DLL;
+    return( 0 );
+}
+
+struct linkcmd_s {
+    const char *cmd;
+    int (*func)(union pexx, char *);
+};
+
+/* linker commands that are known and handled */
+
+static struct linkcmd_s const linkcmds[] = {
+    { "base:", pe_lnkcmd_base },
+    { "dll", pe_lnkcmd_dll },
+    { "fixed", pe_lnkcmd_fixed },
+    { "fixed:no", pe_lnkcmd_fixedno },
+    { "largeaddressaware", pe_lnkcmd_largeaddressaware },
+    { "largeaddressaware:no", pe_lnkcmd_largeaddressawareno },
+    { "stub:", pe_lnkcmd_stub },
+    { "subsystem:", pe_lnkcmd_subsystem },
+};
+
+static void pe_scan_linker_directives( union pexx pe, char *p, int size )
+/***********************************************************************/
+{
+    while ( size ) {
+        char *tmp;
+        int cmdsize;
+        int i;
+        int result;
+        char buffer[128];
+
+        switch ( *p ) {
+        case '-':
+        case '/':
+            p++; size--;
+            tmp = buffer;
+            for ( cmdsize = 0, tmp = buffer; size && cmdsize < sizeof(buffer) && *p > ' '; *tmp++ = *p++, size--, cmdsize++ );
+            *tmp = NULLC;
+            for ( i = 0; i < sizeof( linkcmds ) / sizeof( linkcmds[0] ); i++ ) {
+                int len = strlen( linkcmds[i].cmd );
+                char lbyte = *(linkcmds[i].cmd + len - 1);
+                result = ( lbyte == ':' ) ? _memicmp( buffer, linkcmds[i].cmd, len ) : _stricmp( buffer, linkcmds[i].cmd );
+                if ( !result ) {
+                    result = linkcmds[i].func( pe, buffer + len );
+                    break;
+                }
+            }
+            if ( result ) {
+                DebugMsg(("pe_scan_linker_directives: ignored >%s<\n", buffer ));
+                EmitWarn( 2, TOKEN_IGNORED, buffer );
+            }
+            break;
+        default:
+            p++; size--;
+        }
+    }
+    return;
+}
+
 /* pe_set_values() - called by bin_write_module()
  * - create object table
+ * - create .reloc section if -fixed:no
  * - sort segments
  * - assign RVAs
  */
+
+#if AMD64_SUPPORT
+#define GHF( x ) ( ( ModuleInfo.defOfssize == USE64 ) ? pe.pe64->x : pe.pe32->x )
+#else
+#define GHF( x ) pe.pe32->x
+#endif
+
 
 static void pe_set_values( struct calc_param *cp )
 /************************************************/
@@ -1474,10 +1671,7 @@ static void pe_set_values( struct calc_param *cp )
     struct dsym *pehdr;
     struct dsym *objtab;
     struct dsym *reloc = NULL;
-    struct IMAGE_PE_HEADER32 *ph32;
-#if AMD64_SUPPORT
-    struct IMAGE_PE_HEADER64 *ph64;
-#endif
+    union pexx pe;
     struct IMAGE_FILE_HEADER *fh;
     struct IMAGE_SECTION_HEADER *section;
     struct IMAGE_DATA_DIRECTORY *datadir;
@@ -1488,19 +1682,18 @@ static void pe_set_values( struct calc_param *cp )
     pehdr  = ( struct dsym *)SymSearch( hdrname "2" );
     objtab = ( struct dsym *)SymSearch( hdrname "3" );
 
+    pe.pe32 = ( struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer;
+
+    /* v2.19: first, handle ".drectve" info sections */
+    for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
+        if ( curr->e.seginfo->information && ( !strcmp( curr->sym.name, ".drectve" ) ) )
+            pe_scan_linker_directives( pe, curr->e.seginfo->CodeBuffer, curr->e.seginfo->bytes_written );
+    }
+
     /* make sure all header objects are in FLAT group */
     mzhdr->e.seginfo->group = &ModuleInfo.flat_grp->sym;
-#if AMD64_SUPPORT
-    if ( ModuleInfo.defOfssize == USE64 ) {
-        ph64 = ( struct IMAGE_PE_HEADER64 *)pehdr->e.seginfo->CodeBuffer;
-        ff = ph64->FileHeader.Characteristics;
-    } else {
-#endif
-        ph32 = ( struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer;
-        ff = ph32->FileHeader.Characteristics;
-#if AMD64_SUPPORT
-    }
-#endif
+
+    ff = pe.pe32->FileHeader.Characteristics;
 
     if ( !( ff & IMAGE_FILE_RELOCS_STRIPPED ) ) {
         DebugMsg(("pe_set_values: .reloc section required\n" ));
@@ -1596,7 +1789,7 @@ static void pe_set_values( struct calc_param *cp )
     //DebugMsg(("pe_set_values: no of sections=%u (objtab.sym.max_offset=%u)\n", fh->NumberOfSections, objtab->sym.max_offset ));
 
 #if RAWSIZE_ROUND
-    cp->rawpagesize = ( ModuleInfo.defOfssize == USE64 ? ph64->OptionalHeader.FileAlignment : ph32->OptionalHeader.FileAlignment );
+    cp->rawpagesize = ( ModuleInfo.defOfssize == USE64 ? pe.pe64->OptionalHeader.FileAlignment : pe.pe32->OptionalHeader.FileAlignment );
 #endif
 
     /* fill object table values */
@@ -1618,8 +1811,12 @@ static void pe_set_values( struct calc_param *cp )
          * either since at that time there are no section contents available yet!
          */
         if ( curr->e.seginfo->information ) {/* v2.13: ignore 'info' sections (linker directives) */
-            EmitWarn( 2, INFO_SECTION_IGNORED, curr->sym.name ); /* v2.15: emit warning */
-            DebugMsg(("pe_set_values: skip %s - info\n", curr->sym.name ));
+            if ( !strcmp( curr->sym.name, ".drectve" ) ) /* v2.19: check linker cmds */
+                /* pe_scan_linker_directives( pehdr, curr ) */;  /* already done above */
+            else {
+                EmitWarn( 2, INFO_SECTION_IGNORED, curr->sym.name ); /* v2.15: emit warning */
+                DebugMsg(("pe_set_values: skip %s - info\n", curr->sym.name ));
+            }
             continue;
         }
         if ( curr->e.seginfo->lname_idx != i ) {
@@ -1671,10 +1868,10 @@ static void pe_set_values( struct calc_param *cp )
     if ( ModuleInfo.g.start_label ) {
 #if AMD64_SUPPORT
         if ( ModuleInfo.defOfssize == USE64 )
-            ph64->OptionalHeader.AddressOfEntryPoint = ((struct dsym *)ModuleInfo.g.start_label->segment)->e.seginfo->start_offset + ModuleInfo.g.start_label->offset;
+            pe.pe64->OptionalHeader.AddressOfEntryPoint = ((struct dsym *)ModuleInfo.g.start_label->segment)->e.seginfo->start_offset + ModuleInfo.g.start_label->offset;
         else
 #endif
-            ph32->OptionalHeader.AddressOfEntryPoint = ((struct dsym *)ModuleInfo.g.start_label->segment)->e.seginfo->start_offset + ModuleInfo.g.start_label->offset;
+            pe.pe32->OptionalHeader.AddressOfEntryPoint = ((struct dsym *)ModuleInfo.g.start_label->segment)->e.seginfo->start_offset + ModuleInfo.g.start_label->offset;
     } else {
         DebugMsg(("pe_set_values: warning: not start label found\n" ));
         EmitWarn( 2, NO_START_LABEL );
@@ -1684,27 +1881,27 @@ static void pe_set_values( struct calc_param *cp )
     if ( ModuleInfo.defOfssize == USE64 ) {
 #if IMGSIZE_ROUND
         /* round up the SizeOfImage field to page boundary */
-        sizeimg = ( sizeimg + ph64->OptionalHeader.SectionAlignment - 1 ) & ~(ph64->OptionalHeader.SectionAlignment - 1);
+        sizeimg = ( sizeimg + pe.pe64->OptionalHeader.SectionAlignment - 1 ) & ~(pe.pe64->OptionalHeader.SectionAlignment - 1);
 #endif
-        ph64->OptionalHeader.SizeOfCode = cd.codesize;
-        ph64->OptionalHeader.BaseOfCode = cd.codebase;
-        ph64->OptionalHeader.SizeOfImage = sizeimg;
-        ph64->OptionalHeader.SizeOfHeaders = sizehdr;
-        datadir = &ph64->OptionalHeader.DataDirectory[0];
+        pe.pe64->OptionalHeader.SizeOfCode = cd.codesize;
+        pe.pe64->OptionalHeader.BaseOfCode = cd.codebase;
+        pe.pe64->OptionalHeader.SizeOfImage = sizeimg;
+        pe.pe64->OptionalHeader.SizeOfHeaders = sizehdr;
+        datadir = &pe.pe64->OptionalHeader.DataDirectory[0];
     } else {
 #endif
 #if IMGSIZE_ROUND
         /* round up the SizeOfImage field to page boundary */
-        sizeimg = ( sizeimg + ph32->OptionalHeader.SectionAlignment - 1 ) & ~(ph32->OptionalHeader.SectionAlignment - 1);
+        sizeimg = ( sizeimg + pe.pe32->OptionalHeader.SectionAlignment - 1 ) & ~(pe.pe32->OptionalHeader.SectionAlignment - 1);
 #endif
         DebugMsg(("pe_set_values: SizeOfImage=%" I32_SPEC "X\n", sizeimg ));
-        ph32->OptionalHeader.SizeOfCode = cd.codesize;
-        ph32->OptionalHeader.SizeOfInitializedData = cd.datasize;
-        ph32->OptionalHeader.BaseOfCode = cd.codebase;
-        ph32->OptionalHeader.BaseOfData = cd.database;
-        ph32->OptionalHeader.SizeOfImage = sizeimg;
-        ph32->OptionalHeader.SizeOfHeaders = sizehdr;
-        datadir = &ph32->OptionalHeader.DataDirectory[0];
+        pe.pe32->OptionalHeader.SizeOfCode = cd.codesize;
+        pe.pe32->OptionalHeader.SizeOfInitializedData = cd.datasize;
+        pe.pe32->OptionalHeader.BaseOfCode = cd.codebase;
+        pe.pe32->OptionalHeader.BaseOfData = cd.database;
+        pe.pe32->OptionalHeader.SizeOfImage = sizeimg;
+        pe.pe32->OptionalHeader.SizeOfHeaders = sizehdr;
+        datadir = &pe.pe32->OptionalHeader.DataDirectory[0];
 #if AMD64_SUPPORT
     }
 #endif
@@ -1759,15 +1956,15 @@ static void pe_set_values( struct calc_param *cp )
             datadir[IMAGE_DIRECTORY_ENTRY_EXCEPTION].Size = curr->sym.max_offset;
         }
         /* v2.16: set default base for dll/exe */
-        if ( ph64->OptionalHeader.ImageBase == PE_UNDEF_BASE )
-            ph64->OptionalHeader.ImageBase = ( ff & IMAGE_FILE_DLL ) ? PE64_DEF_BASE_DLL : PE64_DEF_BASE_EXE;
-        cp->imagebase64 = ph64->OptionalHeader.ImageBase;
+        if ( pe.pe64->OptionalHeader.ImageBase == PE_UNDEF_BASE )
+            pe.pe64->OptionalHeader.ImageBase = ( ff & IMAGE_FILE_DLL ) ? PE64_DEF_BASE_DLL : PE64_DEF_BASE_EXE;
+        cp->imagebase64 = pe.pe64->OptionalHeader.ImageBase;
     } else {
 #endif
         /* v2.16: set default base for dll/exe */
-        if ( ph32->OptionalHeader.ImageBase == PE_UNDEF_BASE )
-            ph32->OptionalHeader.ImageBase = ( ff & IMAGE_FILE_DLL ) ? PE32_DEF_BASE_DLL : PE32_DEF_BASE_EXE;
-        cp->imagebase = ph32->OptionalHeader.ImageBase;
+        if ( pe.pe32->OptionalHeader.ImageBase == PE_UNDEF_BASE )
+            pe.pe32->OptionalHeader.ImageBase = ( ff & IMAGE_FILE_DLL ) ? PE32_DEF_BASE_DLL : PE32_DEF_BASE_EXE;
+        cp->imagebase = pe.pe32->OptionalHeader.ImageBase;
     }
 
     /* remove .hdr$1 from FLAT group again */

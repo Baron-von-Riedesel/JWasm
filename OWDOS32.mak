@@ -9,6 +9,9 @@
 # - jwlink ( OW's wlink might also be used )
 # - HXDev ( for modules cstrtdhr.obj and loadpero.bin )
 #
+# LibFile clock.obj is a replacement for the std OW clock();
+# it has a resolution of 1 ms instead of 55 ms.
+#
 # "WMake debug=1" - creates a debug version.
 #
 # Note that OW 1.9 has severe bugs concerning its LFN support!
@@ -102,7 +105,7 @@ format windows pe hx runtime console
 file { $(OUTD)/main.obj $(proj_obj) }
 name $@
 Libpath $(WATCOM)\lib386\dos;$(WATCOM)\lib386
-Libfile cstrtdhr.obj, inirmlfn.obj 
+Libfile cstrtdhr.obj, inirmlfn.obj, clock.obj
 op quiet, stack=0x10000, heapsize=0x1000, map=$^*, stub=loadpero.bin
 disable 171
 !ifndef NOGBL

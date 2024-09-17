@@ -1634,13 +1634,31 @@ _DATA                           C      10C        12        12
 <TR BGCOLOR="#E8E8E8"><TD>LoaderFlags</TD><TD>0</TD><TD></TD></TR>
 </TABLE>
 <P>
-    To change the default values in the PE header there are two options. First, a
-    predefined assembly-time variable <b>@pe_file_flags</b> will map the value
+    To change the default values in the PE header there are several options:
+<UL>
+<LI>
+    A "info" section named ".drectve" may contain linker options. Recognized and handled are:
+<UL>
+<LI>    /BASE:&lt;image_base&gt;</LI>
+<LI>    /DLL</LI>
+<LI>    /FIXED[:NO]</LI>
+<LI>    /LARGEADDRESSAWARE[:NO]</LI>
+<LI>    /STUB:&lt;stub file&gt;</LI>
+<LI>    /SUBSYSTEM:{ CONSOLE | NATIVE | WINDOWS }</LI>
+</UL>
+</LI>
+<LI>
+    A predefined assembly-time variable <b>@pe_file_flags</b> will map the value
     of field <i>Characteristics</i> - changing the value of @pe_file_flags will also change the value
-    in the header field. The other fields in the PE header are only accessible
+    in the header field.
+</LI>
+<LI>
+    Fields in the PE header that aren't handled by the previous options are only accessible
     by setting the appropriate values in section .hdr$2. Fields not listed in the table
     above are set internally by the assembler to ensure data integrity and cannot be modified
     from within the assembly source.
+</LI>
+</UL>
 <P>
     If the PE binary is to use <b>resources</b>, a .rsrc section has to be created which is to
     contain them. Defining the resources manually works and is doable, but it might become tedious
@@ -4419,8 +4437,8 @@ Those are currently not supported.</TD>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x087</b></TD>
-<TD></TD>
-<TD></TD>
+<TD>Missing macro argument: iteration %u</TD>
+<TD>Macro argument missing inside a FOR[c]/WHILE/REP[ea]T loop.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -4516,14 +4534,15 @@ and directives .STARTUP, .EXIT cannot be used.</TD>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x103</b></TD>
-<TD></TD>
-<TD></TD>
+<TD>Language attribute conflict: &lt;attribute&gt;</TD>
+<TD>A (weak) warning (Level 3) that may occure if a symbol's language defined via EXTERNDEF
+differs from the language at the symbols definition.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x104</b></TD>
 <TD>No filename specified.</TD>
-<TD></TD>
+<TD>Fatal error. JWasm needs a source filename for processing.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -5600,7 +5619,8 @@ The resulting MZ binary won't run without further modification, i.e. adding a DO
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x278</b></TD>
 <TD>ADDR32 fixup to '&lt;symbol&gt;' at location &lt;segment&gt;.&lt;offset&gt;</TD>
-<TD>64-bit PE format only: a 32-bit fixup was detected, but base address is above or equal 0x80000000.
+<TD>64-bit PE format only: a 32-bit fixup was detected, but magnitude of base address is &gt; 32;
+The default base for 64-bit PE binaries is 0x140000000.
 </TD>
 </TR>
 

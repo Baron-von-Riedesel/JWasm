@@ -1756,16 +1756,13 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         if( base == EMPTY && index == EMPTY ) {
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, Ofssize );
 #if AMD64_SUPPORT
+            /* v2.03: an override with a segment != FLAT will return a direct fixup */
+#define Get32Fixup() (opndx->override != NULL && SegOverride != &ModuleInfo.flat_grp->sym) ? FIX_OFF32 : FIX_RELOFF32
             /* v2.13: also check CI->Ofssize. if current segm is 64-bit,
-             * use 32-bit rel fixups (mixed mode 64-bit mz binary) - ignore Ofssize */
+             * use 32-bit RIP fixups (mixed mode 64-bit mz binary) - ignore Ofssize */
             //if ( Ofssize == USE64 )
             if (  Ofssize == USE64 || CodeInfo->Ofssize == USE64 )
-                /* v2.03: override with a segment assumed != FLAT? */
-                if ( opndx->override != NULL &&
-                    SegOverride != &ModuleInfo.flat_grp->sym )
-                    fixup_type = FIX_OFF32;
-                else
-                    fixup_type = FIX_RELOFF32;
+                fixup_type = Get32Fixup();
             else
 #endif
                 fixup_type = ( Ofssize ) ? FIX_OFF32 : FIX_OFF16;
@@ -1775,7 +1772,7 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
                       CodeInfo->Ofssize, CodeInfo->prefix.adrsiz, Ofssize ));
 #if AMD64_SUPPORT
             if( Ofssize == USE64 ) {
-                fixup_type = FIX_OFF32;
+                fixup_type = FIX_OFF32; /* RIP addressing not possible with based/indexed addressing? */
             } else
 #endif
             if( IS_ADDR32( CodeInfo ) ) { /* address prefix needed? */

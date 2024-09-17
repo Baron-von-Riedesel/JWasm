@@ -6,7 +6,7 @@
  * v2.06: Japanese texts removed.
  * v2.07: listing texts moved to ltext.h
  */
-pick( MSG_USAGE,              "usage: JWasm [ options ] filelist [@{env_var | file}]\n" )
+pick( MSG_USAGE,              "usage: JWasm [ options ] filelist [@{env_var | resp_file}]\n" )
 pick( MSG_ASSEMBLY_RESULTS,   "%s: %lu lines, %u passes, %u ms, %u warnings, %u errors" )
 pick( MSG_JWASM,              "JWasm v" _JWASM_VERSION_ ", " __DATE__ )
 pick( MSG_JWASM2,             "Masm-compatible assembler.\n" "Portions Copyright (c) 1992-2002 Sybase, Inc. All Rights Reserved.\n" "Source code is available under the Sybase Open Watcom Public License.\n" )
@@ -382,3 +382,8 @@ pick( msg_filler31, "" )
 #endif
 pick( OPCODE_SIZE_SUFFIX_IGNORED_FOR_SR, "Opcode size suffix ignored for segment registers" )
 pick( PROLOGUE_NOT_AT_PROC_START,        "Prologue not at PROC start" )
+#if PE_SUPPORT
+pick( INVALID_STUB_FORMAT,               "Invalid stub format" )
+#else
+pick( msg_filler32, "" )
+#endif

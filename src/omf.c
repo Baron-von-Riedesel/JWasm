@@ -1367,7 +1367,7 @@ static ret_code omf_write_pubdef( void )
 {
     struct qnode        *q;
 
-    DebugMsg1(("omf_write_pub enter\n"));
+    DebugMsg1(("omf_write_pubdef enter\n"));
 
     /* v2.07: struct pubdef_data has been modified to match
      * the data to be written to the object module more closely.
@@ -1380,6 +1380,9 @@ static ret_code omf_write_pubdef( void )
     while ( q ) {
         struct asym     *curr_seg;
         uint_8          *data;
+#ifdef DEBUG_OUT
+        uint_8          *extname;
+#endif
         unsigned        size;
         uint_8          curr32;
         uint_8          is32;
@@ -1442,6 +1445,9 @@ static ret_code omf_write_pubdef( void )
             curr32 = is32;
 
             *data = len;
+#ifdef DEBUG_OUT
+            extname = data+1;
+#endif
             data += len + 1;
             if ( curr32 ) {
                 *(uint_32 *)data = sym->offset;
@@ -1452,7 +1458,7 @@ static ret_code omf_write_pubdef( void )
             }
             *data++ = 0; /* type field */
             size = (char *)data - StringBufferEnd;
-            DebugMsg1(("omf_write_pub(%s)\n", sym->name ));
+            DebugMsg1(("omf_write_pubdef(%s, external=%.*s)\n", sym->name, len, extname ));
         }
         if ( size ) {
             struct omf_rec      obj;
@@ -1467,12 +1473,12 @@ static ret_code omf_write_pubdef( void )
                 obj.d.pubdef.base.grp_idx = omf_GetGrpIdx( GetGroup( curr_seg ) );
             }
             obj.d.pubdef.base.frame = 0;
-            DebugMsg1(("omf_write_pub: is_32=%u, size=%u\n", obj.is_32, size));
+            DebugMsg1(("omf_write_pubdef: is_32=%u, size=%u\n", obj.is_32, size));
             omf_write_record( &obj );
         }
     }
 
-    DebugMsg1(("omf_write_pub exit\n"));
+    DebugMsg1(("omf_write_pubdef exit\n"));
     return( NOT_ERROR );
 }
 

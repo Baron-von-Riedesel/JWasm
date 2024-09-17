@@ -22,6 +22,8 @@
    -  PUSHW will emit warning "magnitude of offset exceeds 16-bit" if
       operand is a 32-bit offset.
    -  using 'option oldmacros' will cause a warning only.
+   -  option -pe: info section ".drectve" will be scanned and some linker
+      options are recognized and handled.
    
 
    09.06.2024, v2.18:

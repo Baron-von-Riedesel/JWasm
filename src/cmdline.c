@@ -153,13 +153,17 @@ struct global_options Options = {
 char *DefaultDir[NUM_FILE_TYPES] = { NULL, NULL, NULL, NULL };
 //static char *DefaultExt[NUM_FILE_TYPES] = { OBJ_EXT, LST_EXT, ERR_EXT };
 
-#define MAX_RSP_NESTING 15  /* nesting of response files */
+#ifdef __I86__
+#define MAX_RSP_NESTING 3
+#else
+#define MAX_RSP_NESTING 15  /* max nesting level of response files */
+#endif
 
 static unsigned         OptValue;  /* value of option's numeric argument  */
 static char             *OptName;  /* value of option's name argument     */
-static const char       *cmdsave[MAX_RSP_NESTING]; /* response files: old cmdline ptr */
-static const char       *cmdbuffers[MAX_RSP_NESTING]; /* response files */
-static int              rspidx = 0; /* response file level */
+static const char       *cmdbuffers[MAX_RSP_NESTING]; /* response file stack */
+static const char       *cmdsave[MAX_RSP_NESTING];    /* saved old cmdline */
+static int              rspidx = 0; /* current response file index */
 
 /* array for options -0 ... -10 */
 static const enum cpu_info cpuoption[] = {
@@ -552,10 +556,10 @@ struct  cmdloption {
 
 /*
  * '#': collect a number
- * '$': collect an identifer[=value]
+ * '$': collect an identifer[=value] (for -D, -nc, -nd, -nm, -nt)
  * '@': collect a filename
  * '=': collect an optional '='
- * '^': skip spaces before argument
+ * '^': skip spaces before argument (for -D, -Fi, -Fo, -Fw, -I)
  */
 static struct cmdloption const cmdl_options[] = {
 #ifndef __SW_BD
