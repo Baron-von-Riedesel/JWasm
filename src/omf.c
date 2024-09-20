@@ -711,6 +711,7 @@ static void omf_write_export( void )
 {
     uint_8      parmcnt;
     struct dsym *dir;
+    struct qnode *q;
     struct dsym *parm;
     struct omf_rec obj;
     int         len;
@@ -720,9 +721,12 @@ static void omf_write_export( void )
     omf_write_import();
 #endif
 
-    for( dir = SymTables[TAB_PROC].head; dir != NULL; dir = dir->nextproc ) {
-        if( dir->e.procinfo->isexport ) {
+    /* v2.19: scan the PUBLIC queue instead of just PROCs */
+    //for( dir = SymTables[TAB_PROC].head; dir != NULL; dir = dir->nextproc ) {
+    for ( q = ModuleInfo.g.PubQueue.head; q; q = q->next ) {
+        if( q->sym->isexport ) {
 
+            dir = (struct dsym *)(q->sym);
             omf_InitRec( &obj, CMD_COMENT );
             obj.d.coment.attr = 0x00;
             obj.d.coment.cmt_class = CMT_OMF_EXT;
@@ -758,8 +762,11 @@ static void omf_write_export( void )
              * bit 6: resident (name should be kept resident)
              * bit 7: ordinal ( if 1, 2 byte index must follow name)
              */
-            for ( parm = dir->e.procinfo->paralist, parmcnt = 0; parm; parm = parm->nextparam, parmcnt++ );
-            parmcnt &= 0x1F; /* ensure bits 5-7 are still 0 */
+            parmcnt = 0x00;
+            if ( dir->sym.isproc ) {
+                for ( parm = dir->e.procinfo->paralist, parmcnt = 0; parm; parm = parm->nextparam, parmcnt++ );
+                parmcnt &= 0x1F; /* ensure bits 5-7 are still 0 */
+            }
             Put8( &obj, parmcnt ); /* v2.01: changed from fix 0x00 */
             Put8( &obj, len );
             obj.curoff += len;

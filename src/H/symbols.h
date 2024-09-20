@@ -157,6 +157,7 @@ struct asym {
 //                    isstatic:1,   /* symbol stored in static memory */
 //#endif
                     fwdref:1,     /* symbol was forward referenced */
+                    isexport:1,   /* v2.19: symbol exported ( SYM_INTERNAL ) */
                     included:1;   /* COFF: static symbol added to public queue. ELF:symbol added to symbol table (SYM_INTERNAL) */
     union {
         /* for SYM_INTERNAL (data labels, memtype != NEAR|FAR), SYM_STRUCT_FIELD */
@@ -363,7 +364,7 @@ struct proc_info {
         struct {
             unsigned char  has_vararg:1;/* last param is VARARG */
             unsigned char  pe_type:1;   /* PROC: prolog-epilog type, 1=use LEAVE */
-            unsigned char  isexport:1;  /* PROC: EXPORT attribute set */
+            //unsigned char  isexport:1;  /* PROC: EXPORT attribute set; v2.19: moved to struct asym */
             //unsigned char  init_done:1; /* has ParseProc() been called? v2.11: obsolete */
             unsigned char  forceframe:1;/* PROC: FORCEFRAME prologuearg? */
             unsigned char  loadds:1;    /* PROC: LOADDS prologuearg? */

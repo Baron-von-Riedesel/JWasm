@@ -949,6 +949,7 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
     struct asym         *sym;
     //struct dsym       *dir;
     char                skipitem;
+    bool                isexport;
     enum lang_type      langtype;
 
     DebugMsg1(("PublicDirective(%u) enter\n", i));
@@ -965,6 +966,14 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
         if ( tokenarray[i].token != T_ID ) {
             return( EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr ) );
         }
+        /* v2.19: syntax extension: scan for optional EXPORT attribute */
+        isexport = FALSE;
+        if ( tokenarray[i+1].token == T_ID )
+            if (!_stricmp( tokenarray[i].string_ptr, "EXPORT" ) ) {
+                isexport = TRUE;
+                i++;
+            }
+
         /* get the symbol name */
         token = tokenarray[i++].string_ptr;
 
@@ -978,7 +987,7 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
                     sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym );
                     DebugMsg1(("PublicDirective(%s): new symbol\n", sym->name ));
                 } else
-                    return( ERROR ); /* name was too long */
+                    return( ERROR ); /* invalid name? */
             }
             skipitem = FALSE;
         } else {
@@ -990,6 +999,7 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
         if ( sym ) {
             switch ( sym->state ) {
             case SYM_UNDEFINED:
+                sym->isexport = isexport;
                 break;
             case SYM_INTERNAL:
                 if ( sym->scoped == TRUE ) {
@@ -997,6 +1007,8 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
                     skipitem = TRUE;
                     //return( ERROR );
                 }
+                if ( isexport )
+                    sym->isexport = TRUE;
                 break;
             case SYM_EXTERNAL:
                 if ( sym->iscomm == TRUE ) {
@@ -1008,7 +1020,7 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
                     EmitErr( SYMBOL_REDEFINITION, sym->name );
                     skipitem = TRUE;
                     //return( ERROR );
-                }
+                } /* a "weak" external (EXTERNDEF) causes no error ( masm compatible ) */
                 break;
             default:
                 EmitErr( CANNOT_DEFINE_AS_PUBLIC_OR_EXTERNAL, sym->name );

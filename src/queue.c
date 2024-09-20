@@ -24,7 +24,9 @@
 *
 *  ========================================================================
 *
-* Description:  implements queue object
+* Description:  implements queue object; queues are used
+*               for publics, lnames, includelibs, safeseh and
+*               - if FASTPASS is on, the "line store".
 *
 ****************************************************************************/
 

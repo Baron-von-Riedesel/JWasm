@@ -347,6 +347,7 @@ void ListAddSubItem( struct list_item *pItem, char *pLine )
 	int len = strlen( pLine );
 	struct lprefix *curr;
 	struct lprefix *prefix;
+	/**/myassert( pItem );
 	prefix = LclAlloc( sizeof( struct lprefix ) + ( len > 28 ? len : 28 ) );
 	prefix->next = NULL;
 	memcpy( prefix->line, pLine, len+1 );

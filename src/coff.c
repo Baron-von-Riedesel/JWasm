@@ -1233,15 +1233,19 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
 static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm )
 /********************************************************************************/
 {
-    struct dsym *exp;
+    //struct dsym *exp;
+    struct qnode *qexp;
 #if DLLIMPORT
     struct dsym *imp = NULL;
 #endif
     char buffer[MAX_ID_LEN + MANGLE_BYTES + 1];
 
-    /* does a proc exist with the EXPORT attribute? */
-    for( exp = SymTables[TAB_PROC].head; exp != NULL; exp = exp->nextproc ) {
-        if( exp->e.procinfo->isexport )
+    /* does a proc exist with the EXPORT attribute?
+     * v2.19: scan the public queue instead of just PROCs
+     */
+    //for( exp = SymTables[TAB_PROC].head; exp != NULL; exp = exp->nextproc ) {
+    for ( qexp = ModuleInfo.g.PubQueue.head; qexp; qexp = qexp->next ) {
+        if( qexp->sym->isexport )
             break;
     }
 #if DLLIMPORT
@@ -1255,7 +1259,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
     /* add a .drectve section if
      - a start_label is defined    and/or
      - a library is included       and/or
-     - a proc is exported          and/or
+     - a proc/variable is exported and/or
      - impdefs are to be written (-Zd)
      */
     if ( modinfo->g.start_label != NULL ||
@@ -1263,9 +1267,10 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
 #if DLLIMPORT
         imp != NULL ||
 #endif
-        exp != NULL ) {
+        qexp != NULL ) {
         if ( cm->directives = (struct dsym *)CreateIntSegment( szdrectve, "", MAX_SEGALIGNMENT, modinfo->Ofssize, FALSE ) ) {
             struct dsym *tmp;
+            struct qnode *texp;
             int size = 0;
             struct qitem *q;
             uint_8 *p;
@@ -1274,12 +1279,12 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
 
             /* calc the size for this segment */
             /* 1. exports */
-            for( tmp = exp; tmp ; tmp = tmp->nextproc ) {
-                if( tmp->e.procinfo->isexport ) {
-                    size += Mangle( &tmp->sym, buffer );
+            for( texp = qexp; texp ; texp = texp->next ) {
+                if( texp->sym->isexport ) {
+                    size += Mangle( texp->sym, buffer );
                     size += sizeof("-export:");
                     if ( Options.no_export_decoration == TRUE )
-                        size += tmp->sym.name_size + 1;
+                        size += texp->sym->name_size + 1;
                 }
             }
             /* 2. defaultlibs */
@@ -1319,13 +1324,13 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             /* copy the data */
 
             /* 1. exports */
-            for( tmp = exp; tmp ; tmp = tmp->nextproc ) {
-                if( tmp->e.procinfo->isexport ) {
-                    Mangle( &tmp->sym, buffer );
+            for( texp = qexp; texp ; texp = texp->next ) {
+                if( texp->sym->isexport ) {
+                    Mangle( texp->sym, buffer );
                     if ( Options.no_export_decoration == FALSE )
                         p += sprintf( (char *)p, "-export:%s ", buffer );
                     else
-                        p += sprintf( (char *)p, "-export:%s=%s ", tmp->sym.name, buffer );
+                        p += sprintf( (char *)p, "-export:%s=%s ", texp->sym->name, buffer );
                 }
             }
             /* 2. libraries */

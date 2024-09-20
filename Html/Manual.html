@@ -68,13 +68,14 @@
 <DD>     3.21 <A HREF="#SIMSEGARG">Optional Name Argument for Simplified Segment Directives</A></DD>
 <DD>     3.22 <A HREF="#ATTRCOMDAT">Segment Attribute COMDAT</A></DD>
 <DD>     3.23 <A HREF="#VARARGMLATTR">Attribute VARARGML for last Macro Parameter</A></DD>
-<DD>     3.24 <A HREF="#OTHERDIFF">Miscellaneous</A></DD>
+<DD>     3.24 <A HREF="#DIRPUBLIC">Optional EXPORT attribute for PUBLIC Directive</A></DD>
+<DD>     3.25 <A HREF="#OTHERDIFF">Miscellaneous</A></DD>
 <DL>
-<DD>     3.24.1 <A HREF="#OTHERDIFF1">Numeric constant __JWASM__</A></DD>
-<DD>     3.24.2 <A HREF="#OTHERDIFF2">Operating System Argument for .MODEL</A></DD>
-<DD>     3.24.3 <A HREF="#OTHERDIFF3">Accepted Parameters for IF[N]DEF Directive</A></DD>
-<DD>     3.24.4 <A HREF="#OTHERDIFF4">Visibility of Procedures</A></DD>
-<DD>     3.24.5 <A HREF="#OTHERDIFF5">Non-RIP-Relative Addressing in 64-Bit</A></DD>
+<DD>     3.25.1 <A HREF="#OTHERDIFF1">Numeric constant __JWASM__</A></DD>
+<DD>     3.25.2 <A HREF="#OTHERDIFF2">Operating System Argument for .MODEL</A></DD>
+<DD>     3.25.3 <A HREF="#OTHERDIFF3">Accepted Parameters for IF[N]DEF Directive</A></DD>
+<DD>     3.25.4 <A HREF="#OTHERDIFF4">Visibility of Procedures</A></DD>
+<DD>     3.25.5 <A HREF="#OTHERDIFF5">Non-RIP-Relative Addressing in 64-Bit</A></DD>
 </DL>
 </DL>
 <DD>    4.    <A HREF="#CHAPINSTRSET">Instruction Sets</A></DD>
@@ -1169,31 +1170,43 @@ size_myarray equ $ - myarray
     a comma.
 
 
-<H2 ID="OTHERDIFF">    3.24 Miscellaneous </H2>
+<H2 ID="DIRPUBLIC">    3.24 Optional EXPORT Attribute for PUBLIC Directive </H2>
+
+    The PUBLIC directive accepts an optional EXPORT attribute:
+
+<P><pre><font color="#008040"> 
+    PUBLIC EXPORT var1
+</font></pre><P>
+
+    This extension may be used to declate data items as exports ( the PROC directive 
+    accepts the EXPORT attribute as well ). It's intended usage is mainly for option -pe.
+
+
+<H2 ID="OTHERDIFF">    3.25 Miscellaneous </H2>
 
 <DL>
-<DD>   <A HREF="#OTHERDIFF1">    3.24.1 Numeric constant __JWASM__ </A></DD>
-<DD>   <A HREF="#OTHERDIFF2">    3.24.2 Operating System Argument for .MODEL </A></DD>
-<DD>   <A HREF="#OTHERDIFF3">    3.24.3 Accepted Parameters for IF[N]DEF Directive </A></DD>
-<DD>   <A HREF="#OTHERDIFF4">    3.24.4 Visibility of Procedures </A></DD>
-<DD>   <A HREF="#OTHERDIFF5">    3.24.5 Non-RIP-Relative Addressing in 64-Bit </A></DD>
+<DD>   <A HREF="#OTHERDIFF1">    3.25.1 Numeric constant __JWASM__ </A></DD>
+<DD>   <A HREF="#OTHERDIFF2">    3.25.2 Operating System Argument for .MODEL </A></DD>
+<DD>   <A HREF="#OTHERDIFF3">    3.25.3 Accepted Parameters for IF[N]DEF Directive </A></DD>
+<DD>   <A HREF="#OTHERDIFF4">    3.25.4 Visibility of Procedures </A></DD>
+<DD>   <A HREF="#OTHERDIFF5">    3.25.5 Non-RIP-Relative Addressing in 64-Bit </A></DD>
 </DL>
 
-<H3 ID="OTHERDIFF1">    3.24.1 Numeric constant __JWASM__ </H3>
+<H3 ID="OTHERDIFF1">    3.25.1 Numeric constant __JWASM__ </H3>
 
     __JWASM__ is a predefined symbol, its value is the current JWasm
     version * 100, that is, for v1.9 the value is 190. The predefined text
     equate @Version won't contain JWasm's version, for compatibility reasons
     it has value &lt;800&gt; (since v2.06, previously the value was &lt;615&gt;).
 
-<H3 ID="OTHERDIFF2">    3.24.2 Operating System Argument for .MODEL </H3>
+<H3 ID="OTHERDIFF2">    3.25.2 Operating System Argument for .MODEL </H3>
 
     The .MODEL directive has an optional "operating system" argument. Masm
     accepts value OS_DOS only, JWasm accepts values OS_DOS and OS_OS2.
     This setting will affect the generated code of directives .STARTUP and
     .EXIT for 16-bit memory models.
 
-<H3 ID="OTHERDIFF3">    3.24.3 Accepted Parameters for IF[N]DEF Directive </H3>
+<H3 ID="OTHERDIFF3">    3.25.3 Accepted Parameters for IF[N]DEF Directive </H3>
 
     Masm's IF[N]DEF directive accepts user-defined symbols and registers,
     but fails for instructions, directives and other reserved words. JWasm's
@@ -1204,7 +1217,7 @@ size_myarray equ $ - myarray
 <P>
     Also see <A HREF="#MBGARG">Member Argument for IF[N]DEF and .ERR[N]DEF Directives</A>.
 
-<H3 ID="OTHERDIFF4">    3.24.4 Visibility of Procedures </H3>
+<H3 ID="OTHERDIFF4">    3.25.4 Visibility of Procedures </H3>
 
     When a PROTO or EXTERNDEF directive for a symbol is located in a module
     before a matching PROC directive, the visibility of this Procedure 
@@ -1246,7 +1259,7 @@ size_myarray equ $ - myarray
     are no differences between Masm v6, v8 and JWasm, and the -Zv8 switch
     also has no effect then.
 <P> 
-<H3 ID="OTHERDIFF5">    3.24.5 Non-RIP-Relative Addressing in 64-Bit </H3>
+<H3 ID="OTHERDIFF5">    3.25.5 Non-RIP-Relative Addressing in 64-Bit </H3>
 
     In 64-bit a RIP-relative addressing mode was introduced. This mode is used as
 	default for direct addressing, because it allows to access all code or data labels
@@ -1639,11 +1652,10 @@ _DATA                           C      10C        12        12
 <LI>
     A "info" section named ".drectve" may contain linker options. Recognized and handled are:
 <UL>
-<LI>    /BASE:&lt;image_base&gt;</LI>
+<LI>    /BASE:&lt;image base&gt;</LI>
 <LI>    /DLL</LI>
 <LI>    /FIXED[:NO]</LI>
 <LI>    /LARGEADDRESSAWARE[:NO]</LI>
-<LI>    /STUB:&lt;stub file&gt;</LI>
 <LI>    /SUBSYSTEM:{ CONSOLE | NATIVE | WINDOWS }</LI>
 </UL>
 </LI>
@@ -1665,9 +1677,25 @@ _DATA                           C      10C        12        12
     if a lot of resource items are to be defined. Therefore tool <b>res2inc</b> is supplied, which
     allows to convert a compiled resource file (.RES) to an assembly include file.
 <P>
-    If a <b>dll</b> is created with -pe, one has to mark all procedures that are to be exported with
-    the EXPORT attribute. If the exported names are to be undecorated, use the 
-    <A HREF="#CMDOPTZZE">-zze</A> cmdline option.
+    If addresses are to be <b>exported</b> in format -pe, there are two options:
+    <UL><LI>
+   PROCedures can be marked directly with the EXPORT attribute. 
+   Alternately, with OPTION PROC:EXPORT, all procedures in a module will be exported.
+   These alternatives are compatible with Masm.
+   </LI>
+   <LI>
+   To export addresses of data items, the syntax of the <A HREF="#DIRPUBLIC">PUBLIC</A> directive has been extended.
+   This is a JWasm extension and cannot be used with Masm.
+    </LI></UL>
+    If the exported names are to be undecorated, use the <A HREF="#CMDOPTZZE">-zze</A> cmdline option.
+<P>
+    To change the default stub that displays "This is a PE executable" if the executable is launched in
+    DOS, use the <A HREF="#DIRINCBIN">INCBIN</A> directive;
+<pre>
+    .hdr$1 segment
+    %INCBIN &lt;stub_file&gt;
+    .hdr$1 ends
+</pre>
 <P>
     Sample <A HREF="#AB06">Win64_8</A> shows how a 64-bit Windows binary is created with -pe. It also
     shows how to define resources in .rsrc manually and how to modify default values of PE header fields.

@@ -1060,18 +1060,24 @@ static int compare_exp( const void *p1, const void *p2 )
 static void pe_emit_export_data( void )
 /*************************************/
 {
-    struct dsym *curr;
+//    struct dsym *curr;
     int_32 timedate;
     int cnt;
     int i;
     char *name;
     char *fname;
+    struct qnode *q;
     struct expitem *pitems;
     struct expitem *pexp;
 
     DebugMsg1(("pe_emit_export_data enter\n" ));
-    for( curr = SymTables[TAB_PROC].head, cnt = 0; curr; curr = curr->nextproc ) {
-        if( curr->e.procinfo->isexport )
+
+    /* v2.19: scan the public queue instead of just PROCs.
+     * In v2.19, the PUBLIC directive has been extended to allow to export data items;
+     * masm has the restriction that only PROCs can have the "export" attribute.
+     */
+    for ( q = ModuleInfo.g.PubQueue.head, cnt = 0; q; q = q->next ) {
+        if( q->sym->isexport )
             cnt++;
     }
 
@@ -1093,10 +1099,10 @@ static void pe_emit_export_data( void )
          * so we have to fill an array of exports and sort it.
          */
         pitems = (struct expitem *)myalloca( cnt * sizeof( struct expitem ) );
-        for( curr = SymTables[TAB_PROC].head, pexp = pitems, i = 0; curr; curr = curr->nextproc ) {
-            if( curr->e.procinfo->isexport ) {
-                DebugMsg1(("pe_emit_export_data: export proc >%s<\n", curr->sym.name ));
-                pexp->name = curr->sym.name;
+        for ( q = ModuleInfo.g.PubQueue.head, pexp = pitems, i = 0; q; q = q->next ) { /* v2.19: scan the public queue */
+            if( q->sym->isexport ) {
+                DebugMsg1(("pe_emit_export_data: export proc >%s<\n", q->sym->name ));
+                pexp->name = q->sym->name;
                 pexp->idx  = i++;
                 pexp++;
             }
@@ -1108,11 +1114,10 @@ static void pe_emit_export_data( void )
          * but we want to emit the EAT being sorted by address.
          */
         AddLineQueueX( "@%s_func %r DWORD", name, T_LABEL );
-        for( curr = SymTables[TAB_PROC].head; curr; curr = curr->nextproc ) {
-            if( curr->e.procinfo->isexport )
-                AddLineQueueX( "DD %r %s", T_IMAGEREL, curr->sym.name );
+        for ( q = ModuleInfo.g.PubQueue.head; q; q = q->next ) { /* v2.19: scan the public queue */
+            if( q->sym->isexport )
+                AddLineQueueX( "DD %r %s", T_IMAGEREL, q->sym->name );
         }
-
         /* emit the name pointer table */
         AddLineQueueX( "@%s_names %r DWORD", name, T_LABEL );
         for ( i = 0; i < cnt; i++ )
@@ -1132,10 +1137,10 @@ static void pe_emit_export_data( void )
             }
         AddLineQueueX( "@%s_name DB '%s',0", name, fname );
 
-        for( curr = SymTables[TAB_PROC].head; curr; curr = curr->nextproc ) {
-            if( curr->e.procinfo->isexport ) {
-                Mangle( &curr->sym, StringBufferEnd );
-                AddLineQueueX( "@%s DB '%s',0", curr->sym.name, Options.no_export_decoration ? curr->sym.name : StringBufferEnd );
+        for ( q = ModuleInfo.g.PubQueue.head; q; q = q->next ) { /* v2.19: scan the public queue */
+            if( q->sym->isexport ) {
+                Mangle( q->sym, StringBufferEnd );
+                AddLineQueueX( "@%s DB '%s',0", q->sym->name, Options.no_export_decoration ? q->sym->name : StringBufferEnd );
             }
         }
         /* exit .edata segment */
@@ -1462,6 +1467,14 @@ union pexx {
 #endif
 };
 
+#if 0 /* linker directive -stub:xxx not implemented */
+
+/* To set an alternative stub use the INCBIN directive:
+ * .hdr$1 segment
+ * %incbin <stubfile>
+ * .hdr$1 ends
+ */
+
 static int pe_lnkcmd_stub( union pexx pe, char *buffer )
 /******************************************************/
 {
@@ -1477,7 +1490,7 @@ static int pe_lnkcmd_stub( union pexx pe, char *buffer )
     /* result of fread() "should" not be ignored */
     fread( &mzhdr, 1, sizeof( mzhdr), file );
     if ( mzhdr.e_magic != 0x5a4d || mzhdr.e_cparhdr != 4 ) {
-        EmitErr( INVALID_STUB_FORMAT, buffer );
+        EmitErr( INVALID_STUB_FORMAT, buffer ); /* msg must be defined in msgdef.h if this function is activated */
         fclose( file );
         return( 1 );
     }
@@ -1497,6 +1510,8 @@ static int pe_lnkcmd_stub( union pexx pe, char *buffer )
     }
     return( 1 );
 }
+
+#endif
 
 static int pe_lnkcmd_subsystem( union pexx pe, char *buffer )
 /***********************************************************/
@@ -1599,7 +1614,7 @@ static struct linkcmd_s const linkcmds[] = {
     { "fixed:no", pe_lnkcmd_fixedno },
     { "largeaddressaware", pe_lnkcmd_largeaddressaware },
     { "largeaddressaware:no", pe_lnkcmd_largeaddressawareno },
-    { "stub:", pe_lnkcmd_stub },
+    //{ "stub:", pe_lnkcmd_stub },
     { "subsystem:", pe_lnkcmd_subsystem },
 };
 
@@ -1778,9 +1793,14 @@ static void pe_set_values( struct calc_param *cp )
     DebugMsg(("pe_set_values: cp->rva=%" I32_SPEC "X\n", cp->rva ));
     sizeimg = cp->rva;
 
-    /* set e_lfanew of dosstub to start of PE header */
-    if ( mzhdr->sym.max_offset >= 0x40 )
-        ((struct IMAGE_DOS_HEADER *)mzhdr->e.seginfo->CodeBuffer)->e_lfanew = pehdr->e.seginfo->fileoffset;
+    /* set e_lfanew of dosstub to start of PE header.
+     * v2.19: added a few consistency checks.
+     */
+    if ( mzhdr->sym.max_offset >= sizeof( struct IMAGE_DOS_HEADER ) ) {
+        struct IMAGE_DOS_HEADER *mz = (struct IMAGE_DOS_HEADER *)mzhdr->e.seginfo->CodeBuffer;
+        if ( mz->e_magic == 0x5a4d && mz->e_cparhdr >= 4 )
+            mz->e_lfanew = pehdr->e.seginfo->fileoffset;
+    }
 
     fh = &((struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer)->FileHeader;
     /* set number of sections in PE file header (doesn't matter if it's 32- or 64-bit) */
@@ -1804,16 +1824,11 @@ static void pe_set_values( struct calc_param *cp )
             DebugMsg(("pe_set_values: skip %s - max_offset=0\n", curr->sym.name ));
             continue;
         }
-        /* v2.16: linker directive sections are ignored. Would be good to scan
-         * them for export directives, since masm/jwasm has the restriction that only PROCs can
-         * be exported. The problem is that it's far too late here, function pe_emit_export_data() has
-         * been called just after step 1 - and worse, inside pe_emit_export_data() it cannot be done
-         * either since at that time there are no section contents available yet!
+        /* v2.16: linker directive sections are ignored.
+         * v2.19: info section .drectve is now scanned - see start of this function.
          */
         if ( curr->e.seginfo->information ) {/* v2.13: ignore 'info' sections (linker directives) */
-            if ( !strcmp( curr->sym.name, ".drectve" ) ) /* v2.19: check linker cmds */
-                /* pe_scan_linker_directives( pehdr, curr ) */;  /* already done above */
-            else {
+            if ( 0 != strcmp( curr->sym.name, ".drectve" ) ) { /* v2.19: just skip .drectve, it's already been scanned */
                 EmitWarn( 2, INFO_SECTION_IGNORED, curr->sym.name ); /* v2.15: emit warning */
                 DebugMsg(("pe_set_values: skip %s - info\n", curr->sym.name ));
             }
@@ -2220,9 +2235,10 @@ static ret_code bin_write_module( struct module_info *modinfo )
         }
 #if PE_SUPPORT
         if ( modinfo->sub_format == SFORMAT_PE &&
-            ( curr->e.seginfo->segtype == SEGTYPE_BSS || curr->e.seginfo->information ) )
+            ( curr->e.seginfo->segtype == SEGTYPE_BSS || curr->e.seginfo->information ) ) {
             size = 0;
-        else
+            if ( curr->e.seginfo->information ) continue; /* v2.19: info sections shouldn't appear in binary map */
+        } else
 #endif
             /* v2.05: changed */
 			/* v2.19: subtract start_loc only if -bin AND first segment */

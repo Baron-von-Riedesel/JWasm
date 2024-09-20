@@ -1014,7 +1014,7 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
     /* set some default values */
 
     if ( IsPROC ) {
-        proc->e.procinfo->isexport = ModuleInfo.procs_export;
+        proc->sym.isexport = ModuleInfo.procs_export;
         /* don't overwrite a PUBLIC directive for this symbol! */
         if ( ModuleInfo.procs_private == FALSE )
             proc->sym.ispublic = TRUE;
@@ -1148,18 +1148,18 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
                     SkipSavedState(); /* do a full pass-2 scan */
                 }
 #endif
-                proc->e.procinfo->isexport = FALSE;
+                proc->sym.isexport = FALSE;
             }
             i++;
         } else if ( IsPROC && (_stricmp(token, "PUBLIC") == 0 ) ) {
             proc->sym.ispublic = TRUE;
-            proc->e.procinfo->isexport = FALSE;
+            proc->sym.isexport = FALSE;
             i++;
         } else if ( _stricmp(token, "EXPORT") == 0 ) {
             DebugMsg1(("ParseProc(%s): EXPORT detected\n", proc->sym.name ));
             if ( IsPROC ) { /* v2.11: ignore EXPORT for PROTO */
                 proc->sym.ispublic = TRUE;
-                proc->e.procinfo->isexport = TRUE;
+                proc->sym.isexport = TRUE;
                 /* v2.11: no export for 16-bit near */
                 if ( ModuleInfo.Ofssize == USE16 && proc->sym.mem_type == MT_NEAR )
                     EmitErr( EXPORT_MUST_BE_FAR, proc->sym.name );
@@ -2142,7 +2142,7 @@ static ret_code write_userdef_prologue( struct asm_tok tokenarray[] )
     /* v2.11: set bit 7 if proc is export */
     flags |= ( CurrProc->sym.mem_type == MT_FAR ? 0x20 : 0 );
     flags |= ( CurrProc->sym.ispublic ? 0 : 0x40 );
-    flags |= ( info->isexport ? 0x80 : 0 );
+    flags |= ( CurrProc->sym.isexport ? 0x80 : 0 );
 
     dir = (struct dsym *)SymSearch( ModuleInfo.proc_prologue );
     if ( dir == NULL || dir->sym.state != SYM_MACRO || dir->sym.isfunc != TRUE ) {
@@ -2972,7 +2972,7 @@ static ret_code write_userdef_epilogue( bool flag_iret, struct asm_tok tokenarra
     flags |= ( CurrProc->sym.mem_type == MT_FAR ? 0x20 : 0 );
     flags |= ( CurrProc->sym.ispublic ? 0 : 0x40 );
     /* v2.11: set bit 7, the export flag */
-    flags |= ( info->isexport ? 0x80 : 0 );
+    flags |= ( CurrProc->sym.isexport ? 0x80 : 0 );
     flags |= flag_iret ? 0x100 : 0;  /* bit 8: 1 if IRET    */
 
     p = reglst;

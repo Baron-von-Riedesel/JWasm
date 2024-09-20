@@ -136,9 +136,8 @@ segment CONST2 readonly
 <<
 
 # the DOS binary ( with statically linke Win32 emulation )
-# cstrtwhx.obj: created from modified cstrtwnt.asm;
-# if HX's InitW3ow.obj is used instead, a warning (multiple start addresses)
-# will be emitted.
+# OW startup module is either cstrtwhx.obj (created from modified cstrtwnt.asm) or InitW3OW.obj.
+# If InitW3OW.obj is used, a warning (multiple start addresses) will be emitted; it's suppressed by "disable 1030".
 
 $(OUTD)/$(name)d.exe: $(OUTD)/main.obj $(proj_obj)
 	$(LINK) @<<
