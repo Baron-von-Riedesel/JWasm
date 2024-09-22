@@ -313,7 +313,7 @@ struct seg_info {
     uint_32             num_relocs;     /* used by COFF/ELF */
     unsigned            seg_idx;        /* segment #; v2.12: changed from short to unsigned */
     enum seg_type       segtype;        /* segment's type (code, data, ...) */
-    int                 lname_idx;      /* segment's name LNAME index (OMF only) */
+    int                 lname_idx;      /* segment's name LNAME index (OMF only; temp. used by -pe for sorting) */
     struct asym         *clsym;         /* segment's class name (stored in an asym item) */
     union {
         uint_16         abs_frame;      /* ABS seg, frame number (OMF,BIN) */

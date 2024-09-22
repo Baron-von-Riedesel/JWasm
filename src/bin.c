@@ -118,7 +118,7 @@ static const enum seg_type flat_order[] = {
     //SEGTYPE_HDR, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
     /* v2.19: add segments with combine type stack - they may contain initialized data */
     //SEGTYPE_HDR, SEGTYPE_UNDEF, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_RSRC, SEGTYPE_RELOC
-    SEGTYPE_HDR, SEGTYPE_UNDEF, SEGTYPE_CODE, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_STACK, SEGTYPE_RSRC, SEGTYPE_RELOC
+    SEGTYPE_HDR, SEGTYPE_UNDEF, SEGTYPE_CODE, SEGTYPE_CODE16, SEGTYPE_CDATA, SEGTYPE_DATA, SEGTYPE_BSS, SEGTYPE_STACK, SEGTYPE_RSRC, SEGTYPE_RELOC
 };
 #define SIZE_PEFLAT ( sizeof( flat_order ) / sizeof( flat_order[0] ) )
 
@@ -951,6 +951,13 @@ void pe_create_PE_header( void )
 
 #define CHAR_READONLY ( IMAGE_SCN_MEM_READ >> 24 )
 
+static int IsStdCodeName( struct dsym *segm )
+/*******************************************/
+{
+    /* if segment name starts with _TEXT$ or .text$, assume it should be "mixed" */
+    return( 0 == _memicmp( segm->sym.name, "_TEXT$", 6 ) || ( 0 == _memicmp( segm->sym.name, ".text$", 6 ) ) );
+}
+
 /* pe_create_section_table() called by pe_enddirhook() when the END directive is handled */
 
 static void pe_create_section_table( void )
@@ -1003,10 +1010,17 @@ static void pe_create_section_table( void )
             DebugMsg(("pe_create_section_table: searching type %u\n", flat_order[i] ));
             for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
                 DebugMsg(("pe_create_section_table: section %s, type=%u, size=%X\n", curr->sym.name, curr->e.seginfo->segtype, curr->sym.max_offset ));
-                /* v2.12: don't mix 32-bit and 16-bit code segments */
-                if ( flat_order[i] == SEGTYPE_UNDEF &&
+                /* v2.19: skip info sections */
+                if ( curr->e.seginfo->information )
+                    continue;
+                /* v2.12: don't mix 32-bit and 16-bit code segments
+                 * v2.19: use SEGTYPE_CODE16 instead of SEGTYPE_UNDEF so it's behind the .text section;
+                 *        if segment name contains a '$', allow mixing!
+                 */
+                if ( flat_order[i] == SEGTYPE_CODE16 &&
                     curr->e.seginfo->segtype == SEGTYPE_CODE &&
-                    curr->e.seginfo->Ofssize != ModuleInfo.defOfssize )
+                    curr->e.seginfo->Ofssize != ModuleInfo.defOfssize &&
+                    !IsStdCodeName( curr ) )
                     ;
                 else
                     if ( curr->e.seginfo->segtype != flat_order[i] )
@@ -1734,10 +1748,18 @@ static void pe_set_values( struct calc_param *cp )
         for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
             if ( curr->e.seginfo->segtype == flat_order[i] ) {
 #if 1
-                /* v2.12: added to avoid mixing 16-/32-bit code segments */
-                if (  curr->e.seginfo->segtype == SEGTYPE_CODE && curr->e.seginfo->Ofssize != ModuleInfo.defOfssize ) {
+                /* v2.12: added to avoid mixing 16-/32-bit code segments;
+                 *        also see code in pe_create_section_table!
+                 *        jwlink DOES mix 16- and 32-bit code segments! MS link does NOT.
+                 * v2.19: allow mixing if 16-bit code segment's name starts with _TEXT$ or .text$.
+                 */
+                if (  curr->e.seginfo->segtype == SEGTYPE_CODE &&
+                    curr->e.seginfo->Ofssize != ModuleInfo.defOfssize &&
+                    !IsStdCodeName( curr ) ) {
                     DebugMsg(("pe_set_values: segment %s set to index 1, MI.defOfssize=%u\n", curr->sym.name, ModuleInfo.defOfssize ));
-                    curr->e.seginfo->lname_idx = 1;
+                    /* v2.19: use newly introduced SEGTYPE_CODE16 (so 16-bit code is behind .text */
+                    //curr->e.seginfo->lname_idx = 1; /* 1   = SEGTYPE_UNDEF */
+                    curr->e.seginfo->lname_idx = i+1; /* i+1 = SEGTYPE_CODE16 */
                     continue;
                 }
 #endif
@@ -1746,7 +1768,7 @@ static void pe_set_values( struct calc_param *cp )
             }
         }
     }
-    SortSegments( 2 );
+    SortSegments( 2 ); /* sort segments based on contents of lname_idx (pe specific) */
     falign = get_bit( GHF( OptionalHeader.FileAlignment ) );
     malign = GHF( OptionalHeader.SectionAlignment );
 

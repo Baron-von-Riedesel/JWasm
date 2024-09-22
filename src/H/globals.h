@@ -548,6 +548,7 @@ enum seg_type {
     SEGTYPE_ABS,
 #if PE_SUPPORT
     SEGTYPE_HDR,   /* only used in bin.c for better sorting */
+    SEGTYPE_CODE16,/* v2.19: only used in bin.c for better sorting */
     SEGTYPE_CDATA, /* only used in bin.c for better sorting */
     SEGTYPE_RELOC, /* only used in bin.c for better sorting */
     SEGTYPE_RSRC,  /* only used in bin.c for better sorting */
