@@ -968,7 +968,7 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
         }
         /* v2.19: syntax extension: scan for optional EXPORT attribute */
         isexport = FALSE;
-        if ( tokenarray[i+1].token == T_ID )
+        if ( ( Options.strict_masm_compat == FALSE ) && ( tokenarray[i+1].token == T_ID ) )
             if (!_stricmp( tokenarray[i].string_ptr, "EXPORT" ) ) {
                 isexport = TRUE;
                 i++;

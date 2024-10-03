@@ -136,8 +136,7 @@ int main( int argc, char **argv )
     CmdlineFini();
     if ( numArgs == 0 ) {
         write_logo();
-        printf( "%s", MsgGetEx( MSG_USAGE ) );
-        printf( "%s", MsgGetEx( MSG_USAGE2 ) );
+        printf( "%s%s", MsgGetEx( MSG_USAGE ), MsgGetEx( MSG_USAGE2 ) );
     } else if ( numFiles == 0 )
         EmitError( NO_FILENAME_SPECIFIED );
 

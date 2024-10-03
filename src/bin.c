@@ -1481,7 +1481,13 @@ union pexx {
 #endif
 };
 
-#if 0 /* linker directive -stub:xxx not implemented */
+#if AMD64_SUPPORT
+#define GHF( x ) ( ( ModuleInfo.defOfssize == USE64 ) ? pe.pe64->x : pe.pe32->x )
+#else
+#define GHF( x ) pe.pe32->x
+#endif
+
+#if 0 /* linker directive -stub:xxx */
 
 /* To set an alternative stub use the INCBIN directive:
  * .hdr$1 segment
@@ -1632,6 +1638,8 @@ static struct linkcmd_s const linkcmds[] = {
     { "subsystem:", pe_lnkcmd_subsystem },
 };
 
+/* pe_scan_linker_directives() - called by pe_set_values() */
+
 static void pe_scan_linker_directives( union pexx pe, char *p, int size )
 /***********************************************************************/
 {
@@ -1676,13 +1684,6 @@ static void pe_scan_linker_directives( union pexx pe, char *p, int size )
  * - sort segments
  * - assign RVAs
  */
-
-#if AMD64_SUPPORT
-#define GHF( x ) ( ( ModuleInfo.defOfssize == USE64 ) ? pe.pe64->x : pe.pe32->x )
-#else
-#define GHF( x ) pe.pe32->x
-#endif
-
 
 static void pe_set_values( struct calc_param *cp )
 /************************************************/

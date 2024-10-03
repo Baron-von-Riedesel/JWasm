@@ -25,6 +25,7 @@
    -  option -pe: info section ".drectve" will be scanned and some linker
       options are recognized and handled.
    -  PUBLIC directive extended to allow setting the export attribute.
+   -  PAGE directive: syntax check added.
    
 
    09.06.2024, v2.18:

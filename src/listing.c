@@ -6,6 +6,13 @@
 *
 * Description:  listing support
 *
+* ListingDirective(): handles directives
+*   .[NO|X]LIST, .[NO|X]CREF, .LISTALL,
+*   .[NO]LISTIF, .[LF|SF|TF]COND,
+*   PAGE, TITLE, SUBTITLE, SUBTTL
+* ListMacroDirective(): handles directives
+*   .[NO]LISTMACRO, .LISTMACROALL, .[X|L|S]ALL
+*
 ****************************************************************************/
 
 #include <stdarg.h>
@@ -22,6 +29,7 @@
 #include "listing.h"
 #include "input.h"
 #include "msgtext.h"
+#include "expreval.h"
 #include "types.h"
 #include "omfspec.h"
 #include "fixup.h"
@@ -1255,6 +1263,9 @@ ret_code ListingDirective( int i, struct asm_tok tokenarray[] )
 /*************************************************************/
 {
     int directive = tokenarray[i].tokval;
+    int j;
+    struct expr opndx;
+
     i++;
 
     switch ( directive ) {
@@ -1314,6 +1325,23 @@ ret_code ListingDirective( int i, struct asm_tok tokenarray[] )
         ModuleInfo.listif = !ModuleInfo.listif;
         break;
     case T_PAGE:
+        /* v2.19: expect one or 2 numeric arguments;
+         *        they aren't used, though.
+         */
+        j = i;
+        if ( ( ERROR == EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) ) )
+            return( ERROR );
+        if ( opndx.kind != EXPR_CONST )
+            return( EmitErr( SYNTAX_ERROR_EX, tokenarray[j].tokpos ) );
+        if ( tokenarray[i].token == T_COMMA ) {
+            i++;
+            j = i;
+            if ( ( ERROR == EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) ) )
+                return( ERROR );
+            if ( opndx.kind != EXPR_CONST )
+                return( EmitErr( SYNTAX_ERROR_EX, tokenarray[j].tokpos ) );
+        }
+        break;
     default: /* TITLE, SUBTITLE, SUBTTL */
         /* tiny checks to ensure that these directives
          aren't used as code labels or struct fields */
