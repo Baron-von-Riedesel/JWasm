@@ -619,7 +619,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
         }
         /* set default values */
         sym->used = TRUE;
-        DebugMsg1(("get_operand(%s): sym->state=%u type=>%s< ofs=%X memtype=%Xh total_size=%u defined=%u\n",
+        DebugMsg1(("get_operand(%s): sym->state=%u type=>%s< ofs=%X memtype=%Xh total_size=%d defined=%u\n",
                 tokenarray[i].string_ptr, sym->state, sym->type ? sym->type->name : "NULL", sym->offset, sym->mem_type, sym->total_size, sym->isdefined ));
         switch ( sym->state ) {
         case SYM_TYPE: /* STRUCT, UNION, RECORD, TYPEDEF */
@@ -1912,7 +1912,9 @@ static ret_code minus_op( struct expr *opnd1, struct expr *opnd2 )
             }
             /* handle first operand */
             sym = opnd1->sym;
-            opnd1->value += sym->offset;
+            /* v2.19: use 64-bit value as target! see minus1.asm */
+            //opnd1->value += sym->offset;
+            opnd1->value64 += sym->offset;
 
             /* handle second operand */
             sym = opnd2->sym;

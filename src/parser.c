@@ -1584,15 +1584,15 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
     if ( ( CodeInfo->mem_type & MT_SPECIAL) == 0 ) {
         switch ( CodeInfo->mem_type & MT_SIZE_MASK ) {
             /* size is encoded 0-based */
-        case  0:  CodeInfo->opnd[CurrOpnd].type = OP_M08;  break;
-        case  1:  CodeInfo->opnd[CurrOpnd].type = OP_M16;  break;
-        case  3:  CodeInfo->opnd[CurrOpnd].type = OP_M32;  break;
-        case  5:  CodeInfo->opnd[CurrOpnd].type = OP_M48;  break;
-        case  7:  CodeInfo->opnd[CurrOpnd].type = OP_M64;  break;
-        case  9:  CodeInfo->opnd[CurrOpnd].type = OP_M80;  break;
-        case 15:  CodeInfo->opnd[CurrOpnd].type = OP_M128; break;
+        case MT_BYTE:  CodeInfo->opnd[CurrOpnd].type = OP_M08;  break;
+        case MT_WORD:  CodeInfo->opnd[CurrOpnd].type = OP_M16;  break;
+        case MT_DWORD: CodeInfo->opnd[CurrOpnd].type = OP_M32;  break;
+        case MT_FWORD: CodeInfo->opnd[CurrOpnd].type = OP_M48;  break;
+        case MT_QWORD: CodeInfo->opnd[CurrOpnd].type = OP_M64;  break;
+        case MT_TBYTE: CodeInfo->opnd[CurrOpnd].type = OP_M80;  break;
+        case MT_OWORD: CodeInfo->opnd[CurrOpnd].type = OP_M128; break;
 #if AVXSUPP
-        case 31:  CodeInfo->opnd[CurrOpnd].type = OP_M256; break;
+        case MT_YMMWORD: CodeInfo->opnd[CurrOpnd].type = OP_M256; break;
 #endif
 #ifdef DEBUG_OUT
         default:
@@ -1752,9 +1752,24 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         /* now set fixup_type.
          * for direct addressing, the fixup type can easily be set by
          * the symbol's offset size.
+         * v2.19: it's actually not THAT simple; if model is flat, Masm will
+         * generate 32-bit offsets and fixups even if the target segment is 16-bit!
          */
         if( base == EMPTY && index == EMPTY ) {
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, Ofssize );
+#ifdef DEBUG_OUT
+            /* v2.19: If model is flat, Masm generates 32-bit fixups, even for items defined in a 16-bit segment;
+             * JWasm does NOT - a (minor) Masm incompatibility. The Masm way is probably better, because it allows
+             * to easily patch the 16-bit code before it is copied to conventional memory.
+             */
+            if ( SegAssumeTable[ASSUME_CS].is_flat && CodeInfo->prefix.adrsiz ) {
+                DebugMsg1(("memory_operand: direct addressing, CS=FLAT: adrsize is 1 - incompatible with Masm!!!\n" ));
+                /* test: suppress address prefix & create a 32-bit fixup!!!! */
+                /* makes JWasm Masm-compatible, but for -pe more adjustments are needed! */
+                //CodeInfo->prefix.adrsiz = 0;
+                //Ofssize = CodeInfo->Ofssize;
+            }
+#endif
 #if AMD64_SUPPORT
             /* v2.03: an override with a segment != FLAT will return a direct fixup */
 #define Get32Fixup() (opndx->override != NULL && SegOverride != &ModuleInfo.flat_grp->sym) ? FIX_OFF32 : FIX_RELOFF32

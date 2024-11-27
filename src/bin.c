@@ -140,8 +140,8 @@ static const char mzcode[] = {
 //    "dw 80h, 1, 0, 4\0"   /* v2.13: file size is 40h (hdr) + 28h (code) */
     "dw 68h, 1, 0, 4\0"   /* e_cblp, e_cp, e_crlc, e_cparhdr */
     "dw 0, -1, 0, 0B8h\0" /* e_minalloc, e_maxalloc, e_ss, e_sp */
-    "dw 0, 0, 0, 40h\0"   /* e_csum, e_ip, e_cs, e_sp, e_lfarlc */
-    "org 40h\0"           /* e_lfanew, will be set by program */
+    "dw 0, 0, 0, 40h\0"   /* e_csum, e_ip, e_cs, e_lfarlc */
+    "org 40h\0"
     "push cs\0"
     "pop ds\0"
     "mov dx,@F - 40h\0"

@@ -13,6 +13,8 @@
       group7.asm.
    -  option -D: accept white spaces if option is enclosed in double quotes
       ( Masm compatible ).
+   -  subtraction of 2 labels may have caused error "constant value too large";
+      see minus1.asm.
 
    Other changes:
    -  write listing reworked.
