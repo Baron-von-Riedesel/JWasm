@@ -227,7 +227,9 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             break;
         }
 
-        p2 += sprintf( p2, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
+        /* v2.19: use '*' qualifier */
+        //p2 += sprintf( p2, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), oldofs );
+        p2 += sprintf( p2, "%0*" I32_SPEC "X ", ModuleInfo.Ofssize > USE16 ? 8 : 4, oldofs );
 
         if ( Options.first_pass_listing ) {
             break;
@@ -370,9 +372,12 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         /* v2.10: display current offset if equate is an alias for a label in this segment
          * v2.17: todo: explain why this might be useful - the current offset where an equate
          *        is defined should be pretty irrelevant.
+         * v2.19: Masm does this as well - actually it ALWAYS displays the current offset.
          */
         if ( sym->segment && sym->segment == &CurrSeg->sym ) {
-            p2 += sprintf( ll.buffer, "%08" I32_SPEC "X", GetCurrOffset() );
+            /* v2.19: display 4-digit offset in 16-bit */
+            //p2 += sprintf( ll.buffer, "%08" I32_SPEC "X", GetCurrOffset() );
+            p2 += sprintf( ll.buffer, "%0*" I32_SPEC "X", ModuleInfo.Ofssize > USE16 ? 8 : 4, GetCurrOffset() );
         }
         *p2++ = ' ';
         *p2++ = '=';
@@ -411,7 +416,9 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         pSrcline = value;
         break;
     case LSTTYPE_LABEL:
-        p2 += sprintf( ll.buffer, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), GetCurrOffset() );
+        /* v2.19: use '*' qualifier */
+        //p2 += sprintf( ll.buffer, (ModuleInfo.Ofssize > USE16 ? "%08" I32_SPEC "X " : "%04" I32_SPEC "X " ), GetCurrOffset() );
+        p2 += sprintf( ll.buffer, "%0*" I32_SPEC "X ", ModuleInfo.Ofssize > USE16 ? 8 : 4, GetCurrOffset() );
         break;
     case LSTTYPE_STRUCT:
         p2 += sprintf( ll.buffer, "%08" I32_SPEC "X ", oldofs );
@@ -425,10 +432,10 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         break;
     default: /* LSTTYPE_MACRO */
         /* line without token or comment? */
-		if ( Token_Count == 0 && ModuleInfo.CurrComment == NULL && srcfile == ModuleInfo.srcfile ) {
-			ll.buffer[0] = NULLC;
-			p2++;
-		}
+        if ( Token_Count == 0 && ModuleInfo.CurrComment == NULL && srcfile == ModuleInfo.srcfile ) {
+            ll.buffer[0] = NULLC;
+            p2++;
+        }
         break;
     }
 
@@ -1325,13 +1332,14 @@ ret_code ListingDirective( int i, struct asm_tok tokenarray[] )
         ModuleInfo.listif = !ModuleInfo.listif;
         break;
     case T_PAGE:
-        /* v2.19: expect one or 2 numeric arguments;
-         *        they aren't used, though.
+        /* v2.19: optional 1 or 2 numeric arguments; they aren't used currently.
+         *        first must be >= 14, <= 255 ( not checked yet )
+         *        second must be >= 60, <= 255 ( not checked yet )
          */
         j = i;
         if ( ( ERROR == EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) ) )
             return( ERROR );
-        if ( opndx.kind != EXPR_CONST )
+        if ( opndx.kind != EXPR_CONST && opndx.kind != EXPR_EMPTY )  /* first arg may be omitted */
             return( EmitErr( SYNTAX_ERROR_EX, tokenarray[j].tokpos ) );
         if ( tokenarray[i].token == T_COMMA ) {
             i++;

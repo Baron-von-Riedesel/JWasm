@@ -91,10 +91,11 @@
 <DD>    6.4   <A HREF="#OUTPUTFORMATBIN">Binary Output Format</A></DD>
 <DD>    6.5   <A HREF="#OUTPUTFORMATPE">PE Output Format</A></DD>
 </DL>
-<DD>    7.    <A HREF="#CHAPMASMBUGS">Masm Bugs fixed in JWasm</A></DD>
-<DD>    8.    <A HREF="#CHAPOPTFEAT">Optional Features</A></DD>
-<DD>    9.    <A HREF="#CHAPKNOWNBUGS">Known Bugs and missing Features</A></DD>
-<DD>    10.   <A HREF="#CHAPLICENSE">License</A></DD>
+<DD>    7.    <A HREF="#CHAPLISTINGDIFF">Listing Differences</A></DD>
+<DD>    8.    <A HREF="#CHAPMASMBUGS">Masm Bugs fixed in JWasm</A></DD>
+<DD>    9.    <A HREF="#CHAPOPTFEAT">Optional Features</A></DD>
+<DD>    10.   <A HREF="#CHAPKNOWNBUGS">Known Bugs and missing Features</A></DD>
+<DD>    11.   <A HREF="#CHAPLICENSE">License</A></DD>
 <DD>    Appendix A. <A HREF="#AA">Reserved Words</A></DD>
 <DD>    Appendix B. <A HREF="#AB">Source Samples</A></DD>
 <DD>    Appendix C. <A HREF="#AC">Errors and Warnings</A></DD>
@@ -1708,7 +1709,39 @@ _DATA                           C      10C        12        12
 </pre>
 
 
-<H1 ID="CHAPMASMBUGS">    7. Masm bugs fixed in JWasm </H1>
+<H1 ID="CHAPLISTINGDIFF">    7. Listing Differences </H1>
+
+   The listing file is divided into 2 parts: the source lines and the symbol table.
+   A source line consist of a 32-column header, followed by the original line of the source file itself.
+   JWasm's listing generation also follows this approach; the differences are:
+ <UL>
+  <LI>Masm divides the source file into pages. The size and format of those pages may be controlled by
+  directives PAGE, TITLE, SUBTITLE, SUBTTL. JWasm doesn't support this; hence you won't find a form feed
+  character ( 0x0C ) in the listing file ( unless the source file does contain such characters ).
+  </LI>
+  <LI>Jwasm doesn't use TABs in the header part of listing source lines.
+  </LI>
+  <LI>In Lines for EQUates and assembly-time variables, JWasm will only emit the current PC at line start
+  if the equate or assembly-time variable defines a (relocatable) label.
+  </LI>
+  <LI>For lines of a macro definition, the stored lines are marked with a &gt; in the header part.
+  </LI>
+  </LI>
+  <LI>Structure definition: the struct's current offset is always rendered as a 8-digit hexadecimal number.
+      Also, the struct's size is not displayed at the line of the STRUCT directive, but at the corresponding
+      ENDS directive.
+  </LI>
+  <LI>In data lines ( lines with directives DB, DW, ... ) the header is restricted to one line only. If the data
+  defined in the source needs more than one line to be displayed, it won't be shown in the header part.
+  This is considered a known bug, planned to be removed in a future release.
+  </LI>
+  <LI>In code lines, data with associated fixups are marked with a small letter suffix: 'r' for PC-relative
+  offsets, 'o' for absolute offsets, 'i' for image-relative offsets ( COFF/ELF only ), 's' for either segment fixups ( OMF )
+  or for section-relative offsets ( COFF/ELF ).
+  </LI>
+ </UL>
+
+<H1 ID="CHAPMASMBUGS">    8. Masm bugs fixed in JWasm </H1>
 
 <TABLE CELLPADDING="4" CELLSPACING="2">
 
@@ -1794,7 +1827,7 @@ _DATA                           C      10C        12        12
     compatibility.
 <P> 
 <P> 
-<H1 ID="CHAPOPTFEAT">    8. Optional Features </H1>
+<H1 ID="CHAPOPTFEAT">    9. Optional Features </H1>
 
   There exist some features that are not activated in the
   precompiled binaries. To enable these options, the JWasm source must be
@@ -1807,7 +1840,7 @@ _DATA                           C      10C        12        12
   Masm syntax.
 <P> 
 <P> 
-<H1 ID="CHAPKNOWNBUGS">    9. Known Bugs and missing Features </H1>
+<H1 ID="CHAPKNOWNBUGS">    10. Known Bugs and missing Features </H1>
 
 <H2>    a) Bugs which are known but not fixed yet: </H2>
 
@@ -1850,7 +1883,7 @@ _DATA                           C      10C        12        12
 <DD>    - commandline option -errorReport (Report internal assembler errors to Microsoft).
 </DL> 
 
-<H1 ID="CHAPLICENSE">    10. License </H1>
+<H1 ID="CHAPLICENSE">    11. License </H1>
 
 <P> This manual was written by Andreas Grech ( aka Japheth ).
 <P> It may be redistributed as long as it is free of charge.
@@ -5072,13 +5105,12 @@ cannot be guessed from the current operands.</TD>
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x186</b></TD>
 <TD>No 4k Page-aligned segments in MS386 OMF</TD>
-<TD>A 4K page-aligned segment isn't compatible with MS OMF format, it's a Phar Lab extension.
-This warning won't appear in the standard version.</TD>
+<TD>A 4K page-aligned segment isn't compatible with MS OMF format, it's a PharLap extension.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x187</b></TD>
-<TD></TD>
+<TD>Line number information for segment without class 'CODE': %s</TD>
 <TD></TD>
 </TR>
 
