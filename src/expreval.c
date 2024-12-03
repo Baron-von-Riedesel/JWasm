@@ -764,7 +764,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                 }
                 DefineFlatGroup();
             }
-            if ( !( opnd->sym = &ModuleInfo.flat_grp->sym ) )
+            if ( !( opnd->sym = &ModuleInfo.g.flat_grp->sym ) )
                 return( ERROR );
 
             opnd->label_tok = &tokenarray[i];

@@ -252,8 +252,8 @@ static ret_code coff_write_section_table( struct module_info *modinfo, struct co
                 if ( fix->sym == NULL ) {
                     DebugMsg(( "coff_write_section_table(%s): fixup (type=%u, loc=0x%" I32_SPEC "X) without symbol, skipped!\n", curr->sym.name, fix->type, fix->locofs ));
                     /* display a warning if fixup doesn't refer to FLAT group */
-                    if ( fix->frame_type != FRAME_GRP || ModuleInfo.flat_grp == NULL ||
-                        fix->frame_datum != ModuleInfo.flat_grp->e.grpinfo->grp_idx )
+                    if ( fix->frame_type != FRAME_GRP || ModuleInfo.g.flat_grp == NULL ||
+                        fix->frame_datum != ModuleInfo.g.flat_grp->e.grpinfo->grp_idx )
                         EmitWarn( 2, ANONYMOUS_FIXUP, curr->sym.name, fix->locofs );
 #if AMD64_SUPPORT
                     if ( fix->type == FIX_RELOFF32 ) {

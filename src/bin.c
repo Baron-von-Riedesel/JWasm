@@ -319,7 +319,7 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
          * - segment is in a group and
          * - group isn't FLAT or segment's name contains '$'
          */
-        if ( grp && ( grp != ModuleInfo.flat_grp || strchr( curr->sym.name, '$' ) ) ) {
+        if ( grp && ( grp != ModuleInfo.g.flat_grp || strchr( curr->sym.name, '$' ) ) ) {
             curr->e.seginfo->start_loc = 0;
             DebugMsg(("CalcOffset(%s): start_loc reset to 0\n", curr->sym.name ));
         }
@@ -604,6 +604,20 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                         curr->sym.name, fixup->locofs, fixup->sym->name, seg->e.seginfo->start_offset, fixup->offset, offset ));
                 break;
             default:
+#if 1
+# if PE_SUPPORT
+                /* v2.19: ensure that all DIR32 offsets have image base added ( even if segment is 16-bit )
+                 * Actually, this "moves" the segment to FLAT - and shows up accordingly in the listing.
+                 * Perhaps there's a better fix possible?
+                 */
+                if ( ModuleInfo.sub_format == SFORMAT_PE ) {
+                    if ( seg->e.seginfo->group == NULL )
+                        seg->e.seginfo->group = &ModuleInfo.g.flat_grp->sym;
+                    if ( seg->e.seginfo->group == &ModuleInfo.g.flat_grp->sym && fixup->frame_type == FRAME_SEG )
+                        fixup->frame_type = FRAME_GRP;
+                }
+# endif
+#endif
                 /* v2.01: don't use group if fixup explicitely refers the segment! */
                 //if ( seg->e.seginfo->group ) {
                 if ( seg->e.seginfo->group && fixup->frame_type != FRAME_SEG ) {
@@ -628,9 +642,8 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                         value += (seg->e.seginfo->start_offset & 0xF) + fixup->offset + offset;
                     }
                 }
-
-                DebugMsg(("DoFixup(%s): loc=%04" I32_SPEC "X, sym=%s, target->start_offset=%" I32_SPEC "Xh, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
-                        curr->sym.name, fixup->locofs, fixup->sym->name, seg->e.seginfo->start_offset, fixup->offset, offset ));
+                DebugMsg(("DoFixup(%s): loc=%04" I32_SPEC "X, sym=%s, target->start_offset=%" I32_SPEC "Xh, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh, fixup->frame_type=%u\n",
+                        curr->sym.name, fixup->locofs, fixup->sym->name, seg->e.seginfo->start_offset, fixup->offset, offset, fixup->frame_type ));
                 break;
             }
 
@@ -920,7 +933,7 @@ void pe_create_PE_header( void )
         pehdr = ( struct dsym *)SymSearch( hdrname "2" );
         if ( pehdr == NULL ) {
             pehdr = (struct dsym *)CreateIntSegment( hdrname "2", "HDR", 2, ModuleInfo.defOfssize, TRUE );
-            pehdr->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+            pehdr->e.seginfo->group = &ModuleInfo.g.flat_grp->sym;
             pehdr->e.seginfo->combine = COMB_ADDOFF;  /* PUBLIC */
             pehdr->e.seginfo->characteristics = (IMAGE_SCN_MEM_READ >> 24);
             pehdr->e.seginfo->readonly = 1;
@@ -975,7 +988,7 @@ static void pe_create_section_table( void )
         if ( !objtab ) {
             bCreated = TRUE;
             objtab = (struct dsym *)CreateIntSegment( hdrname "3", "HDR", 2, ModuleInfo.defOfssize, TRUE );
-            objtab->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+            objtab->e.seginfo->group = &ModuleInfo.g.flat_grp->sym;
             objtab->e.seginfo->combine = COMB_ADDOFF;  /* PUBLIC */
         }
         objtab->e.seginfo->segtype = SEGTYPE_HDR;
@@ -1721,7 +1734,7 @@ static void pe_set_values( struct calc_param *cp )
     }
 
     /* make sure all header objects are in FLAT group */
-    mzhdr->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+    mzhdr->e.seginfo->group = &ModuleInfo.g.flat_grp->sym;
 
     ff = pe.pe32->FileHeader.Characteristics;
 
@@ -1729,7 +1742,7 @@ static void pe_set_values( struct calc_param *cp )
         DebugMsg(("pe_set_values: .reloc section required\n" ));
         reloc = (struct dsym *)CreateIntSegment( ".reloc", "RELOC", 2, ModuleInfo.defOfssize, TRUE );
         if ( reloc ) {
-            reloc->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+            reloc->e.seginfo->group = &ModuleInfo.g.flat_grp->sym;
             reloc->e.seginfo->combine = COMB_ADDOFF;  /* PUBLIC */
             reloc->e.seginfo->segtype = SEGTYPE_RELOC;
             reloc->e.seginfo->characteristics = ((IMAGE_SCN_MEM_DISCARDABLE | IMAGE_SCN_MEM_READ) >> 24 );

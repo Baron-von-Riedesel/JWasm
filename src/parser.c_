@@ -574,7 +574,6 @@ static ret_code set_rm_sib( struct code_info *CodeInfo, unsigned CurrOpnd, char 
         mod_field = MOD_00;
 
         /* default is DS:[], DS: segment override is not needed */
-
         seg_override( CodeInfo, T_DS, sym, TRUE );
 
         DebugMsg1(( "set_rm_sib: direct addressing, CI.Ofssize=%u / adrsize=%u / data=%" I32_SPEC "X\n",
@@ -1753,24 +1752,16 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
         } else
             Ofssize = CodeInfo->Ofssize;
 
-        /* now set fixup_type. */
-
+        /* now set fixup_type.
+         * for direct addressing, the fixup type can easily be set by
+         * the symbol's offset size.
+         */
         if( base == EMPTY && index == EMPTY ) {
-
-			/* v2.19: For Masm, offsets and fixups generated depend on the used segment register;
-			 * if it's assumed to be flat/32-bit, offsets and fixups will also be 32-bit.
-			 */
-			if ( ( !opndx->is_abs ) && sym ) {
-				enum assume_segreg reg;
-				struct asym *assume;
-				reg = GetAssume( SegOverride, sym, ASSUME_DS, &assume );
-				if ( reg != ASSUME_NOTHING && assume )
-					Ofssize = GetSymOfssize( assume );
-			}
-
+            /* v2.19: For Masm, offsets and fixups generated depend on the used segment register;
+             * if it's assumed to be flat/32-bit, offsets and fixups will also be 32-bit.
+             */
             DebugMsg1(("memory_operand: CodeInfo.Ofssize=%u, Ofssize=%u, SegOverride=%p, sym=%s\n", CodeInfo->Ofssize, Ofssize, SegOverride, sym ? sym->name : "NULL" ));
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, Ofssize );
-
 #if AMD64_SUPPORT
             /* v2.03: an override with a segment != FLAT will return a direct fixup */
 #define Get32Fixup() (opndx->override != NULL && SegOverride != &ModuleInfo.g.flat_grp->sym) ? FIX_OFF32 : FIX_RELOFF32

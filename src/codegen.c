@@ -420,7 +420,8 @@ static void output_data( const struct code_info *CodeInfo, enum operand_type det
     }
 #ifdef DEBUG_OUT
     if ( CodeInfo->opnd[index].InsFixup )
-        DebugMsg1(("output_data(idx=%u, op=%" I32_SPEC "X [data=%" I32_SPEC "X fixup=%p typ=%u] ) enter [rm=%X]\n", index, determinant, CodeInfo->opnd[index].data32l, CodeInfo->opnd[index].InsFixup, CodeInfo->opnd[index].InsFixup->type ,CodeInfo->rm_byte ));
+        DebugMsg1(("output_data(idx=%u, op=%" I32_SPEC "X [data=%" I32_SPEC "X fixup=%p typ=%u] ) enter [rm=%X]\n",
+                   index, determinant, CodeInfo->opnd[index].data32l, CodeInfo->opnd[index].InsFixup, CodeInfo->opnd[index].InsFixup->type ,CodeInfo->rm_byte ));
     else
         DebugMsg1(("output_data(idx=%u, op=%" I32_SPEC "X [data=%" I32_SPEC "X fixup=NULL] ) enter [rm=%X]\n", index, determinant, CodeInfo->opnd[index].data32l, CodeInfo->rm_byte ));
 #endif

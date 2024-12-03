@@ -719,6 +719,7 @@ struct module_vars {
     struct fixup        *FixupHeap;       /* v2.19: stack of free <struct fixup>-items */
     /* v2.10: moved here from module_info due to problems if @@: occured on the very first line */
     unsigned            anonymous_label; /* "anonymous label" counter */
+    struct dsym         *flat_grp;       /* magic FLAT group; v2.19: moved to module_vars */
 #if STACKBASESUPP
     struct asym         *StackBase;
     struct asym         *ProcStatus;
@@ -817,7 +818,7 @@ struct module_info {
 #endif
     unsigned            srcfile;         /* main source file - is an index for FNames[] */
     struct dsym         *currseg;        /* currently active segment */
-    struct dsym         *flat_grp;       /* magic FLAT group */
+    //struct dsym         *flat_grp;       /* magic FLAT group; v2.19: moved to module_vars */
     uint_8              *pCodeBuff;
     unsigned int        GeneratedCode;   /* nesting level generated code */
     /* input members */

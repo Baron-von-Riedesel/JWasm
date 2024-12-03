@@ -121,7 +121,7 @@ struct fixup {
     };
     union {
         struct {
-            int_8           frame_type;     /* frame specifier (SEG=0,GRP=1,,...) */
+            int_8           frame_type;     /* frame specifier (SEG=0,GRP=1,...); see omfspec.h, enum frame_methods */
             uint_16         frame_datum;    /* additional data, usually index */
         };
         struct asym         *segment_var;   /* symbol's segment if assembly time var */

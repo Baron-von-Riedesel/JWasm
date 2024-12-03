@@ -259,8 +259,8 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
          * unless the linker does pack groups. And, last but not least, jwlink crashes
          * if target datum contains FLAT group index.
          */
-        if ( ModuleInfo.flat_grp && fixup->frame_type == FRAME_GRP &&
-            fixup->frame_datum == ModuleInfo.flat_grp->e.grpinfo->grp_idx )
+        if ( ModuleInfo.g.flat_grp && fixup->frame_type == FRAME_GRP &&
+            fixup->frame_datum == ModuleInfo.g.flat_grp->e.grpinfo->grp_idx )
             return( 0 );
         lr->target_meth = fixup->frame_type;
         lr->target_datum = fixup->frame_datum;

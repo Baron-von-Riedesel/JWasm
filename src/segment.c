@@ -233,7 +233,7 @@ static void UpdateCurrSegVars( void )
         /* fixme: OPTION OFFSET:SEGMENT? */
         if( CurrSeg->e.seginfo->group != NULL ) {
             info->symbol = CurrSeg->e.seginfo->group;
-            if ( info->symbol == &ModuleInfo.flat_grp->sym )
+            if ( info->symbol == &ModuleInfo.g.flat_grp->sym )
                 info->is_flat = TRUE;
         } else {
             info->symbol = &CurrSeg->sym;
@@ -460,7 +460,7 @@ ret_code GrpDir( int i, struct asm_tok tokenarray[] )
                 return( EmitErr( SEGMENT_EXPECTED, name ) );
             } else if( seg->e.seginfo->group != NULL &&
                       /* v2.09: allow segments in FLAT magic group be moved to a "real" group */
-                      seg->e.seginfo->group != &ModuleInfo.flat_grp->sym &&
+                      seg->e.seginfo->group != &ModuleInfo.g.flat_grp->sym &&
                       seg->e.seginfo->group != &grp->sym ) {
                 /* segment is in another group */
                 DebugMsg(("GrpDir: segment >%s< is in group >%s< already\n", name, seg->e.seginfo->group->name));
@@ -594,17 +594,17 @@ static ret_code CloseSeg( const char *name )
 void DefineFlatGroup( void )
 /**************************/
 {
-    if( ModuleInfo.flat_grp == NULL ) {
+    if( ModuleInfo.g.flat_grp == NULL ) {
         /* can't fail because <FLAT> is a reserved word */
-        ModuleInfo.flat_grp = CreateGroup( "FLAT" );
+        ModuleInfo.g.flat_grp = CreateGroup( "FLAT" );
         /* v2.14: set Ofssize of FLAT to at least USE32.
          * this will make "assume ds:FLAT" work in 16-bit code ( needed for i.e. INVLPG )
          */
-        //ModuleInfo.flat_grp->sym.Ofssize = ModuleInfo.defOfssize;
-        ModuleInfo.flat_grp->sym.Ofssize = ( ModuleInfo.defOfssize > USE16 ) ? ModuleInfo.defOfssize : USE32;
-        DebugMsg1(("DefineFlatGroup(): Ofssize=%u\n", ModuleInfo.flat_grp->sym.Ofssize ));
+        //ModuleInfo.g.flat_grp->sym.Ofssize = ModuleInfo.defOfssize;
+        ModuleInfo.g.flat_grp->sym.Ofssize = ( ModuleInfo.defOfssize > USE16 ) ? ModuleInfo.defOfssize : USE32;
+        DebugMsg1(("DefineFlatGroup(): %p, Ofssize=%u\n", ModuleInfo.g.flat_grp, ModuleInfo.g.flat_grp->sym.Ofssize ));
     }
-    ModuleInfo.flat_grp->sym.isdefined = TRUE; /* v2.09 */
+    ModuleInfo.g.flat_grp->sym.isdefined = TRUE; /* v2.09 */
 }
 
 unsigned GetSegIdx( const struct asym *sym )
@@ -1241,7 +1241,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
              * this is not quite Masm-compatible, because trying to put
              * the segment into another group will cause an error.
              */
-            dir->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+            dir->e.seginfo->group = &ModuleInfo.g.flat_grp->sym;
             break;
         case INIT_OFSSIZE:
             dir->e.seginfo->Ofssize = type->value;
@@ -1250,7 +1250,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
              * be aware that the "flat" attribute affects fixups of non-flat items for -pe format.
              */
             if ( type->value == USE64 && ModuleInfo.model == MODEL_FLAT ) {
-                dir->e.seginfo->group = &ModuleInfo.flat_grp->sym;
+                dir->e.seginfo->group = &ModuleInfo.g.flat_grp->sym;
             }
 #endif
             break;
@@ -1389,7 +1389,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
                 else if ( dir->e.seginfo->group->Ofssize != dir->e.seginfo->Ofssize )
 #if AMD64_SUPPORT
                     /* v2.17: allow both 32- and 64-bit segments in FLAT group */
-                    if ( dir->e.seginfo->group == &ModuleInfo.flat_grp->sym &&
+                    if ( dir->e.seginfo->group == &ModuleInfo.g.flat_grp->sym &&
                         dir->e.seginfo->Ofssize >= USE32 ) ; else
 #endif
                     EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );

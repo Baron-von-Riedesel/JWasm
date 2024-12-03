@@ -226,8 +226,8 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
              report an error */
             //if ( ModuleInfo.flatgrp_idx != 0 )
             /* v2.09: make sure there's no near jmp/call between 32- and 64-bit */
-            //if ( ModuleInfo.flat_grp )
-            if ( ModuleInfo.flat_grp
+            //if ( ModuleInfo.g.flat_grp )
+            if ( ModuleInfo.g.flat_grp
 #if AMD64_SUPPORT
                 && ( symseg == NULL || symseg->e.seginfo->Ofssize == ModuleInfo.Ofssize )
 #endif

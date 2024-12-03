@@ -15,6 +15,8 @@
       ( Masm compatible ).
    -  subtraction of 2 labels may have caused error "constant value too large";
       see minus1.asm.
+   -  if .model wasn't flat, but segments with flat attribute existed, they
+      may not have been listed in symbol table.
 
    Other changes:
    -  write listing reworked.
@@ -28,6 +30,8 @@
       options are recognized and handled.
    -  PUBLIC directive extended to allow setting the export attribute.
    -  PAGE directive: syntax check added.
+   -  .model flat: ensure variables in 16-bit segments can be accessed
+      directly. This is Masm compatible; see flat2.asm.
    
 
    09.06.2024, v2.18:

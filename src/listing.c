@@ -819,12 +819,18 @@ static void log_typedef( const struct asym *sym )
     LstPrintf( "%s %s    %8" I32_SPEC "u  %s" NLSTR, sym->name, pdots, sym->total_size, p );
 }
 
+/* render listing "Segments and Groups":
+ * 1. list the segments that are NOT part of a group.
+ * 2. list the groups with their segments.
+ */
+
 static void log_segment( const struct asym *sym, const struct asym *group )
 /*************************************************************************/
 {
     char buffer[32];
     struct seg_info *seg = ((struct dsym *)sym)->e.seginfo;
 
+    DebugMsg(("log_segment(%s, %s): grp=%p\n", sym->name, group ? group->name : "NULL", seg->group ));
     if( seg->group == group ) {
         int i = sym->name_size;
         const char *pdots;
@@ -862,15 +868,20 @@ static void log_group( const struct asym *grp, const struct dsym *segs )
     pdots = (( i >= DOTSMAX ) ? "" : dots + i + 1);
     LstPrintf( "%s %s        %s" NLSTR, grp->name, pdots, strings[LS_GROUP] );
 
-    /* the FLAT groups is always empty */
-    if ( grp == (struct asym *)ModuleInfo.flat_grp ) {
+    /* the FLAT group has an empty segment list;
+     * that's why the standard segment list (segs) must be used then.
+     */
+    if ( grp == (struct asym *)ModuleInfo.g.flat_grp ) {
+        DebugMsg(("log_group: def. flat group (%p), scan all segments\n", ModuleInfo.g.flat_grp ));
         for( ; segs; segs = segs->next ) {
             log_segment( (struct asym *)segs, grp );
         }
-    } else
+    } else {
+        DebugMsg(("log_group: group %s (%p)\n", grp->name, grp ));
         for( curr = ((struct dsym *)grp)->e.grpinfo->seglist; curr; curr = curr->next ) {
             log_segment( (struct asym *)curr->seg, grp );
         }
+    }
 }
 
 static const char *get_proc_type( const struct asym *sym )
@@ -1225,6 +1236,9 @@ void LstWriteCRef( void )
         q->tail = syms[i];
         ((struct dsym *)syms[i])->next = NULL;
     }
+
+    /* write macros, structs, records, typedefs, segments & groups, procedures */
+
     for ( idx = 0; idx < ( sizeof( cr ) / sizeof(cr[0] ) ); idx++ ) {
         if ( queues[cr[idx].type].head ) {
             if ( cr[idx].capitems ) {

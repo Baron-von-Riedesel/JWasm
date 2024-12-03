@@ -423,7 +423,7 @@ ret_code AssumeDirective( int i, struct asm_tok tokenarray[] )
                 } else {
                     return( EmitError( SEGMENT_GROUP_OR_SEGREG_EXPECTED ) );
                 }
-                info->is_flat = ( info->symbol == &ModuleInfo.flat_grp->sym );
+                info->is_flat = ( info->symbol == &ModuleInfo.g.flat_grp->sym );
                 break;
             case EXPR_REG:
                 if ( GetValueSp( opnd.base_reg->tokval ) & OP_SR ) {
@@ -475,7 +475,7 @@ enum assume_segreg search_assume( const struct asym *sym,
         if( SegAssumeTable[def].symbol == sym )
             return( def );
         if( search_grps && grp ) {
-            if( SegAssumeTable[def].is_flat && grp == &ModuleInfo.flat_grp->sym )
+            if( SegAssumeTable[def].is_flat && grp == &ModuleInfo.g.flat_grp->sym )
                 return( def );
             if( SegAssumeTable[def].symbol == grp )
                 return( def );
@@ -493,7 +493,7 @@ enum assume_segreg search_assume( const struct asym *sym,
     /* now check the groups */
     if( search_grps && grp )
         for( def = 0; def < NUM_SEGREGS; def++ ) {
-            if( SegAssumeTable[searchtab[def]].is_flat && grp == &ModuleInfo.flat_grp->sym )
+            if( SegAssumeTable[searchtab[def]].is_flat && grp == &ModuleInfo.g.flat_grp->sym )
                 return( searchtab[def] );
             if( SegAssumeTable[searchtab[def]].symbol == grp ) {
                 return( searchtab[def] );
@@ -513,7 +513,7 @@ struct asym *GetOverrideAssume( enum assume_segreg override )
 /***********************************************************/
 {
     if( SegAssumeTable[override].is_flat ) {
-        return( (struct asym *)ModuleInfo.flat_grp );
+        return( (struct asym *)ModuleInfo.g.flat_grp );
     }
     return( SegAssumeTable[override].symbol);
 
@@ -561,7 +561,7 @@ enum assume_segreg GetAssume( const struct asym *override, const struct asym *sy
          || ModuleInfo.Ofssize == USE64
 #endif
         ) ) {
-        *passume = (struct asym *)ModuleInfo.flat_grp;
+        *passume = (struct asym *)ModuleInfo.g.flat_grp;
         return( def );
     }
     if( override != NULL ) {

@@ -383,7 +383,7 @@ ret_code CondAsmDirective( int i, struct asm_tok tokenarray[] )
             i++;
         } else if ( tokenarray[i].token == T_RES_ID && tokenarray[i].tokval == T_FLAT ) {
             /* v2.09: special treatment of FLAT added */
-            NextIfState = (( ModuleInfo.flat_grp && ModuleInfo.flat_grp->sym.isdefined ) ? BLOCK_ACTIVE : BLOCK_INACTIVE );
+            NextIfState = (( ModuleInfo.g.flat_grp && ModuleInfo.g.flat_grp->sym.isdefined ) ? BLOCK_ACTIVE : BLOCK_INACTIVE );
             i++;
         } else if ( Options.strict_masm_compat == FALSE && (
                     tokenarray[i].token == T_RES_ID ||
