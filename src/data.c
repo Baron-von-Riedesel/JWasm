@@ -552,17 +552,13 @@ next_item:  /* <--- continue scan if a comma has been detected */
     /* handle DUP operator */
 
     if ( tokenarray[i].token == T_RES_ID && tokenarray[i].tokval == T_DUP ) {
+        /* v2.19: check for undefined symbol - may occur even if kind is EXPR_CONST; struct43.asm */
+        if ( opndx.sym && opndx.sym->state == SYM_UNDEFINED )
+            return( EmitErr( SYMBOL_NOT_DEFINED, opndx.sym->name ) );
         /* v2.03: db 'AB' dup (0) is valid syntax! */
-        //if ( opndx.kind != EXPR_CONST || opndx.string != NULL ) {
-        if ( opndx.kind != EXPR_CONST ) {
-            DebugMsg(("data_item, error, unexpected kind=%u of DUP's first operand\n", opndx.kind ));
-            /* v2.09: emit a better error msg if a forward ref was used */
-            if ( opndx.sym && opndx.sym->state == SYM_UNDEFINED )
-                EmitErr( SYMBOL_NOT_DEFINED, opndx.sym->name );
-            else
-                EmitError( CONSTANT_EXPECTED );
-            return( ERROR );
-        }
+        //if ( opndx.kind != EXPR_CONST || opndx.string != NULL )
+        if ( opndx.kind != EXPR_CONST )
+            return( EmitError( CONSTANT_EXPECTED ) );
         /* v2.17: check high32(value)
          * max dup is 0x7fffffff
          */

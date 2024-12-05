@@ -375,15 +375,21 @@ void ListUpdateSubItem( struct list_item *pItem, int prefix, char *pLine )
 
 /* last pass is done, write listing from list queue items. */
 
+#ifdef __UNIX__
+#define NLSTR "\n"
+#else
+#define NLSTR "\r\n"
+#endif
+
 void ListFlushAll( void )
 /***********************/
 {
 	struct list_item *pItem = ListStore.head;
 	for (; pItem; pItem = pItem->next ) {
 		struct lprefix *pPrefix;
-		LstPrintf("%s\n", pItem->line );
+		LstPrintf("%s" NLSTR, pItem->line );
 		for ( pPrefix = pItem->lprfx; pPrefix; pPrefix = pPrefix->next )
-			LstPrintf("%s\n", pPrefix->line );
+			LstPrintf("%s" NLSTR, pPrefix->line );
 	}
 }
 

@@ -1744,6 +1744,7 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
 
     if( with_fixup ) {
 
+		/* v2.19: todo: cleanup code for direct addressing ( base=index=empty ) */
         if( opndx->is_abs ) {
             Ofssize = IS_ADDR32( CodeInfo );
         } else if ( sym ) {

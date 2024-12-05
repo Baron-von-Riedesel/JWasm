@@ -17,6 +17,9 @@
       see minus1.asm.
    -  if .model wasn't flat, but segments with flat attribute existed, they
       may not have been listed in symbol table.
+   -  regression in v2.05-v2.18, DUP operator: if an undefined symbol was
+      contained in first operand, error message may have been omitted; see
+      struct43.asm.
 
    Other changes:
    -  write listing reworked.
@@ -31,7 +34,8 @@
    -  PUBLIC directive extended to allow setting the export attribute.
    -  PAGE directive: syntax check added.
    -  .model flat: ensure variables in 16-bit segments can be accessed
-      directly. This is Masm compatible; see flat2.asm.
+      directly if segment register is assumed flat ( Masm compatible );
+      see flat2.asm.
    
 
    09.06.2024, v2.18:

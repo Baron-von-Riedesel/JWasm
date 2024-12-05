@@ -3116,12 +3116,6 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
         return( fnEmitErr( SYNTAX_ERROR_EX, oper->string_ptr ) );
     } /* end switch( oper->token ) */
 
-    /* v2.15 ensure that any undefined symbol finds its way into the expression.
-     * this is for assembly-time variables.
-     */
-    if ( Parse_Pass == PASS_1 && opnd2->sym && opnd2->sym->state == SYM_UNDEFINED )
-        opnd1->sym = opnd2->sym;
-
 #ifdef DEBUG_OUT
     if ( opnd1->hlvalue ) {
         DebugMsg1(("%u calculate(%s) exit, ok kind=%d value=0x%" I64_SPEC "X_%016" I64_SPEC "X memtype=0x%X indirect=%u type=>%s<\n",
@@ -3352,6 +3346,14 @@ static ret_code evaluate( struct expr *opnd1, int *i, struct asm_tok tokenarray[
         }
         if( rc != ERROR ) {
             rc = calculate( opnd1, &opnd2, &tokenarray[curr_operator] );
+
+            /* v2.15 ensure that any undefined symbol finds its way into the expression.
+             * this is for assembly-time variables.
+             * v2.19: the check has been moved here; was inside calculate(), but there
+             * it was definitely executed in the debug version only!
+             */
+            if ( rc == NOT_ERROR && Parse_Pass == PASS_1 && opnd2.sym && opnd2.sym->state == SYM_UNDEFINED )
+                opnd1->sym = opnd2.sym;
         }
 
         if( flags & EXPF_ONEOPND ) /* stop after one operand? */
