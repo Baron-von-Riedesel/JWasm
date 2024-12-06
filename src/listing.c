@@ -402,14 +402,18 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         for ( p1 = sym->string_ptr, p2 = &ll.buffer[3], pll = &ll; *p1; ) {
             if ( p2 >= &pll->buffer[28] ) {
                 struct lstleft *next = myalloca( sizeof( struct lstleft ) );
+                if ( p2 != &ll.buffer[28] ) *p2 = 0; /* v2.19: additional line, terminate header */
                 pll->next = next;
                 pll = next;
                 pll->next = NULL;
-                memset( pll->buffer, ' ', sizeof( pll->buffer) );
+                /* v2.19: header of multi-line is variable in size */
+                //memset( pll->buffer, ' ', sizeof( pll->buffer) );
+                memset( pll->buffer, ' ', 3 );
                 p2 = &pll->buffer[3];
             }
             *p2++ = *p1++;
         }
+        if ( p2 != &ll.buffer[28] ) *p2 = 0; /* v2.19: additional line, terminate header */
         break;
     case LSTTYPE_MACROLINE:
         ll.buffer[1] = '>';

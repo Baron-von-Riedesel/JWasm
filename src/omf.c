@@ -385,6 +385,8 @@ static void omf_write_fixupp( struct dsym *seg, char is32 )
     enum fixgen_types type = ( is32 ? FIX_GEN_MS386 : FIX_GEN_INTEL );
     struct omf_rec  obj;
 
+    //DebugMsg1(("omf_write_fixupp( %s )\n", seg->sym.name ));
+
     fix = seg->e.seginfo->FixupList.head;
     while ( fix ) {
         for( data = (uint_8 *)StringBufferEnd, size = 0; fix; fix = fix->nextrlc ) {

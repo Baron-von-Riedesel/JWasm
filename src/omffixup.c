@@ -338,17 +338,19 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
             if ( sym->segment && ((struct dsym *)sym->segment)->e.seginfo->group )
                 DebugMsg1(("omf_seg_logref: group=%s\n", ((struct dsym *)sym->segment)->e.seginfo->group->name ));
 #endif
+#if 0 /* v2.19: "isvariable" branch disabled; see label9.asm */
             /* v2.08: don't use info from assembly-time variables */
             /* v2.16: the '$' is NO assembly-time variable; however, flag "isvariable" is TRUE!
-             *        Are assembly-time variables defined by '=' supposed to create a fixup at all???
-             *        Why should their (final) value be defined at link time???
+             *        Variables defined by '=' directive may define a label, hence need a fixup then!
              */
             //if ( sym->isvariable ) {
             if ( sym->isvariable && sym->isequate ) {
                 lr->target_meth = ( fixup->frame_type == FRAME_GRP ? TARGET_GRP : TARGET_SEG );
                 lr->target_datum = fixup->frame_datum;
                 DebugMsg1(("omf_seg_logref: assembly-time variable branch\n" ));
-            } else if ( sym->segment == NULL ) { /* shouldn't happen */
+            } else
+#endif
+            if ( sym->segment == NULL ) { /* shouldn't happen */
                 EmitErr( SEGMENT_MISSING_FOR_FIXUP, sym->name );
                 return ( 0 );
 #if COMDATSUPP

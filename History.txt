@@ -20,6 +20,10 @@
    -  regression in v2.05-v2.18, DUP operator: if an undefined symbol was
       contained in first operand, error message may have been omitted; see
       struct43.asm.
+   -  local labels were accepted by PUBLIC directive without -Zm being set;
+      see public3.asm.
+   -  omf format: incorrect special handling of assembly-time variable fixups
+      removed; see label9.asm.
 
    Other changes:
    -  write listing reworked.

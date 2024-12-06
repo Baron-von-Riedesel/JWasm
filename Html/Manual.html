@@ -428,7 +428,10 @@
 </LI>
 <LI>    OPATTR will return the language type bits 8-10 for PROCs and PROTOs only.
 </LI>
-</UL> 
+</UL>
+    Those changes won't achieve an exact copy in all cases. Some instructions can be
+    encoded in more than one way ( i.e. CMP AL, AH ), and the JWasm code generator
+    may select a different encoding.
 
 <H2 ID="CMDOPTZI">    Option -Zi: Emit Symbolic Debugging Info </H2>
 
