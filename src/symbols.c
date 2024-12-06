@@ -326,7 +326,9 @@ struct asym *SymLookupLocal( const char *name )
     struct asym      *sym;
 
     sym = SymFind( name );
-    if ( sym == NULL ) {
+    /* v2.19: don't move a label marked as public if -Zm isn't set */
+    //if ( sym == NULL ) {
+    if ( sym == NULL || ( sym->ispublic && ModuleInfo.m510 == 0 ) ) {
         sym = SymAlloc( name );
         sym->scoped = TRUE;
         /* add the label to the local hash table */
