@@ -40,6 +40,9 @@
    -  .model flat: ensure variables in 16-bit segments can be accessed
       directly if segment register is assumed flat ( Masm compatible );
       see flat2.asm.
+   -  option -bin: to create an "alignment" segment/section that modifies
+      the RVA only, the ALIGN() segment attribute syntax has been extended.
+   -  sample Win32_1p.asm added, sample Win32_5.asm adjusted.
    
 
    09.06.2024, v2.18:

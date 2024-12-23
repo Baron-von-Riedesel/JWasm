@@ -3,7 +3,11 @@
 ;--- Uses JWasm's bin output format, so no linker needed.
 ;--- assemble: JWasm -bin -Fo Win32_5.exe Win32_5.ASM
 
-;--- v2.19: sample is currently broken - the ALIGNx sections are no longer excluded from binary
+;--- v2.19: sample had to be changed, since jwasm as default won't skip
+;--- the contents of segments/sections anymore that contain just an ORG;
+;--- Instead, the align() segment argument has been expanded, accepting
+;--- an optional second parameter that tells the assembler to align the
+;--- RVA. It's for -bin only!
 
     .386
     option casemap:none
@@ -82,19 +86,18 @@ num_sections equ ( $ -  sectiontable ) / sizeof IMAGE_SECTION_HEADER
 
 PEHDR ends
 
-;--- the ALIGNx segments are needed because
-;--- section alignment and file alignment are different
+;--- align RVA to next page
 
-ALIGN1 segment dword public FLAT 'DATA'
-    ORG 0E00h   ; change pc to RVA 1000h
-ALIGN1 ends
+PEHDR$1 segment align(4096,v) public FLAT
+PEHDR$1 ends
 
 _TEXT segment dword public FLAT 'CODE'
 _TEXT ends
 
-ALIGN2 segment dword public FLAT 'DATA'
-    ORG 0E00h   ; change pc to RVA 2000h
-ALIGN2 ends
+;--- align RVA to next page
+
+_TEXT$1 segment align(4096,v) public FLAT
+_TEXT$1 ends
 
 _IDATA segment dword public FLAT 'DATA'
 start_rdata label byte
@@ -138,7 +141,7 @@ endif
 name&IAT label dword
 _IDATA$2 ends
 _IDATA$3 segment
-name db @CatStr(!",name, !"),0
+name db @CatStr(!",name, !"),".dll",0
     align 4
 _IDATA$3 ends
 ImportDefined equ 1

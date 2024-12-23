@@ -15,6 +15,7 @@
   Win16_2d.asm  Win16   omf    dll      simple dll with 2 exports
 
   Win32_1.asm   Win32   coff   console  "Hello world", no include files
+  Win32_1p.asm  Win32   pe     console  like Win32_1, but uses option -pe
   Win32_2.asm   Win32   coff   console  uses WinInc include files
   Win32_3.asm   Win32   coff   GUI      "Empty Window", no include files
   Win32_3m.asm  Win32   coff   GUI      like Win32_3, but uses Masm32

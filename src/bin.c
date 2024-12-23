@@ -81,7 +81,6 @@ struct calc_param {
     uint_8 alignment;      /* current aligment */
     uint_32 fileoffset;    /* current file offset */
     uint_32 sizehdr;       /* -mz: size of MZ header, else 0 */
-    //uint_32 sizebss;     /* v2.12: -mz: size of BSS segments. v2.13: removed */
     uint_32 entryoffset;   /* -bin only: offset of first segment */
     struct asym *entryseg; /* -bin only: segment of first segment */
     uint_32 imagestart;    /* -bin: start offset (of first segment), else 0 */
@@ -231,7 +230,6 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
 /****************************************************************/
 {
     uint_32 align;
-    uint_32 alignbytes;
     uint_32 offset;
     struct dsym *grp;
 
@@ -250,9 +248,17 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
         align = 1 << cp->alignment;
     else
         align = 1 << curr->e.seginfo->alignment;
-    //alignbytes = ((offset + (align - 1)) & (-align)) - offset;
-    alignbytes = ((cp->fileoffset + (align - 1)) & (-align)) - cp->fileoffset;
-    cp->fileoffset += alignbytes;
+
+    /* v2.19, format -bin: don't align fileoffset for segments with RVA alignment [ALIGN(x,v)] */
+    if ( !curr->e.seginfo->align_rva_only ) {
+        cp->fileoffset += ((cp->fileoffset + (align - 1)) & (-align)) - cp->fileoffset;
+    }
+
+    if (grp) {
+        grp->sym.max_offset += ((grp->sym.max_offset + (align - 1)) & (-align)) - grp->sym.max_offset;
+        DebugMsg(("CalcOffset(%s grp=%s): align=%u, grp.max_offset=%" I32_SPEC "Xh\n",
+                  curr->sym.name, grp->sym.name, align, grp->sym.max_offset ));
+    }
 
     DebugMsg(("CalcOffset(%s): sizehdr=%" I32_SPEC "Xh, imagestart=%" I32_SPEC "X, fileofs=%" I32_SPEC "Xh\n",
               curr->sym.name, cp->sizehdr, cp->imagestart, cp->fileoffset ));
@@ -260,25 +266,19 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
     /* v2.12: never check group for PE format */
     if ( ModuleInfo.sub_format == SFORMAT_PE ) {
         offset = cp->rva;
-		/* v2.19: subtract start_loc for first segment only */
-		/* v2.19: never subtract start_loc */
+		/* v2.19: don't subtract start_loc */
 		//cp->rva += curr->sym.max_offset - curr->e.seginfo->start_loc;
-		//cp->rva += cp->first ? ( curr->sym.max_offset - curr->e.seginfo->start_loc ) : curr->sym.max_offset;
 		cp->rva += curr->sym.max_offset;
         DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh\n", curr->sym.name, offset ));
     } else {
 #endif
         if ( grp == NULL ) {
-            /* v2.13: sizebss removed */
-            //offset = cp->fileoffset + cp->sizebss - cp->sizehdr;  // + alignbytes;
-            offset = cp->fileoffset - cp->sizehdr;  // + alignbytes;
+            offset = cp->fileoffset - cp->sizehdr;
             DebugMsg(("CalcOffset(%s): no group, ofs=%" I32_SPEC "Xh\n", curr->sym.name, offset ));
         } else {
             /* grp->sym.included is FALSE for the first segment of the group.
              */
             if ( grp->sym.included == FALSE ) {
-                /* v2.13: sizebss removed */
-                //grp->sym.offset = cp->fileoffset + cp->sizebss - cp->sizehdr;
                 grp->sym.offset = cp->fileoffset - cp->sizehdr;
                 grp->sym.included = TRUE;
                 offset = 0;
@@ -293,10 +293,11 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
                 /* v2.13: grp->sym.max_offset wasn't the best base for this calculation,
                  * since segments NOT belonging to the group may affect the group size.
                  * Since v2.13, grp.max_offset has a different meaning, is updated only
-                 * in format -bin, when a segment contains just an ORG (see Win32_5.asm);
-                 * in this case, just the "rva" is to be updated, the fileoffset isn't changed!
                  */
-                offset = ( cp->fileoffset + cp->imagestart - cp->sizehdr ) + grp->sym.max_offset - grp->sym.offset;
+                if ( ModuleInfo.sub_format == SFORMAT_NONE && grp == ModuleInfo.g.flat_grp )
+                    offset = ( cp->imagestart - cp->sizehdr ) + grp->sym.max_offset - grp->sym.offset;
+                else
+                    offset = ( cp->fileoffset + cp->imagestart - cp->sizehdr ) + grp->sym.max_offset - grp->sym.offset;
             }
             DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh grp=%s, grp.ofs=%" I32_SPEC "Xh\n",
                       curr->sym.name,
@@ -307,23 +308,6 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
 #if PE_SUPPORT
     }
 #endif
-
-    /* v2.04: added */
-    /* v2.05: this addition did mess sample Win32_5.asm, because the
-     * "empty" alignment sections are now added to <fileoffset>.
-     * todo: VA in binary map is displayed wrong.
-     */
-    if ( cp->first == FALSE ) {
-        /* v2.05: do the reset more carefully.
-         * Do reset start_loc only if
-         * - segment is in a group and
-         * - group isn't FLAT or segment's name contains '$'
-         */
-        if ( grp && ( grp != ModuleInfo.g.flat_grp || strchr( curr->sym.name, '$' ) ) ) {
-            curr->e.seginfo->start_loc = 0;
-            DebugMsg(("CalcOffset(%s): start_loc reset to 0\n", curr->sym.name ));
-        }
-    }
 
     curr->e.seginfo->fileoffset = cp->fileoffset;
     curr->e.seginfo->start_offset = offset;
@@ -346,9 +330,28 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
 		cp->fileoffset += curr->sym.max_offset;
 		break;
 #endif
-	default:
-		cp->fileoffset += ( cp->first ? curr->sym.max_offset - curr->e.seginfo->start_loc : curr->sym.max_offset );
-	}
+    default:
+        /* v2.04: added */
+        /* v2.05: this addition did mess sample Win32_5.asm, because the
+         * "empty" alignment sections are now added to <fileoffset>.
+         * todo: VA in binary map is displayed wrong.
+         */
+        if ( cp->first == FALSE ) {
+            /* v2.05: do the reset more carefully.
+             * Do reset start_loc only if
+             * - segment is in a group and
+             * - group isn't FLAT or segment's name contains '$'
+             */
+            /* v2.19 don't check for '$', that's a -coff format thing */
+            //if ( grp && ( grp != ModuleInfo.g.flat_grp || strchr( curr->sym.name, '$' ) ) ) {
+            if ( grp && ( grp != ModuleInfo.g.flat_grp ) ) {
+                curr->e.seginfo->start_loc = 0;
+                DebugMsg(("CalcOffset(%s): start_loc reset to 0\n", curr->sym.name ));
+            }
+        }
+
+        cp->fileoffset += cp->first ? curr->sym.max_offset - curr->e.seginfo->start_loc : curr->sym.max_offset;
+    }
 
     //if ( cp->first && ModuleInfo.sub_format == SFORMAT_NONE ) {
     if ( ModuleInfo.sub_format == SFORMAT_NONE ) {
@@ -370,33 +373,32 @@ static void CalcOffset( struct dsym *curr, struct calc_param *cp )
          * if the group size is > 65520, but <= 65536.
          */
         if ( grp->sym.Ofssize == USE16 && ( offset + curr->sym.max_offset ) > 0x10000 ) {
-            DebugMsg(("CalcOffset(%s): ofs=%" I32_SPEC "Xh + max_ofs=%" I32_SPEC "Xh > 64 kB\n",
-                      curr->sym.name, offset, curr->sym.max_offset ));
+            DebugMsg(("CalcOffset(%s grp=%s): ofs=%" I32_SPEC "Xh + max_ofs=%" I32_SPEC "Xh > 64 kB\n",
+                      curr->sym.name, grp->sym.name, offset, curr->sym.max_offset ));
             EmitWarn( 2, GROUP_EXCEEDS_64K, grp->sym.name );
         }
         /* v2.13: if the segment contains just an ORG (BIN only)
          * needed by sample Win32_5.asm; was regression in v2.12.
+         * v2.19: simplified, since old method is deprecated.
+         * !!!! to be fixed: currently works for FLAT grp only!
          */
-        if ( ModuleInfo.sub_format == SFORMAT_NONE )
-            if ( curr->e.seginfo->start_loc == curr->sym.max_offset )
-                grp->sym.max_offset += curr->sym.max_offset;
+        if ( ModuleInfo.sub_format == SFORMAT_NONE && grp == ModuleInfo.g.flat_grp )
+            grp->sym.max_offset += curr->sym.max_offset - (cp->first ? cp->imagestart : 0);
 
-        DebugMsg(("CalcOffset(%s): grp %s, ofs=%" I32_SPEC "Xh, max_ofs=%" I32_SPEC "Xh\n",
-                  curr->sym.name,
-                  grp->sym.name,
+        DebugMsg(("CalcOffset(%s grp %s): ofs=%" I32_SPEC "Xh, max_ofs=%" I32_SPEC "Xh\n", curr->sym.name, grp->sym.name,
                   grp->sym.offset,
                   grp->sym.max_offset ));
     }
 #if PE_SUPPORT
-    DebugMsg(("CalcOffset(%s) exit: segment fileofs=%" I32_SPEC "Xh, start_ofs=%" I32_SPEC "Xh, start_loc=%" I32_SPEC "Xh, max_ofs=%" I32_SPEC "Xh\n",
+    DebugMsg(("CalcOffset(%s) exit: curr->fileofs=%" I32_SPEC "Xh, start_ofs=%" I32_SPEC "Xh, start_loc=%" I32_SPEC "Xh, max_ofs=%" I32_SPEC "Xh\n",
               curr->sym.name,
               curr->e.seginfo->fileoffset,
               curr->e.seginfo->start_offset,
               curr->e.seginfo->start_loc,
               curr->sym.max_offset ));
-    DebugMsg(("CalcOffset(%s) exit: fileofs=%" I32_SPEC "Xh, rva=%" I32_SPEC "Xh\n", curr->sym.name, cp->fileoffset, cp->rva ));
+    DebugMsg(("CalcOffset(%s) exit: cp->fileofs=%" I32_SPEC "Xh, rva=%" I32_SPEC "Xh\n", curr->sym.name, cp->fileoffset, cp->rva ));
 #else
-    DebugMsg(("CalcOffset(%s) exit: seg.fileofs=%" I32_SPEC "Xh, seg.start_offset=%" I32_SPEC "Xh, fileofs=%" I32_SPEC "Xh\n",
+    DebugMsg(("CalcOffset(%s) exit: curr->fileofs=%" I32_SPEC "Xh, start_offset=%" I32_SPEC "Xh, cp->fileofs=%" I32_SPEC "Xh\n",
               curr->sym.name, curr->e.seginfo->fileoffset, curr->e.seginfo->start_offset, cp->fileoffset ));
 #endif
 
@@ -2089,7 +2091,6 @@ static ret_code bin_write_module( struct module_info *modinfo )
         cp.sizehdr = 0;
     }
     cp.fileoffset = cp.sizehdr;
-    //cp.sizebss = 0; /* v2.13: sizebss removed */
 
     if ( cp.sizehdr ) {
         hdrbuf = LclAlloc( cp.sizehdr );

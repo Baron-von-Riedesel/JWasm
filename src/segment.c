@@ -946,7 +946,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 /*******************************************************/
 {
     char                is_old = FALSE;
-    ret_code            rc;
+    ret_code            rc = NOT_ERROR;
     char                *token;
     int                 typeidx;
     const struct typeinfo *type;          /* type of option */
@@ -1058,7 +1058,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 
     i++; /* go past SEGMENT */
 
-    for( ; i < Token_Count; i++ ) {
+    for( ; i < Token_Count && rc == NOT_ERROR; i++ ) {
         token = tokenarray[i].string_ptr;
         DebugMsg1(("SegmentDir(%s): i=%u, string=%s token=%X\n", name, i, token, tokenarray[i].token ));
         if( tokenarray[i].token == T_STRING ) {
@@ -1110,24 +1110,37 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
         case INIT_ALIGN_PARAM:
             DebugMsg1(("SegmentDir(%s): ALIGN() found\n", name ));
             if ( Options.output_format == OFORMAT_OMF ) {
-                EmitErr( NOT_SUPPORTED_WITH_OMF_FORMAT, tokenarray[i].string_ptr );
-                i = Token_Count; /* stop further parsing of this line */
+                rc = EmitErr( NOT_SUPPORTED_WITH_OMF_FORMAT, tokenarray[i].string_ptr );
                 break;
             }
             i++;
             if ( tokenarray[i].token != T_OP_BRACKET ) {
-                EmitErr( EXPECTED, "(" );
+                rc = EmitErr( EXPECTED, "(" );
                 break;
             }
             i++;
             if ( EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) == ERROR )
                 break;
-            if ( tokenarray[i].token != T_CL_BRACKET ) {
-                EmitErr( EXPECTED, ")" );
+            if ( opndx.kind != EXPR_CONST ) {
+                rc = EmitError( CONSTANT_EXPECTED );
                 break;
             }
-            if ( opndx.kind != EXPR_CONST ) {
-                EmitError( CONSTANT_EXPECTED );
+#if BIN_SUPPORT
+            /* v2.19: if format -bin, accept ALIGN(num,v) syntax */
+            if ( Options.output_format == OFORMAT_BIN && ModuleInfo.sub_format == SFORMAT_NONE &&
+                tokenarray[i].token == T_COMMA ) {
+                i++;
+                if ( tokenarray[i].token == T_ID && ( 0 == _stricmp(tokenarray[i].string_ptr, "V") ) ) {
+                    dir->e.seginfo->align_rva_only = 1;
+                    i++;
+                } else {
+                    rc = EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr );
+                    break;
+                }
+            }
+#endif
+            if ( tokenarray[i].token != T_CL_BRACKET ) {
+                rc = EmitErr( EXPECTED, ")" );
                 break;
             }
             /*
@@ -1136,7 +1149,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
              */
             for( temp = 1, temp2 = 0; temp < opndx.value && temp < 8192 ; temp <<= 1, temp2++ );
             if( temp != opndx.value ) {
-                EmitErr( POWER_OF_2, opndx.value );
+                rc = EmitErr( POWER_OF_2, opndx.value );
             }
             dir->e.seginfo->alignment = temp2;
             break;
@@ -1166,8 +1179,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
             /* v2.12: COMDAT supported by OMF */
             //if ( Options.output_format != OFORMAT_COFF ) {
             if ( Options.output_format != OFORMAT_COFF && Options.output_format != OFORMAT_OMF ) {
-                EmitErr( NOT_SUPPORTED_WITH_CURR_FORMAT, tokenarray[i].string_ptr );
-                i = Token_Count; /* stop further parsing of this line */
+                rc = EmitErr( NOT_SUPPORTED_WITH_CURR_FORMAT, tokenarray[i].string_ptr );
                 break;
             }
             i++;
@@ -1179,8 +1191,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
             if ( EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) == ERROR )
                 break;
             if ( opndx.kind != EXPR_CONST ) {
-                EmitError( CONSTANT_EXPECTED );
-                i = Token_Count; /* stop further parsing of this line */
+                rc = EmitError( CONSTANT_EXPECTED );
                 break;
             }
             if ( opndx.value < 1 || opndx.value > 6 ) {
@@ -1192,14 +1203,12 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
                 if ( opndx.value == 5 ) {
                     struct asym *sym2;
                     if ( tokenarray[i].token != T_COMMA ) {
-                        EmitErr( EXPECTING_COMMA, tokenarray[i].tokpos );
-                        i = Token_Count; /* stop further parsing of this line */
+                        rc = EmitErr( EXPECTING_COMMA, tokenarray[i].tokpos );
                         break;
                     }
                     i++;
                     if ( tokenarray[i].token != T_ID ) {
-                        EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr );
-                        i = Token_Count; /* stop further parsing of this line */
+                        rc = EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr );
                         break;
                     }
                     /* associated segment must be COMDAT, but not associative */
@@ -1215,7 +1224,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
                 }
             }
             if ( tokenarray[i].token != T_CL_BRACKET ) {
-                EmitErr( EXPECTED, ")" );
+                rc = EmitErr( EXPECTED, ")" );
                 break;
             }
             dir->e.seginfo->comdat_selection = opndx.value;
@@ -1276,27 +1285,25 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
             if ( Options.output_format == OFORMAT_OMF
                 || ( Options.output_format == OFORMAT_BIN && ModuleInfo.sub_format != SFORMAT_PE )
                ) {
-                EmitErr( NOT_SUPPORTED_WITH_CURR_FORMAT, tokenarray[i].string_ptr );
-                i = Token_Count; /* stop further parsing of this line */
+                rc = EmitErr( NOT_SUPPORTED_WITH_CURR_FORMAT, tokenarray[i].string_ptr );
                 break;
             }
             i++;
             if ( tokenarray[i].token != T_OP_BRACKET ) {
-                EmitErr( EXPECTED, "(" );
+                rc = EmitErr( EXPECTED, "(" );
                 break;
             }
             i++;
             if ( tokenarray[i].token != T_STRING ||
                 ( tokenarray[i].string_delim != '"' &&
                 tokenarray[i].string_delim != '\'' ) ) {
-                EmitErr( SYNTAX_ERROR_EX, token );
-                i = Token_Count; /* stop further parsing of this line */
+                rc = EmitErr( SYNTAX_ERROR_EX, token );
                 break;
             }
             temp = i;
             i++;
             if ( tokenarray[i].token != T_CL_BRACKET ) {
-                EmitErr( EXPECTED, ")" );
+                rc = EmitErr( EXPECTED, ")" );
                 break;
             }
             /* v2.10: if segment already exists, check that old and new aliasname are equal */

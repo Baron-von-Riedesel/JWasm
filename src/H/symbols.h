@@ -341,6 +341,9 @@ struct seg_info {
 #if COMDATSUPP
     unsigned char       comdat_selection:3; /* if > 0, it's a COMDAT (COFF/OMF) */
 #endif
+#if BIN_SUPPORT
+    unsigned char       align_rva_only:1;/* alignment modifies RVA only, filepos not affected */
+#endif
 };
 
 #define MAX_SEGALIGNMENT 0xFF

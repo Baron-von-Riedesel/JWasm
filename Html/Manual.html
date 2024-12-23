@@ -1828,6 +1828,10 @@ _DATA                           C      10C        12        12
       offset 10000h exceeds 16-bit ( it will be truncated to 16-bit ). JWasm emits a level 3 warning and
       the offset is NOT truncated.
 </TD><TD>-</TD></TR>
+<TR BGCOLOR="#E0E0E0"><TD>22</TD><TD>if output format is OMF, Masm will generate LEDATA records with
+      size 0 for segment _BSS (.DATA?) if an EVEN directive is positioned at the very start of this segment.
+      This causes the linker to add the segment to the binary, bloating it with trailing 0x00 bytes.
+</TD><TD>-</TD></TR>
 </TABLE>
 
     It's slightly dangerous to fix old Masm bugs, since some code might
