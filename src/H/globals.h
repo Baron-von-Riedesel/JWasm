@@ -582,6 +582,7 @@ struct global_options {
     bool        dump_reswords_hash;      /* -drh option */
     bool        dump_symbols;            /* -ds option */
     bool        dump_symbols_hash;       /* -dsh option */
+    bool        display_memalloc;        /* -dma option */
 #endif
     char        *names[OPTN_LAST];
     struct qitem *queues[OPTQ_LAST];

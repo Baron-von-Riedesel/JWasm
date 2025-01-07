@@ -90,6 +90,7 @@ struct global_options Options = {
     /* dump_reswords_hash */        FALSE,
     /* dump_symbols     */          FALSE,
     /* dump_symbols_hash */         FALSE,
+    /* display_memalloc */          FALSE,
 #endif
     /* names            */          {
         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -588,6 +589,7 @@ static struct cmdloption const cmdl_options[] = {
     { "djgpp",  OFORMAT_COFF | (SFORMAT_DJGPP << 8), Set_ofmt },
 #endif
 #ifdef DEBUG_OUT
+    { "dma",    optofs( display_memalloc ), Set_True },
     { "dm",     0,        Set_dm },
     { "drh",    optofs( dump_reswords_hash ), Set_True },
     { "dr",     optofs( dump_reswords ),    Set_True },

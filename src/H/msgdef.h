@@ -382,3 +382,4 @@ pick( msg_filler31, "" )
 #endif
 pick( OPCODE_SIZE_SUFFIX_IGNORED_FOR_SR, "Opcode size suffix ignored for segment registers" )
 pick( PROLOGUE_NOT_AT_PROC_START,        "Prologue not at PROC start" )
+pick( EXTRA_CHARACTERS_AFTER_STATEMENT,  "Extra characters after statement: %s" )

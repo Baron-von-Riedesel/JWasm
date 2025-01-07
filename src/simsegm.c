@@ -225,18 +225,20 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
         /* Masm accepts a name argument for .CODE and .FARDATA[?] only.
          * JWasm also accepts this for .DATA[?] and .CONST unless
          * option -Zne is set.
+         * v2.19: Masm don't accept name argument for .CODE if model is TINY!
          */
         if( tokenarray[i].token == T_ID &&
-           ( type == SIM_CODE || type == SIM_FARDATA || type == SIM_FARDATA_UN
+           ( (type == SIM_CODE && ModuleInfo.model != MODEL_TINY) || type == SIM_FARDATA || type == SIM_FARDATA_UN
             || ( Options.strict_masm_compat == FALSE &&
-                ( type == SIM_DATA || type == SIM_DATA_UN || type == SIM_CONST )))) {
+                ( type == SIM_CODE || type == SIM_DATA || type == SIM_DATA_UN || type == SIM_CONST )))) {
             name = tokenarray[i].string_ptr;
             i++;
         }
     }
     if ( tokenarray[i].token != T_FINAL ) {
-        EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr );
-        return( ERROR );
+        /* v2.19: new error msg "Extra characters after statement" (Masm compatible) */
+        //EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr );
+        return (EmitErr( EXTRA_CHARACTERS_AFTER_STATEMENT, tokenarray[i].string_ptr ) );
     }
 
     if( type != SIM_STACK )

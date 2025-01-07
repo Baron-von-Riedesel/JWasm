@@ -926,6 +926,7 @@ static void StartComment( const char *p )
     ModuleInfo.inside_comment = *p++;
     if( strchr( p, ModuleInfo.inside_comment ) )
         ModuleInfo.inside_comment = NULLC;
+
     return;
 }
 
@@ -962,6 +963,9 @@ int Tokenize( char *line, unsigned int start, struct asm_tok tokenarray[], unsig
                 DebugMsg1(("COMMENT mode exited\n"));
                 ModuleInfo.inside_comment = NULLC;
             }
+            strcpy( commentbuffer, p.input );
+            ModuleInfo.CurrComment = commentbuffer;
+            *p.input = NULLC;
             goto skipline;
         }
         /* v2.08: expansion operator % at pos 0 is handled differently.
@@ -1046,7 +1050,10 @@ int Tokenize( char *line, unsigned int start, struct asm_tok tokenarray[], unsig
                     if ( tokenarray[p.index].tokval == T_COMMENT ) {
                         DebugMsg1(("tokenize: COMMENT starting, delim is >%c<\n", ModuleInfo.inside_comment));
                         StartComment( p.input );
-                        break; /* p.index is 0 or 2 */
+                        strcpy( commentbuffer, p.input );
+                        ModuleInfo.CurrComment = commentbuffer;
+                        *p.input = NULLC;
+                        break; /* p.index is 0 or 2; even if the comment is finished, the line isn't scanned further! */
                     }
                     conditional_assembly_prepare( tokenarray[p.index].tokval );
                     if ( CurrIfState != BLOCK_ACTIVE ) {

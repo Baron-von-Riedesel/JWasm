@@ -550,6 +550,7 @@
 <DD>      - <A HREF="#MBRARG">member argument for IF[N]DEF and .ERR[N]DEF directives</A>
 <DD>      - <A HREF="#INITMMXMM">integer initializer values for items of type [X]MMWORD</A>
 <DD>      - <A HREF="#SIMSEGARG">optional name argument</A> for .DATA, .DATA? and .CONST directives
+<DD>      - <A HREF="#SIMSEGARG">optional name argument</A> for .CODE directive if model is TINY
 <DD>      - forward references in arguments for INVOKEd procedures
 <DD>      - overrides inside square brackets for base/index registers
 <DD>      - <A HREF="#LABELARRAY">Optional Array Size</A> for LABEL Directive</DD>
@@ -1111,7 +1112,7 @@ size_myarray equ $ - myarray
 
 <H2 ID="SIMSEGARG">    3.21 Optional Name Argument for Simplified Segment Directives </H2>
 
-    Masm allows an optional argument for simplified segment directives <b>.CODE</b>,
+    Masm allows an optional argument for simplified segment directives <b>.CODE</b> (unless model is TINY),
     <b>.FARDATA</b> and <b>.FARDATA?</b>. This is to set the name of the segment that is to be opened.
     JWasm will also accept the name argument for those directives; additionally, it's
     accepted for <b>.DATA</b>, <b>.DATA?</b> and <b>.CONST</b> directives.
@@ -5741,6 +5742,14 @@ and an image base that fits into 32-bit.
 </TD>
 </TR>
 
+<TR BGCOLOR="#F0F0F0">
+<TD><b>x285</b></TD>
+<TD>Extra characters after statement: %s</TD>
+<TD>Additional characters found behind a directive that cannot be interpreted.
+    Emitted if simplified segment directives have additional argument(s) that aren't accepted in the current context.
+</TD>
+</TR>
+
 </TABLE>
 
 <H1 ID="AD"> Appendix D. Differences between Masm 6 and Masm 8 </H1>
@@ -5833,6 +5842,9 @@ files in a directory won't work as expected.</LI>
 <TR BGCOLOR="#E8E8E8"><TD>-nfp</TD> <TD> Do full subsequent passes ( disables "fastpass" ) </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-pm=&lt;n&gt;</TD> <TD> Stop assembly after <i>n</i> passes </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-sp</TD> <TD> Skip preprocessor step </TD></TR>
+<P>In the listing, forward references are marked with <b>(F)</b>, 
+   unused global variables that have a size and aren't PUBLIC are marked with <b>(U)</b>.
+</P>
 </TABLE>
 
 </BODY>

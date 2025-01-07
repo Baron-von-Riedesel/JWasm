@@ -14,6 +14,10 @@
 
 #include "globals.h"
 #include "memalloc.h"
+#ifdef DEBUG_OUT
+#include "input.h"
+extern struct asym *LineCur;  /* @Line symbol       */
+#endif
 
 /* what items are stored in the heap?
  * - symbols + symbol names ( asym, dsym; symbol.c )
@@ -198,6 +202,7 @@ void *LclAlloc( size_t size )
         pBase = (struct linked_list *)pCurr;
         pCurr += sizeof( struct linked_list );
         DebugCmd( blocks++ );
+        DebugCmd( if ( Options.display_memalloc ) printf("mem alloc(0x%X)=%p [%u: %s]\n", currfree, pBase, LineCur ? GetLineNumber() : 0, CurrSource ); );
     }
     ptr = pCurr;
     pCurr += size;

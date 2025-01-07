@@ -111,6 +111,7 @@
 "-af\0"             "Display all files used in assembly process\0"
 "-ce\0"             "Cause an exception\0"
 "-dm\0"             "Display all messages\0"
+"-dma\0"            "Display memory allocations\0"
 "-dr\0"             "Display reserved words\0"
 "-drh\0"            "Display reserved words hash table\0"
 "-ds\0"             "Display global symbols\0"

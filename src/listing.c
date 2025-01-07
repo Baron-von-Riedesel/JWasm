@@ -1121,6 +1121,9 @@ static void log_symbol( const struct asym *sym )
 #ifdef DEBUG_OUT
         if ( sym->fwdref )
             LstPrintf( "(F) " );
+        /* list unused global variables if they have a size and aren't public */
+        if ( sym->state == SYM_INTERNAL && (!sym->used) && !(sym->mem_type & MT_ADDRESS) && !sym->ispublic )
+            LstPrintf( "(U) " );
 #endif
         if ( sym->state == SYM_EXTERNAL && sym->iscomm == TRUE )
             LstPrintf( "%s=%u ", szCount, sym->total_length );
