@@ -69,13 +69,14 @@
 <DD>     3.22 <A HREF="#ATTRCOMDAT">Segment Attribute COMDAT</A></DD>
 <DD>     3.23 <A HREF="#VARARGMLATTR">Attribute VARARGML for last Macro Parameter</A></DD>
 <DD>     3.24 <A HREF="#DIRPUBLIC">Optional EXPORT attribute for PUBLIC Directive</A></DD>
-<DD>     3.25 <A HREF="#OTHERDIFF">Miscellaneous</A></DD>
+<DD>     3.25 <A HREF="#ALIGNVA">Segment attribute ALIGN() extended for Binary Format</A></DD>
+<DD>     3.26 <A HREF="#OTHERDIFF">Miscellaneous</A></DD>
 <DL>
-<DD>     3.25.1 <A HREF="#OTHERDIFF1">Numeric constant __JWASM__</A></DD>
-<DD>     3.25.2 <A HREF="#OTHERDIFF2">Operating System Argument for .MODEL</A></DD>
-<DD>     3.25.3 <A HREF="#OTHERDIFF3">Accepted Parameters for IF[N]DEF Directive</A></DD>
-<DD>     3.25.4 <A HREF="#OTHERDIFF4">Visibility of Procedures</A></DD>
-<DD>     3.25.5 <A HREF="#OTHERDIFF5">Non-RIP-Relative Addressing in 64-Bit</A></DD>
+<DD>     3.26.1 <A HREF="#OTHERDIFF1">Numeric constant __JWASM__</A></DD>
+<DD>     3.26.2 <A HREF="#OTHERDIFF2">Operating System Argument for .MODEL</A></DD>
+<DD>     3.26.3 <A HREF="#OTHERDIFF3">Accepted Parameters for IF[N]DEF Directive</A></DD>
+<DD>     3.26.4 <A HREF="#OTHERDIFF4">Visibility of Procedures</A></DD>
+<DD>     3.26.5 <A HREF="#OTHERDIFF5">Non-RIP-Relative Addressing in 64-Bit</A></DD>
 </DL>
 </DL>
 <DD>    4.    <A HREF="#CHAPINSTRSET">Instruction Sets</A></DD>
@@ -1183,35 +1184,44 @@ size_myarray equ $ - myarray
     PUBLIC EXPORT var1
 </font></pre><P>
 
-    This extension may be used to declate data items as exports ( the PROC directive 
+    This extension may be used to declare data items as exports ( the PROC directive 
     accepts the EXPORT attribute as well ). It's intended usage is mainly for option -pe.
 
 
-<H2 ID="OTHERDIFF">    3.25 Miscellaneous </H2>
+<H2 ID="ALIGNVA">    3.25 Segment Attribute ALIGN() extended for BIN Format </H2>
+<P>
+    If output format -bin is selected, the segment attribute ALIGN(alignment) will accept
+    an optional second argument: ALIGN(alignment,v). This tells the assembler that the
+    alignment is "virtual", meaning that it should affect the "assumed" offset only.
+    This is only relevant for segments in a group ( and also for the FLAT model, since
+    in this model all segments/sections are assumed to be part of the virtual group "FLAT" ).
+</P>
+
+<H2 ID="OTHERDIFF">    3.26 Miscellaneous </H2>
 
 <DL>
-<DD>   <A HREF="#OTHERDIFF1">    3.25.1 Numeric constant __JWASM__ </A></DD>
-<DD>   <A HREF="#OTHERDIFF2">    3.25.2 Operating System Argument for .MODEL </A></DD>
-<DD>   <A HREF="#OTHERDIFF3">    3.25.3 Accepted Parameters for IF[N]DEF Directive </A></DD>
-<DD>   <A HREF="#OTHERDIFF4">    3.25.4 Visibility of Procedures </A></DD>
-<DD>   <A HREF="#OTHERDIFF5">    3.25.5 Non-RIP-Relative Addressing in 64-Bit </A></DD>
+<DD>   <A HREF="#OTHERDIFF1">    3.26.1 Numeric constant __JWASM__ </A></DD>
+<DD>   <A HREF="#OTHERDIFF2">    3.26.2 Operating System Argument for .MODEL </A></DD>
+<DD>   <A HREF="#OTHERDIFF3">    3.26.3 Accepted Parameters for IF[N]DEF Directive </A></DD>
+<DD>   <A HREF="#OTHERDIFF4">    3.26.4 Visibility of Procedures </A></DD>
+<DD>   <A HREF="#OTHERDIFF5">    3.26.5 Non-RIP-Relative Addressing in 64-Bit </A></DD>
 </DL>
 
-<H3 ID="OTHERDIFF1">    3.25.1 Numeric constant __JWASM__ </H3>
+<H3 ID="OTHERDIFF1">    3.26.1 Numeric constant __JWASM__ </H3>
 
     __JWASM__ is a predefined symbol, its value is the current JWasm
     version * 100, that is, for v1.9 the value is 190. The predefined text
     equate @Version won't contain JWasm's version, for compatibility reasons
     it has value &lt;800&gt; (since v2.06, previously the value was &lt;615&gt;).
 
-<H3 ID="OTHERDIFF2">    3.25.2 Operating System Argument for .MODEL </H3>
+<H3 ID="OTHERDIFF2">    3.26.2 Operating System Argument for .MODEL </H3>
 
     The .MODEL directive has an optional "operating system" argument. Masm
     accepts value OS_DOS only, JWasm accepts values OS_DOS and OS_OS2.
     This setting will affect the generated code of directives .STARTUP and
     .EXIT for 16-bit memory models.
 
-<H3 ID="OTHERDIFF3">    3.25.3 Accepted Parameters for IF[N]DEF Directive </H3>
+<H3 ID="OTHERDIFF3">    3.26.3 Accepted Parameters for IF[N]DEF Directive </H3>
 
     Masm's IF[N]DEF directive accepts user-defined symbols and registers,
     but fails for instructions, directives and other reserved words. JWasm's
@@ -1222,7 +1232,7 @@ size_myarray equ $ - myarray
 <P>
     Also see <A HREF="#MBGARG">Member Argument for IF[N]DEF and .ERR[N]DEF Directives</A>.
 
-<H3 ID="OTHERDIFF4">    3.25.4 Visibility of Procedures </H3>
+<H3 ID="OTHERDIFF4">    3.26.4 Visibility of Procedures </H3>
 
     When a PROTO or EXTERNDEF directive for a symbol is located in a module
     before a matching PROC directive, the visibility of this Procedure 
@@ -5831,7 +5841,8 @@ files in a directory won't work as expected.</LI>
 <TABLE CELLPADDING="4" CELLSPACING="1">
 <TR BGCOLOR="#E8E8E8"><TD>-af</TD>  <TD> Display all files used in assembly process </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-ce</TD>  <TD> Cause an exception </TD></TR>
-<TR BGCOLOR="#E8E8E8"><TD>-dm</TD>  <TD> Display all messages </TD></TR>
+<TR BGCOLOR="#E8E8E8"><TD>-dm</TD>  <TD> Display all message texts </TD></TR>
+<TR BGCOLOR="#E8E8E8"><TD>-dma</TD> <TD> Display memory allocations </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-dr</TD>  <TD> Display reserved words </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-drh</TD> <TD> Display reserved words hash table </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-ds</TD>  <TD> Display global symbols </TD></TR>

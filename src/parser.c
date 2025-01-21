@@ -1646,6 +1646,14 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
     }
 #endif
 
+    /* v2.19: to be fixed: if base/index != EMPTY, check if register and assumed segment
+     * register are correct ( that is, 16-bit registers require a segment register assumed
+     * to a segment of the same bitness ). If no, a warning should be emitted; Masm emits
+     * error "cannot use 16-bit register with a 32-bit address".
+     * it's quite similar to warning WORD_FIXUP_FOR_32BIT_LABEL (see below), but there's
+     * not necessarily a fixup involved here.
+     */
+
     /* check for base registers */
 
     if ( base != EMPTY ) {

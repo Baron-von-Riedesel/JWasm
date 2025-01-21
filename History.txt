@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.____, v2.19:
+   __.__.2025, v2.19:
 
    Bugfixes:
    -  format mz: stack segment was never written - a fault if it isn't
@@ -24,6 +24,8 @@
       see public3.asm.
    -  omf format: incorrect special handling of assembly-time variable fixups
       removed; see label9.asm.
+   -  if a 32-bit offset was to initialize a WORD variable, no error was
+      emitted; see data11.asm.
 
    Other changes:
    -  write listing reworked.

@@ -541,10 +541,12 @@ enum segofssize GetOfssizeAssume( enum assume_segreg segno )
 #endif
 /*
  * GetAssume():
- * called by check_assume() in parser.c
+ * called by
+ * a) check_assume() in parser.c
+ * b) memory_operand() in parser.c if both base & index are empty
  * in:
  * - override: SegOverride
- * - sym: symbol in current memory operand
+ * - sym: symbol in current memory operand; cannot be NULL if override is NULL.
  * - def: default segment assume value
  * to be fixed: check if symbols with state==SYM_STACK are handled correctly.
  */
