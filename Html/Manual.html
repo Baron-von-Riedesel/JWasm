@@ -5273,8 +5273,8 @@ In some cases (i.e. overlays) a missing stack may be ok.</TD>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x210</b></TD>
-<TD></TD>
-<TD></TD>
+<TD>Too many unwind codes in FRAME procedure</TD>
+<TD>64-bit only. The prologue of the procedure must be simplified.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -5757,6 +5757,14 @@ and an image base that fits into 32-bit.
 <TD>Extra characters after statement: %s</TD>
 <TD>Additional characters found behind a directive that cannot be interpreted.
     Emitted if simplified segment directives have additional argument(s) that aren't accepted in the current context.
+</TD>
+</TR>
+
+<TR BGCOLOR="#F0F0F0">
+<TD><b>x286</b></TD>
+<TD>Cannot use 16-bit register with a 32-bit address</TD>
+<TD>A 16-bit register is used for indirect addressing, but the associated segment register is assumed flat.
+Note that the error won't be displayed if the associated segment register is assumed 32-bit, non-flat.
 </TD>
 </TR>
 

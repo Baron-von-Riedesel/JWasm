@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.2025, v2.19:
+   24.01.2025, v2.19:
 
    Bugfixes:
    -  format mz: stack segment was never written - a fault if it isn't
@@ -26,6 +26,9 @@
       removed; see label9.asm.
    -  if a 32-bit offset was to initialize a WORD variable, no error was
       emitted; see data11.asm.
+   -  address size prefix was missing for indirect addressing if a segment
+      prefix was used and both the prefix and the current code segment were
+      32-bit (but not flat); see pref67a.asm.
 
    Other changes:
    -  write listing reworked.
@@ -48,6 +51,9 @@
    -  option -Zne: now makes jwasm refuse name after .CODE if model is tiny;
       see simpseg1.asm.
    -  debug option -dma added to display memory allocations.
+   -  error msg "cannot use 16-bit register with a 32-bit address" is now
+      emitted if a 16-bit register is used for indirect addressing and the
+      associated segment register is assumed flat; see assume14.asm.
 
    09.06.2024, v2.18:
 

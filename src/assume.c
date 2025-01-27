@@ -526,7 +526,9 @@ enum segofssize GetOfssizeAssume( enum assume_segreg segno )
 /**********************************************************/
 {
     if( SegAssumeTable[segno].is_flat )
-        return( ModuleInfo.Ofssize );
+        /* v2.19: ModuleInfo.Ofssize has the current CS ofssize - not what we want here */
+        //return( ModuleInfo.Ofssize );
+        return( ModuleInfo.g.flat_grp->sym.Ofssize );
 
     if ( SegAssumeTable[segno].symbol ) {
         struct asym *sym = SegAssumeTable[segno].symbol;
@@ -534,11 +536,10 @@ enum segofssize GetOfssizeAssume( enum assume_segreg segno )
             return( ((struct dsym *)sym)->e.seginfo->Ofssize );
         return( sym->Ofssize );
     }
-
     return( ModuleInfo.Ofssize );
-
 }
 #endif
+
 /*
  * GetAssume():
  * called by

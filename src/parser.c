@@ -475,19 +475,24 @@ static void seg_override( struct code_info *CodeInfo, int seg_reg, const struct 
     } else {
         if ( sym || SegOverride )
             check_assume( CodeInfo, sym, default_seg );
-#if AMD64_SUPPORT
+        /* v2.19: next if() removed, since definitely a bug; see pref67a.asm.
+         * i.e. ADDRSIZE() will clear prefix.adrsize if both arguments are > 0.
+         */
+#if 0
+ #if AMD64_SUPPORT
         /* v2.17: no address prefix in 64-bit or if segoverride is FLAT.
          * todo: check if this isn't generally the wrong place to modify the adrsiz prefix.
          * Also, the ADDRSIZE() macro should really be removed/replaced.
          */
         if ( sym == NULL && SegOverride && ( SegOverride != (struct asym *)ModuleInfo.g.flat_grp ) && CodeInfo->Ofssize != USE64 ) {
-#else
+ #else
         if ( sym == NULL && SegOverride ) {
-#endif
+ #endif
             CodeInfo->prefix.adrsiz = ADDRSIZE( CodeInfo->Ofssize, GetSymOfssize( SegOverride ) );
             DebugMsg1(("seg_override: sym==NULL, group/seg override (%u/%u), new CI->adrsize=%u\n",
                     CodeInfo->Ofssize, GetSymOfssize( SegOverride ), CodeInfo->prefix.adrsiz ));
         }
+#endif
     }
 
     if( CodeInfo->prefix.RegOverride == default_seg ) {
@@ -1646,14 +1651,6 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
     }
 #endif
 
-    /* v2.19: to be fixed: if base/index != EMPTY, check if register and assumed segment
-     * register are correct ( that is, 16-bit registers require a segment register assumed
-     * to a segment of the same bitness ). If no, a warning should be emitted; Masm emits
-     * error "cannot use 16-bit register with a 32-bit address".
-     * it's quite similar to warning WORD_FIXUP_FOR_32BIT_LABEL (see below), but there's
-     * not necessarily a fixup involved here.
-     */
-
     /* check for base registers */
 
     if ( base != EMPTY ) {
@@ -1838,10 +1835,6 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
             CodeInfo->opnd[CurrOpnd].InsFixup = FixupCreate( sym, fixup_type, OPTJ_NONE );
         }
     }
-#ifdef DEBUG_OUT
-    else
-        DebugMsg1(("memory_operand: without fixup, CI->Ofssize=%u, adrsize=%u\n", CodeInfo->Ofssize, CodeInfo->prefix.adrsiz ));
-#endif
 
     /* v2.17: check if offset fits in 32-bit; this replaces check
      * in process_address(), which was for indirect addressing only.
@@ -1857,6 +1850,27 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
     if( set_rm_sib( CodeInfo, CurrOpnd, ss, index, base, sym ) == ERROR ) {
         return( ERROR );
     }
+
+	/* v2.19: check if address register is 16-bit; if yes, check if the associated segment register is flat.
+	 * If yes, emit error "cannot use 16-bit register with a 32-bit address". That's what Masm does, with the
+	 * small difference that jwasm won't complain if the expression is behind a LEA!
+	 * If the assumed segment register is 32-bit, but NOT flat, it's no error!?
+	 * this check is behind set_rm_sib(), since the errors detected by that function have a higher priority.
+	 */
+	if ( (!with_fixup) && CodeInfo->token != T_LEA ) {
+		DebugMsg1(("memory_operand: without fixup, CI->Ofssize=%u, adrsize=%u\n", CodeInfo->Ofssize, CodeInfo->prefix.adrsiz ));
+		if ( base != EMPTY && ( ( GetValueSp( base ) & OP_R16) ) ) {  /* 16-bit register used for based addressing? */
+			enum assume_segreg sr = ( base == T_BP ? ASSUME_SS : ASSUME_DS );
+			if ( SegAssumeTable[CodeInfo->prefix.RegOverride == EMPTY ? sr : CodeInfo->prefix.RegOverride].is_flat )
+				return( EmitErr( CANNOT_USE_16BIT_REG_WITH_32BIT_ADDR ) );
+		}
+		if ( index != EMPTY && ( ( GetValueSp( index ) & OP_R16) ) ) {  /* 16-bit register used for indexed addressing? */
+			enum assume_segreg sr = ( index == T_BP ? ASSUME_SS : ASSUME_DS );
+			if ( SegAssumeTable[CodeInfo->prefix.RegOverride == EMPTY ? sr : CodeInfo->prefix.RegOverride].is_flat )
+				return( EmitErr( CANNOT_USE_16BIT_REG_WITH_32BIT_ADDR ) );
+		}
+	}
+
     /* set frame type/data in fixup if one was created */
     if ( CodeInfo->opnd[CurrOpnd].InsFixup ) {
         CodeInfo->opnd[CurrOpnd].InsFixup->frame_type = Frame_Type;
