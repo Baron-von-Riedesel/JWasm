@@ -838,9 +838,16 @@ next_item:  /* <--- continue scan if a comma has been detected */
                 break;
             case 2:
                 /* v2.19: check if offset size is > 16 */
-                if ( opndx.sym && ( GetSymOfssize(opndx.sym) > USE16 ) ) {
-                    DebugMsg(("data_item.ADDR: error, offset wont fit in a WORD\n" ));
-                    EmitError( OFFSET_MAGNITUDE_TOO_LARGE );
+                if ( opndx.sym ) {
+                    switch ( GetSymOfssize(opndx.sym) ) {
+                    case USE_EMPTY:
+                    case USE16:
+                        break;
+                    default:
+                        DebugMsg(("data_item.ADDR: error, offset wont fit in a WORD\n" ));
+                        EmitError( OFFSET_MAGNITUDE_TOO_LARGE );
+                        break;
+                    }
                 }
                 fixup_type = FIX_OFF16;
                 break;
