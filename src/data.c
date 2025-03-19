@@ -837,10 +837,15 @@ next_item:  /* <--- continue scan if a comma has been detected */
                 }
                 break;
             case 2:
-                /* v2.19: check if offset size is > 16 */
-                if ( opndx.sym && ( GetSymOfssize(opndx.sym) > USE16 ) ) {
-                    DebugMsg(("data_item.ADDR: error, offset wont fit in a WORD\n" ));
-                    EmitError( OFFSET_MAGNITUDE_TOO_LARGE );
+                /* v2.19: check if offset size is > 16
+                 * v2.20: skip error if offset size is EMPTY
+                 */
+                if ( opndx.sym ) {
+                    enum segofssize ofssize = GetSymOfssize(opndx.sym);
+                    if ( ofssize != USE_EMPTY && ofssize > USE16 ) {
+                        DebugMsg(("data_item.ADDR: error, offset wont fit in a WORD\n" ));
+                        EmitError( OFFSET_MAGNITUDE_TOO_LARGE );
+                    }
                 }
                 fixup_type = FIX_OFF16;
                 break;
