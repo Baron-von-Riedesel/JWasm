@@ -186,10 +186,13 @@ void AddLinnumDataRef( unsigned srcfile, uint_32 line_num )
 
     /* v2.10: warning if line-numbers for segments without class code! */
     if ( CurrSeg->e.seginfo->linnum_init == FALSE ) {
-        CurrSeg->e.seginfo->linnum_init = TRUE;
         if ( TypeFromClassName( CurrSeg, CurrSeg->e.seginfo->clsym ) != SEGTYPE_CODE ) {
+            /* v2.20: suppress line number generation for non-code segments */
+            if ( ModuleInfo.cv_opt & CVO_NOLINNUMFORDATA )
+                return;
             EmitWarn( 2, LINNUM_INFO_FOR_SEGMENT_WITHOUT_CLASS_CODE, CurrSeg->sym.name );
         }
+        CurrSeg->e.seginfo->linnum_init = TRUE; /* flag to avoid multiple warnings */
     }
     DebugMsg1(("AddLinnumDataRef: calling AddLinnumData(src=%u.%u ofs=%X)\n", curr->number == 0 ? curr->file : curr->srcfile, curr->number, curr->offset ));
     AddLinnumData( curr );

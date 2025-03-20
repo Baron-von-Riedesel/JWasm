@@ -537,6 +537,7 @@ enum cvex_values {
 /* codeview debug info option flags */
 enum cvoption_flags {
     CVO_STATICTLS = 1, /* handle static tls */
+    CVO_NOLINNUMFORDATA = 2, /* v2.20: suppress line number generation for non-code segments */
 };
 
 enum seg_type {
