@@ -185,7 +185,7 @@
 <P>
     Chapter <A HREF="#CHAPOUTPUTFORMATS">Output Formats</A> lists all available output formats.
 
-<H2 ID="CMDOPTDJGPP">    Option -djgpp: Select Output Format for DJGPP (optional) </H2>
+<H2 ID="CMDOPTDJGPP">    Option -djgpp: Select Output Format for DJGPP </H2>
 
     Option -djgpp selects Djgpp's variant of COFF as output format.
 <P>
@@ -555,6 +555,7 @@
 <DD>      - forward references in arguments for INVOKEd procedures
 <DD>      - overrides inside square brackets for base/index registers
 <DD>      - <A HREF="#LABELARRAY">Optional Array Size</A> for LABEL Directive</DD>
+<DD>      - <A HREF="#DIRPUBLIC">Optional EXPORT attribute</A> for PUBLIC Directive</DD>
 </DL> 
      Some directives aren't touched by this option, although Masm won't accept them:
 <DL>
@@ -949,7 +950,7 @@ code segment must be at least the value of OPTION PROCALIGN.
 <DL style="color:#008040"> 
 <DD>       OPTION CODEVIEW:<i>switches</i>
 </DL>
-<P>    There is currently only one switch :
+<P>    Currently defined switches :
 <P>
 <DL>
 <DD>     [bit 0]: If 1, create symbols with indices S_[L|G]THREAD32 instead of S_[L|G]DATA32
@@ -962,6 +963,10 @@ _TLS segment dword alias(".tls") public 'TLS'
 tvar DD -1      ;codeview symbol tvar will be S_LTHREAD32
 _TLS ends
 </font></pre>
+</DL>
+<DL>
+<DD>     [bit 1]: If 1, suppress generation of line number information for segments that don't have class code.
+         Thus JWasm won't display warning 0x4187.
 </DL>
 <P> 
 
@@ -1530,7 +1535,7 @@ is written for more than one source file; this conforms to MASM behavior.
     most of the other high level features combined with PROC (function 
     parameters, locals and registers saved with USES) because no function
     prologues and epilogues are generated anymore. Additionally, the 
-    implementation at least in Masm v8 seems to be a bit buggy, at least in Masm v8.
+    implementation at least in Masm v8 seems to be a bit buggy.
     Because of this and to ease the usage of SEH in Win64 there is a new 
     directive implemented in JWasm:
 <PRE><font color="#008040"> 
@@ -3497,6 +3502,12 @@ STACK <b>ends</b>
 ;<font color="#808080">--- Uses JWasm's bin output format, so no linker needed.</font>
 ;<font color="#808080">--- assemble: JWasm -bin -Fo Win32_5.exe Win32_5.ASM</font>
 
+;<font color="#808080">--- v2.19: sample had to be changed, since jwasm as default won't skip</font>
+;<font color="#808080">--- the contents of segments/sections anymore that contain just an ORG;</font>
+;<font color="#808080">--- Instead, the align() segment argument has been expanded, accepting</font>
+;<font color="#808080">--- an optional second parameter that tells the assembler to align the</font>
+;<font color="#808080">--- RVA. It's for -bin only!</font>
+
     <b>.386</b>
     <b>option</b> casemap:none
 
@@ -3508,7 +3519,7 @@ STD_OUTPUT_HANDLE <b>equ</b> -11
 
 IMAGEBASE <b>equ</b> 400000h
 
-PEHDR <b>segment</b> dword FLAT
+PEHDR <b>segment</b> <font color="#800000">dword</font> FLAT
 
 ;<font color="#808080">--- define the DOS "MZ" header</font>
 
@@ -3529,16 +3540,16 @@ PEHDR <b>segment</b> dword FLAT
 
 ;<font color="#808080">--- define the Win32 "PE" header</font>
 
-PEHdr <b>label</b> byte
+PEHdr <b>label</b> <font color="#800000">byte</font>
     <b>db</b> "PE",0,0
-    IMAGE_FILE_HEADER &lt;IMAGE_FILE_MACHINE_I386, num_sections, 0, 0, 0, sizeof IMAGE_OPTIONAL_HEADER32,
-        IMAGE_FILE_RELOCS_STRIPPED or IMAGE_FILE_EXECUTABLE_IMAGE or IMAGE_FILE_32BIT_MACHINE or IMAGE_FILE_LOCAL_SYMS_STRIPPED&gt;
+    IMAGE_FILE_HEADER &lt;IMAGE_FILE_MACHINE_I386, num_sections, 0, 0, 0, sizeof IMAGE_OPTIONAL_HEADER32,\
+        IMAGE_FILE_RELOCS_STRIPPED <font color="#0000E0">or</font> IMAGE_FILE_EXECUTABLE_IMAGE <font color="#0000E0">or</font> IMAGE_FILE_32BIT_MACHINE <font color="#0000E0">or</font> IMAGE_FILE_LOCAL_SYMS_STRIPPED&gt;
 
     IMAGE_OPTIONAL_HEADER32 { 10Bh, ;<font color="#808080">magic</font>
         6,0,                        ;<font color="#808080">linker major, minor</font>
         1000h,1000h,0,              ;<font color="#808080">sizeof code, initialized data, uninitialized data</font>
-        IMAGEREL mainCRTStartup,    ;<font color="#808080">entry point</font>
-        IMAGEREL start_text, IMAGEREL start_rdata,  ;<font color="#808080">baseof code, data</font>
+        <font color="#808000">imagerel</font> mainCRTStartup,    ;<font color="#808080">entry point</font>
+        <font color="#808000">imagerel</font> start_text, <font color="#808000">imagerel</font> start_rdata,  ;<font color="#808080">baseof code, data</font>
         IMAGEBASE,    ;<font color="#808080">imagebase</font>
         1000h,200h,   ;<font color="#808080">section alignment, file alignment</font>
         4,0,          ;<font color="#808080">OS major, minor</font>
@@ -3554,63 +3565,62 @@ PEHdr <b>label</b> byte
         100000h,1000h,;<font color="#808080">heap res, com</font>
         0,            ;<font color="#808080">loader flags</font>
         16,           ;<font color="#808080">number of directories</font>
-        &lt;&lt;0,0&gt;,       ;exports
-        &lt; IMAGEREL start_idata, SECTIONREL endof_idata &gt;, ;<font color="#808080">imports</font>
-        &lt;0,0&gt;,&lt;0,0&gt;,     ;<font color="#808080">resource, exception</font>
-        &lt;&gt;,&lt;&gt;,&lt;&gt;,&lt;&gt;,     ;<font color="#808080">security, baserelocs, debug, architecture</font>
-        &lt;&gt;,&lt;&gt;,&lt;&gt;,&lt;&gt;,     ;<font color="#808080">globalptr, tls, load_config, bound_import</font>
-        &lt;&gt;,&lt;&gt;,&lt;&gt;,&lt;&gt;&gt;}    ;<font color="#808080">iat, delay_import, com descriptor, reserved</font>
+        &lt; &lt;0,0&gt;,\        ;0 exports
+        &lt; IMAGEREL start_idata, SECTIONREL endof_idata &gt;,\ ;<font color="#808080">1 imports</font>
+        &lt;0,0&gt;,&lt;0,0&gt;,\    ;<font color="#808080">2 resource, 3 exception</font>
+        &lt;&gt;,&lt;&gt;,&lt;&gt;,&lt;&gt;,\    ;<font color="#808080">4 security, 5 baserelocs, 6 debug, 7 architecture</font>
+        &lt;&gt;,&lt;&gt;,&lt;&gt;,&lt;&gt;,\    ;<font color="#808080">8 globalptr, 9 tls, 10 load_config, 11 bound_import</font>
+        &lt;&gt;,&lt;&gt;,&lt;&gt;,&lt;&gt; &gt;}   ;<font color="#808080">12 iat, 13 delay_import, 14 com descriptor, 15 reserved</font>
 
 ;<font color="#808080">--- define the section table</font>
 
-sectiontable <b>label</b> byte
-    IMAGE_SECTION_HEADER &lt;".text", &lt;sizeof_text&gt;, IMAGEREL start_text, sizeof_text,
+sectiontable <b>label</b> <font color="#800000">byte</font>
+    IMAGE_SECTION_HEADER &lt;".text", &lt;sizeof_text&gt;, IMAGEREL start_text, sizeof_text,\
         200h, 0, 0, 0, 0, 060000020h &gt;
-    IMAGE_SECTION_HEADER &lt;".rdata", &lt;SECTIONREL endof_idata + sizeof_const&gt;, IMAGEREL start_rdata, SECTIONREL endof_idata + sizeof_const,
+    IMAGE_SECTION_HEADER &lt;".rdata", &lt;SECTIONREL endof_idata + sizeof_const&gt;, IMAGEREL start_rdata, SECTIONREL endof_idata + sizeof_const,\
         400h, 0, 0, 0, 0, 040000040h &gt;
-num_sections <b>equ</b> ( $ -  sectiontable ) / sizeof IMAGE_SECTION_HEADER
+num_sections <b>equ</b> ( $ -  sectiontable ) / <font color="#808000">sizeof</font> IMAGE_SECTION_HEADER
 
     <b>org</b> IMAGEBASE+200h   ;<font color="#808080">forces physical size of header to 200h and sets VA to 400200h</font>
 
 PEHDR <b>ends</b>
 
-;<font color="#808080">--- the ALIGNx segments are needed because</font>
-;<font color="#808080">--- section alignment and file alignment are different</font>
+;<font color="#808080">--- align RVA to next page</font>
 
-ALIGN1 <b>segment</b> dword public FLAT 'DATA'
-    <b>org</b> 0E00h   ;<font color="#808080"> change pc to RVA 1000h</font>
-ALIGN1 <b>ends</b>
+PEHDR$1 <b>segment</b> align(4096,v) public FLAT
+PEHDR$1 <b>ends</b>
 
-_TEXT <b>segment</b> dword public FLAT 'CODE'
+_TEXT <b>segment</b> <font color="#800000">dword</font> public FLAT 'CODE'
 _TEXT <b>ends</b>
 
-ALIGN2 <b>segment</b> dword public FLAT 'DATA'
-    <b>org</b> 0E00h   ;<font color="#808080"> change pc to RVA 2000h</font>
-ALIGN2 <b>ends</b>
+;<font color="#808080">--- align RVA to next page</font>
 
-_IDATA <b>segment</b> dword public FLAT 'DATA'
-start_rdata <b>label</b> byte
-start_idata <b>label</b> byte
+_TEXT$1 <b>segment</b> align(4096,v) public FLAT
+_TEXT$1 <b>ends</b>
+
+_IDATA <b>segment</b> <font color="#800000">dword</font> public FLAT 'DATA'
+start_rdata <b>label</b> <font color="#800000">byte</font>
+start_idata <b>label</b> <font color="#800000">byte</font>
 ;<font color="#808080">--- import descriptors go here</font>
 _IDATA <b>ends</b>
-_IDATA$1 <b>segment</b> dword public FLAT 'DATA'
+_IDATA$1 <b>segment</b> <font color="#800000">dword</font> public FLAT 'DATA'
     IMAGE_IMPORT_DESCRIPTOR &lt;&lt;0&gt;,0,0,0,0&gt;
 ;<font color="#808080">--- ILT entries go here</font>
 _IDATA$1 <b>ends</b>
-_IDATA$2 <b>segment</b> dword public FLAT 'DATA'
+_IDATA$2 <b>segment</b> <font color="#800000">dword</font> public FLAT 'DATA'
     <b>dd</b> 0    ;<font color="#808080">--- end of last ILT</font>
 ;<font color="#808080">--- IAT entries go here</font>
 _IDATA$2 <b>ends</b>
-_IDATA$3 <b>segment</b> dword public FLAT 'DATA'
+_IDATA$3 <b>segment</b> <font color="#800000">dword</font> public FLAT 'DATA'
     <b>dd</b> 0    ;<font color="#808080">--- end of last IAT</font>
 ;<font color="#808080">--- import name strings go here</font>
 _IDATA$3 <b>ends</b>
-_IDATA$4 <b>segment</b> dword public FLAT 'DATA'
+_IDATA$4 <b>segment</b> <font color="#800000">dword</font> public FLAT 'DATA'
 endof_idata <b>equ</b> $
 _IDATA$4 <b>ends</b>
 
-CONST <b>segment</b> dword public FLAT 'DATA'
-start_const <b>label</b> byte
+CONST <b>segment</b> <font color="#800000">dword</font> public FLAT 'DATA'
+start_const <b>label</b> <font color="#800000">byte</font>
 CONST <b>ends</b>
 
 DefineImpDll <b>macro</b> name
@@ -3621,16 +3631,16 @@ _IDATA$1 <b>segment</b>
 <b>ifdef</b> ImportDefined
     <b>dd</b> 0  ;<font color="#808080">terminate previous ILT</font>
 <b>endif</b>
-<b>name</b>&amp;ILT label dword
+<b>name</b>&amp;ILT label <font color="#800000">dword</font>
 _IDATA$1 <b>ends</b>
 _IDATA$2 <b>segment</b>
 <b>ifdef</b> ImportDefined
     <b>dd</b> 0  ;<font color="#808080">terminate previous IAT</font>
 <b>endif</b>
-<b>name</b>&amp;IAT label dword
+<b>name</b>&amp;IAT label <font color="#800000">dword</font>
 _IDATA$2 <b>ends</b>
 _IDATA$3 <b>segment</b>
-<b>name</b> db @CatStr(!",name, !"),0
+<b>name</b> db @CatStr(!",name, !"),".dll",0
     <b>align</b> 4
 _IDATA$3 <b>ends</b>
 ImportDefined <b>equ</b> 1
@@ -3638,11 +3648,11 @@ ImportDefined <b>equ</b> 1
 
 DefineImport <b>macro</b> name
 _IDATA$1 <b>segment</b>
-    <b>dd</b> IMAGEREL n&amp;name
+    <b>dd</b> <font color="#808000">imagerel</font> n&amp;name
 _IDATA$1 <b>ends</b>
 _IDATA$2 <b>segment</b>
-lp&amp;<b>name</b> typedef ptr pr&amp;name
-<b>name</b>    lp&amp;name IMAGEREL n&amp;name
+lp&amp;<b>name</b> typedef <font color="#808000">ptr</font> pr&amp;name
+<b>name</b>    lp&amp;name <font color="#808000">imagerel</font> n&amp;name
 _IDATA$2 <b>ends</b>
 _IDATA$3 <b>segment</b>
 n&amp;<b>name</b> dw 0
@@ -3651,9 +3661,9 @@ n&amp;<b>name</b> dw 0
 _IDATA$3 <b>ends</b>
     <b>endm</b>
 
-prWriteConsoleA <b>typedef</b> proto stdcall :dword, :dword, :dword, :dword, :dword
-prGetStdHandle  <b>typedef</b> proto stdcall :dword
-prExitProcess   <b>typedef</b> proto stdcall :dword
+prWriteConsoleA <b>typedef</b> proto stdcall :<font color="#800000">dword</font>, :<font color="#800000">dword</font>, :<font color="#800000">dword</font>, :<font color="#800000">dword</font>, :<font color="#800000">dword</font>
+prGetStdHandle  <b>typedef</b> proto stdcall :<font color="#800000">dword</font>
+prExitProcess   <b>typedef</b> proto stdcall :<font color="#800000">dword</font>
 
     DefineImpDll kernel32
     DefineImport ExitProcess
@@ -3661,7 +3671,7 @@ prExitProcess   <b>typedef</b> proto stdcall :dword
     DefineImport GetStdHandle
 
 <b>if</b> 0 ;<font color="#808080">if further dlls are to be imported</font>
-prMessageBoxA   <b>typedef</b> proto stdcall :dword, :dword, :dword, :dword
+prMessageBoxA   <b>typedef</b> proto stdcall :<font color="#800000">dword</font>, :<font color="#800000">dword</font>, :<font color="#800000">dword</font>, :<font color="#800000">dword</font>
 
     DefineImpDll user32
     DefineImport MessageBoxA
@@ -3677,24 +3687,24 @@ CONST <b>ends</b>
 
 _TEXT <b>segment</b>
 
-    <b>assume</b> ds:FLAT,es:FLAT
+    <b>assume</b> <font color="#00B000">ds</font>:FLAT,<font color="#00B000">es</font>:FLAT
 
-start_text <b>label</b> near
+start_text <b>label</b> <font color="#800000">near</font>
 
 ;<font color="#808080">--- start of program</font>
 
 main <b>proc</b>
 
-<b>local</b> dwWritten:dword
-<b>local</b> hConsole:dword
+<b>local</b> dwWritten:<font color="#800000">dword</font>
+<b>local</b> hConsole:<font color="#800000">dword</font>
 
     <b>invoke</b>  GetStdHandle, STD_OUTPUT_HANDLE
-    mov     hConsole,eax
+    <font color="#0000E0">mov</font>     hConsole,<font color="#00B000">eax</font>
 
-    <b>invoke</b>  WriteConsoleA, hConsole, addr string, sizeof string, addr dwWritten, 0
+    <b>invoke</b>  WriteConsoleA, hConsole, addr string, <font color="#808000">sizeof</font> string, addr dwWritten, 0
 
-    xor     eax,eax
-    ret
+    <font color="#0000E0">xor</font>     <font color="#00B000">eax</font>,<font color="#00B000">eax</font>
+    <font color="#0000E0">ret</font>
 main <b>endp</b>
 
 ;<font color="#808080">--- entry</font>
@@ -3702,7 +3712,7 @@ main <b>endp</b>
 mainCRTStartup <b>proc</b> c
 
     <b>invoke</b>  main
-    <b>invoke</b>  ExitProcess, eax
+    <b>invoke</b>  ExitProcess, <font color="#00B000">eax</font>
 
 mainCRTStartup <b>endp</b>
 
@@ -3716,6 +3726,7 @@ _TEXT <b>ends</b>
 </pre>
 </TD></TR>
 </TABLE>
+
 
 <H2 ID="AB05"> Win32_7 - Usage of OPTION DLLIMPORT and -Fd Switch </H2>
 
@@ -5134,7 +5145,7 @@ cannot be guessed from the current operands.</TD>
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x187</b></TD>
 <TD>Line number information for segment without class 'CODE': %s</TD>
-<TD></TD>
+<TD>This warning may be suppressed by setting switch OPTION CODEVIEW:2.</TD>
 </TR>
 
 <TR BGCOLOR="#F0F0F0">
@@ -5846,6 +5857,7 @@ files in a directory won't work as expected.</LI>
     to do that.
 <P>
     The debug version offers the following additional commandline options:
+</P>    
 <TABLE CELLPADDING="4" CELLSPACING="1">
 <TR BGCOLOR="#E8E8E8"><TD>-af</TD>  <TD> Display all files used in assembly process </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-ce</TD>  <TD> Cause an exception </TD></TR>
@@ -5861,10 +5873,10 @@ files in a directory won't work as expected.</LI>
 <TR BGCOLOR="#E8E8E8"><TD>-nfp</TD> <TD> Do full subsequent passes ( disables "fastpass" ) </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-pm=&lt;n&gt;</TD> <TD> Stop assembly after <i>n</i> passes </TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>-sp</TD> <TD> Skip preprocessor step </TD></TR>
+</TABLE>
 <P>In the listing, forward references are marked with <b>(F)</b>, 
    unused global variables that have a size and aren't PUBLIC are marked with <b>(U)</b>.
 </P>
-</TABLE>
 
 </BODY>
 </HTML>
