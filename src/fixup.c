@@ -217,10 +217,10 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
 
 #ifdef DEBUG_OUT
     if ( fixup->sym )
-        DebugMsg1(("store_fixup: type=%u, loc=%s.%" I32_SPEC "X, target=%s(%" I32_SPEC "X+% " I32_SPEC "X)\n",
+        DebugMsg1(("store_fixup: type=%u, loc=%s.%" I32_SPEC "X, sym=%s(ofs=%" I32_SPEC "X)+fixup.ofs=% " I32_SPEC "X)\n",
                 fixup->type, seg->sym.name, fixup->locofs, fixup->sym->name, fixup->sym->offset, fixup->offset ));
     else
-        DebugMsg1(("store_fixup: type=%u, loc=%s.%" I32_SPEC "X, target=%" I32_SPEC "X\n",
+        DebugMsg1(("store_fixup: type=%u, loc=%s.%" I32_SPEC "X, fixup.ofs=%" I32_SPEC "X\n",
                 fixup->type, seg->sym.name, fixup->locofs, fixup->offset));
 #endif
 
