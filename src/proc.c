@@ -42,6 +42,8 @@
 #define NUMQUAL
 #endif
 
+#define PROLOGUEWARNING 1 /* emit a warning level 3 if prologue isn't triggered at procedure start */
+
 /* STACKPROBE: emit a conditional "call __chkstk" inside the prologue
  * if stack space that is to be allocated exceeds 1000h bytes.
  * this is currently implemented for 64-bit only,
@@ -2370,6 +2372,9 @@ static ret_code write_default_prologue( void )
     uint_8              oldlinenumbers;
     int                 cnt;
     unsigned            rstackreg; /* stackpointer register to use */
+#if PROLOGUEWARNING
+    bool                fPrologueWarning;
+#endif
 #if AMD64_SUPPORT
     int                 resstack = 0;
 #endif
@@ -2405,13 +2410,15 @@ static ret_code write_default_prologue( void )
     //info->localsize = ROUND_UP( info->localsize, CurrWordSize );
     regist = info->regslist;
 
-#if 1
+#if PROLOGUEWARNING
     /* v2.16: emit a warning (level 3) if prologue is NOT at the very beginning of the procedure.
      * may happen if data definition directives are placed behind the PROC directive.
      * it's actually a rather severe thing, but Masm accepts it without complaints.
      */
-    if ( Parse_Pass == PASS_1 && GetCurrOffset() > CurrProc->sym.offset )
-        EmitWarn( 3, PROLOGUE_NOT_AT_PROC_START );
+    /* v2.20: emitting the warning may cause a crash. Better emit warning at pass 2 and after prologue.
+     */
+    //if ( Parse_Pass == PASS_1 && GetCurrOffset() > CurrProc->sym.offset )
+    fPrologueWarning = ( Parse_Pass == PASS_2 && GetCurrOffset() > CurrProc->sym.offset ) ? 1 : 0;
 #endif
 
 #if AMD64_SUPPORT
@@ -2517,7 +2524,11 @@ runqueue:
     Options.line_numbers = FALSE; /* temporarily disable line numbers */
     RunLineQueue();
     Options.line_numbers = oldlinenumbers;
-
+#if PROLOGUEWARNING
+    /* v2.20: emit warning AFTER prologue has been done */
+    if (fPrologueWarning)
+        EmitWarn( 3, PROLOGUE_NOT_AT_PROC_START );
+#endif
     return( NOT_ERROR );
 }
 
