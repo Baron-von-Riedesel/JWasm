@@ -4,15 +4,16 @@
 ;---   JWasm -mz Dos2.asm
 ;--- or, if a linker is to be used:
 ;---   JWasm Dos2.asm
-;---   wlink format dos file Dos2.obj
+;--- Open Watcom: wlink format dos file Dos2.obj
+;--- MS VC 1.52:  link Dos2.obj;
 
 ;--- To debug the sample with MS CodeView enter
 ;---   JWasm -Zi Dos2.asm
 ;---   link /CO Dos2.obj;
 ;---   cv Dos2.exe
 
-;--- Optionally, the module can be linked as a DPMI 16bit protected-mode
-;--- application. There are 2 ways to achieve this:
+;--- Optionally, the module can be linked as a (DPMI) 16bit protected-mode
+;--- application. There are several ways to achieve this:
 ;--- 1. use Borland DOS extender:
 ;---   JWasm Dos2.asm
 ;---   tlink /Tx Dos2.obj;
@@ -24,7 +25,11 @@
 ;---   wlink format windows file Dos2.obj op stub=hdld16.bin
 ;---   patchne Dos2.exe
 ;--- The result is a 16bit DPMI application which includes a DPMI host.
-;--- [To get files HDLD16.BIN and PATCHNE.EXE download HXDEV16.ZIP].
+;--- [files HDLD16.BIN & PATCHNE.EXE are part of HX development package].
+;--- 3. use CauseWay DOS extender:
+;---   JWasm Dos2.asm
+;---   wl32 Dos2.obj
+;--- wl32.exe is CauseWay's native linker. 
 
     .model small
     .stack 1024

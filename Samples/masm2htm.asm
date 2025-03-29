@@ -5,7 +5,7 @@
 
 ;--- Win32 binary:
 ;--- assemble: jwasm -coff masm2htm.asm crtexe.asm
-;--- link:     link masm2htm.obj crtexe.obj msvcrt.lib
+;--- link:     link masm2htm.obj crtexe.obj msvcrt.lib kernel32.lib
 
 ;--- Linux binary:
 ;--- assemble: jwasm -zcw -elf -D?MSC=0 -Fo masm2htm.o masm2htm.asm

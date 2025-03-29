@@ -1,6 +1,20 @@
 
    Changelog
 
+   __.__.____, v2.20:
+
+   Bugfixes:
+   -  warning level 3 about prologue not triggered at PROC start may have
+      caused a crash; see prolog4.asm.
+   -  option -mz, anonymous fixups: see da.asm.
+   -  .model directive: os qualifier (OS_DOS,OS_OS2) never worked; see
+      startup5.asm.
+
+   Other changes:
+   -  sample Win32_5 updated in manual.html.
+   -  OPTION CODEVIEW got another switch, to suppress line number generation
+      for segments that don't have class 'CODE'.
+
    24.01.2025, v2.19:
 
    Bugfixes:

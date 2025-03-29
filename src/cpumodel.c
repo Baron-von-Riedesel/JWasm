@@ -55,7 +55,9 @@ struct typeinfo {
 };
 
 static const char * const ModelAttr[] = {
-    "NEARSTACK", "FARSTACK", "OS_OS2", "OS_DOS" };
+    /* v2.20: wrong order for dos/os2 */
+    //"NEARSTACK", "FARSTACK", "OS_OS2", "OS_DOS" };
+    "NEARSTACK", "FARSTACK", "OS_DOS", "OS_OS2" };
 
 static const struct typeinfo ModelAttrValue[] = {
     { STACK_NEAR,     INIT_STACK      },
