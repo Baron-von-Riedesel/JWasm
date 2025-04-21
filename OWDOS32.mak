@@ -1,5 +1,5 @@
 
-# this makefile in OW WMake style creates JWasmd.EXE (DOS32).
+# This makefile in OW WMake style creates JWasmd.EXE (DOS32).
 # unlike the DOS version created with OWWin32.mak, which uses
 # a statically linked Win32 emulation layer, this creates
 # a DOS version that uses the native OW DOS32 support. Besides
@@ -8,6 +8,12 @@
 # - Open Watcom v2.0
 # - jwlink ( OW's wlink might also be used )
 # - HXDev ( for modules cstrtdhr.obj and loadpero.bin )
+#
+# OW's DOS32 support has a very slow memory management.
+# Fortunately this doesn't matter too much for JWasm, since
+# JWasm usually allocates memory in 512 kB chunks and does
+# further management itself. A measureable speed reduction
+# will still exist, though.
 #
 # LibFile clock.obj is a replacement for the std OW clock();
 # it has a resolution of 1 ms instead of 55 ms.
@@ -40,10 +46,11 @@ TRMEM=0
 !endif
 
 !ifndef OUTD
+BOUT=Build
 !if $(DEBUG)
-OUTD=Build\OWDOS32D
+OUTD=$(BOUT)\OWDOS32D
 !else
-OUTD=Build\OWDOS32R
+OUTD=$(BOUT)\OWDOS32R
 !endif
 !endif
 
@@ -93,10 +100,15 @@ proj_obj += $(OUTD)/trmem.obj
 
 TARGET1=$(OUTD)/$(name)d.exe
 
-ALL: $(OUTD) $(TARGET1)
+ALL: $(BOUT) $(OUTD) $(TARGET1)
+
+!ifdef BOUT
+$(BOUT):
+	@mkdir $(BOUT)
+!endif
 
 $(OUTD):
-	@if not exist $(OUTD) mkdir $(OUTD)
+	@mkdir $(OUTD)
 
 $(OUTD)/$(name)d.exe: $(OUTD)/main.obj $(proj_obj)
 	$(LINK) @<<

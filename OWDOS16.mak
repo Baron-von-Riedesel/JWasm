@@ -12,10 +12,11 @@ WATCOM = \Watcom
 DEBUG=0
 !endif
 
+BOUT=Build
 !if $(DEBUG)
-OUTD=build\OWDOS16D
+OUTD=$(BOUT)\OWDOS16D
 !else
-OUTD=build\OWDOS16R
+OUTD=$(BOUT)\OWDOS16R
 !endif
 
 inc_dirs  = -Isrc\H -I$(WATCOM)\H
@@ -62,10 +63,13 @@ proj_obj = &
 proj_obj += $(OUTD)/trmem.obj
 !endif
 
-ALL: $(OUTD) $(OUTD)/$(name)r.exe
+ALL: $(BOUT) $(OUTD) $(OUTD)/$(name)r.exe
+
+$(BOUT):
+	@mkdir $(BOUT)
 
 $(OUTD):
-	@if not exist $(OUTD) mkdir $(OUTD)
+	@mkdir $(OUTD)
 
 $(OUTD)/$(name)r.exe: $(OUTD)/$(name).lib $(OUTD)/main.obj
 	@set LIB=$(WATCOM)\Lib286;$(WATCOM)\Lib286\DOS

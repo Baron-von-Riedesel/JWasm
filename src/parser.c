@@ -1629,6 +1629,12 @@ static ret_code memory_operand( struct code_info *CodeInfo, unsigned CurrOpnd, s
                 return( EmitError( INVALID_INSTRUCTION_OPERANDS ) );
             }
             break;
+        case T_PUSHW: /* v2.20 see pushwd.asm */
+            Set_Memtype(CodeInfo, MT_WORD );
+            break;
+        case T_PUSHD: /* v2.20 see pushwd.asm */
+            Set_Memtype(CodeInfo, MT_DWORD );
+            break;
         }
     }
 

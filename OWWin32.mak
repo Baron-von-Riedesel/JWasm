@@ -45,10 +45,11 @@ TRMEM=0
 !endif
 
 !ifndef OUTD
+BOUT=Build
 !if $(DEBUG)
-OUTD=Build\Debug
+OUTD=$(BOUT)\Debug
 !else
-OUTD=Build\Release
+OUTD=$(BOUT)\Release
 !endif
 !endif
 
@@ -110,10 +111,15 @@ TARGET1=$(OUTD)/$(name).exe
 TARGET2=$(OUTD)/$(name)d.exe
 !endif
 
-ALL: $(OUTD) $(TARGET1) $(TARGET2)
+ALL: $(BOUT) $(OUTD) $(TARGET1) $(TARGET2)
+
+!ifdef BOUT
+$(BOUT):
+	@mkdir $(BOUT)
+!endif
 
 $(OUTD):
-	@if not exist $(OUTD) mkdir $(OUTD)
+	@mkdir $(OUTD)
 
 $(OUTD)/$(name).exe: $(OUTD)/main.obj $(proj_obj)
 	$(LINK) @<<
@@ -135,7 +141,7 @@ segment CONST2 readonly
 !endif
 <<
 
-# the DOS binary ( with statically linke Win32 emulation )
+# the DOS binary ( with statically linked Win32 emulation )
 # OW startup module is either cstrtwhx.obj (created from modified cstrtwnt.asm) or InitW3OW.obj.
 # If InitW3OW.obj is used, a warning (multiple start addresses) will be emitted; it's suppressed by "disable 1030".
 
@@ -165,8 +171,6 @@ segment CONST2 readonly
 #	$(HXDIR)\Bin\pestub.exe -x -z -n $@
 	pestub.exe -x -z -n $@
 !endif
-
-#Libfile cstrtwhx.obj
 
 $(OUTD)/msgtext.obj: src/msgtext.c src/H/msgdef.h src/H/globals.h
 	$(CC) src\msgtext.c

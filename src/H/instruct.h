@@ -346,6 +346,8 @@ insn(PUSHW,  1,                 OpCls( I16,      NONE,       NONE ), F_16,  0,  
 /* v2.15: PUSHW for segment registers added, although NO size prefix will be emitted due to masm compatibility */
 insn(PUSHW,  2,                 OpCls( SR86,     NONE,       NONE ), 0,     1,  R_in_OP,0x06,     0x00,       P_86,        0)
 insn(PUSHW,  3,                 OpCls( SR,       NONE,       NONE ), F_0F,  1,  R_in_OP,0x80,     0x00,       P_386,       0)
+/* v2.20: PUSHW added for memory operands ( masm compatibility ) */
+insn(PUSHW,  4,                 OpCls( M16,      NONE,       NONE ), 0,     0,  0,      0xFF,     0x30,       P_86,        0)
 ins (PUSHF,  pushf,             OpCls( NONE,     NONE,       NONE ), F_16,  0,  no_RM,  0x9C,     0x00,       P_86,        0)
 ins (POPF,  popf,               OpCls( NONE,     NONE,       NONE ), F_16,  0,  no_RM,  0x9D,     0x00,       P_86,        0)
 

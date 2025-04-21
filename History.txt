@@ -6,9 +6,10 @@
    Bugfixes:
    -  warning level 3 about prologue not triggered at PROC start may have
       caused a crash; see prolog4.asm.
-   -  option -mz, anonymous fixups: see da.asm.
    -  .model directive: os qualifier (OS_DOS,OS_OS2) never worked; see
       startup5.asm.
+   -  pushd: no opsize prefix generated in 16-bit code; see pushwd.asm.
+   -  pushw: memory operands were rejected; see pushwd.asm.
 
    Other changes:
    -  sample Win32_5 updated in manual.html.
