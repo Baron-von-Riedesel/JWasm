@@ -187,9 +187,11 @@ void AddLinnumDataRef( unsigned srcfile, uint_32 line_num )
     /* v2.10: warning if line-numbers for segments without class code! */
     if ( CurrSeg->e.seginfo->linnum_init == FALSE ) {
         if ( TypeFromClassName( CurrSeg, CurrSeg->e.seginfo->clsym ) != SEGTYPE_CODE ) {
+#if CVOSUPP
             /* v2.20: suppress line number generation for non-code segments */
             if ( ModuleInfo.cv_opt & CVO_NOLINNUMFORDATA )
                 return;
+#endif
             EmitWarn( 2, LINNUM_INFO_FOR_SEGMENT_WITHOUT_CLASS_CODE, CurrSeg->sym.name );
         }
         CurrSeg->e.seginfo->linnum_init = TRUE; /* flag to avoid multiple warnings */

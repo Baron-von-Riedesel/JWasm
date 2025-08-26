@@ -155,7 +155,7 @@ format windows pe runtime console
 !endif
 file { $(OUTD)/main.obj $(proj_obj) } name $@
 Libpath $(WATCOM)\lib386\nt;$(WATCOM)\lib386
-libpath $(HXDIR)\lib
+Libpath $(HXDIR)\Lib
 Libfile $(HXDIR)\Lib\InitW3OW.obj
 disable 1030
 Library imphlp.lib, dkrnl32s.lib, HXEmu387.lib

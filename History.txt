@@ -10,6 +10,7 @@
       startup5.asm.
    -  pushd: no opsize prefix generated in 16-bit code; see pushwd.asm.
    -  pushw: memory operands were rejected; see pushwd.asm.
+   -  regression in v2.19: option -Sg without option -Fl caused a GPF.
 
    Other changes:
    -  sample Win32_5 updated in manual.html.

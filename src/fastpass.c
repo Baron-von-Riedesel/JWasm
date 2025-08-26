@@ -287,18 +287,20 @@ struct list_item *ListGetItem( uint_8 bGeneratedCode )
 	return ListStoreCurr;
 }
 
-/* ListNextGenCode() - if generated code that is to be displayed BEFORE
+/* v2.19: ListNextGenCode() - if generated code that is to be displayed BEFORE
  * the line ( PROC prologues, SEH data in 64-bit ).
  * Implementation is a bit hackish.
  */
 void ListNextGenCode( void )
 /**************************/
 {
+	if ( !ListStoreCurr ) return; /* v2.20: fix regression (-Sg is set without -Fl) */
 	/* scan for first "generated code" line in list store */
 	for ( ; ListStoreCurr->next; ListStoreCurr = ListStoreCurr->next ) {
 		if ( strlen( ListStoreCurr->next->line ) > 28 && ListStoreCurr->next->line[28] == '*' )
 			break;
 	}
+	return;
 }
 
 /* ListAddItem() - called by LstWrite() if StoreState == 1 (that's in pass 1 only) */

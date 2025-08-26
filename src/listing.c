@@ -1032,17 +1032,19 @@ static void log_proc( const struct asym *sym )
                 sprintf( buffer, "%s[%" I32_SPEC "u]", GetMemtypeString(&l->sym, NULL), l->sym.total_length );
             else
                 strcpy( buffer, GetMemtypeString( &l->sym, NULL ) );
-            LstPrintf( szFmtProcStk, l->sym.name, pdots, buffer,
 #if STACKBASESUPP
+            LstPrintf( szFmtProcStk, l->sym.name, pdots, buffer,
                       GetResWName( dir->e.procinfo->basereg, NULL ),
                       l->sym.offset >= 0 ? '+' : '-', l->sym.offset >= 0 ? l->sym.offset : - l->sym.offset );
 #else
+            LstPrintf( szFmtProcStk, l->sym.name, pdots, buffer,
                       GetResWName( basereg[Ofssize], NULL ),
                       '-', - l->sym.offset );
 #endif
             LstNL();
         }
 
+        /* todo for v2.20: sort local labels */
         for ( l = dir->e.procinfo->labellist; l ; l = l->e.nextll ) {
             struct dsym *l2;
             for ( l2 = l; l2; l2 = (struct dsym *)l2->sym.nextitem ) {

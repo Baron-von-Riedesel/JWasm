@@ -657,6 +657,7 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                       curr->sym.name, fixup->locofs, fixup->sym ? fixup->sym->name : "", fixup->offset ? offset : 0 ));
             value = 0;
             /* v2.14: use fixup->offset; see flatgrp2.asm. todo: check if this should be done generally */
+            /* v2.20: if fixup->sym != NULL, it's an equate - and that should be handled like a constant */
             if ( fixup->sym == NULL )
                 value = fixup->offset;
             /* v2.14: if a segment is given, find it - we just have the segment index */
@@ -665,7 +666,11 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                     if ( seg->e.seginfo->seg_idx == fixup->frame_datum ) {
                         /* if the segment is in a group, add the segment's start offset */
                         if ( seg->e.seginfo->group ) {
+#if 0 /* v2.20: this is very questionable - the omf linker won't do that (see da.asm) */
                             value += seg->e.seginfo->start_offset;
+#else
+                            value += (seg->e.seginfo->group->offset & 0xF);
+#endif
 #if PE_SUPPORT
                             /* v2.15: add imagebase. see lea3.asm */
                             if ( ModuleInfo.sub_format == SFORMAT_PE ) {
@@ -681,6 +686,17 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                     }
                 }
             }
+#if 1 /* v2.20: name of test case missing! */
+            else if ( fixup->frame_type == FRAME_GRP ) {
+                struct dsym *grp;
+                for( grp = SymTables[TAB_GRP].head; grp; grp = grp->next ) {
+                    if ( grp->e.grpinfo->grp_idx == fixup->frame_datum ) {
+                        value += (grp->sym.offset & 0xF);
+                        break;
+                    }
+                }
+            }
+#endif
         }
 
         switch ( fixup->type ) {
@@ -1640,7 +1656,14 @@ struct linkcmd_s {
     int (*func)(union pexx, char *);
 };
 
-/* linker commands that are known and handled */
+/* linker commands that are known and handled.
+ *
+ * Note: exports cannot be handled here, since they
+ * must be handled at the end of step 1 (see pe_emit_export_data);
+ * However, at the end of step 1 the segment buffers don't exist yet, so
+ * segment .drectve cannot be scanned.
+ * That's why the PUBLIC directive has been expanded with the EXPORT attribute in v2.19!
+ */
 
 static struct linkcmd_s const linkcmds[] = {
     { "base:", pe_lnkcmd_base },

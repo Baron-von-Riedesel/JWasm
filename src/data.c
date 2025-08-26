@@ -156,6 +156,8 @@ static ret_code InitializeArray( const struct sfield *f, int *pi, struct asm_tok
     } else if ( no_of_bytes < f->sym.total_size ) {
         char filler = NULLC;
         DebugMsg1(("InitializeArray: remaining bytes=%" I32_SPEC "u\n", f->sym.total_size - no_of_bytes ));
+        /* v2.20: don't fill a remaining rest if the default initializer isn't '?'.
+         */
         if ( CurrSeg && CurrSeg->e.seginfo->segtype == SEGTYPE_BSS )
             SetCurrOffset( CurrSeg, f->sym.total_size - no_of_bytes, TRUE, TRUE );
         else {

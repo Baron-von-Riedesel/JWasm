@@ -1,0 +1,71 @@
+
+da.asm: 
+ - check changes in omffixup.c, bin.c (marked with v2.20, see below)
+ - see if regression test lea2.asm fails now
+ - add - renamed - da.asm to regression tests
+ 
+ --------------------------------------------------------------------------------
+diff --git i/src/bin.c w/src/bin.c
+index d60b4a1..cb90d04 100644
+--- i/src/bin.c
++++ w/src/bin.c
+@@ -657,6 +657,7 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
+                       curr->sym.name, fixup->locofs, fixup->sym ? fixup->sym->name : "", fixup->offset ? offset : 0 ));
+             value = 0;
+             /* v2.14: use fixup->offset; see flatgrp2.asm. todo: check if this should be done generally */
++            /* v2.20: if fixup->sym != NULL, it's an equate - and that should be handled like a constant */
+             if ( fixup->sym == NULL )
+                 value = fixup->offset;
+             /* v2.14: if a segment is given, find it - we just have the segment index */
+@@ -665,7 +666,11 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
+                     if ( seg->e.seginfo->seg_idx == fixup->frame_datum ) {
+                         /* if the segment is in a group, add the segment's start offset */
+                         if ( seg->e.seginfo->group ) {
++#if 0 /* v2.20: this is very questionable - the omf linker won't do that (see da.asm) */
+                             value += seg->e.seginfo->start_offset;
++#else
++                            value += (seg->e.seginfo->group->offset & 0xF);
++#endif
+ #if PE_SUPPORT
+                             /* v2.15: add imagebase. see lea3.asm */
+                             if ( ModuleInfo.sub_format == SFORMAT_PE ) {
+@@ -681,6 +686,17 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
+                     }
+                 }
+             }
++#if 1 /* v2.20 */
++            else if ( fixup->frame_type == FRAME_GRP ) {
++                struct dsym *grp;
++                for( grp = SymTables[TAB_GRP].head; grp; grp = grp->next ) {
++                    if ( grp->e.grpinfo->grp_idx == fixup->frame_datum ) {
++                        value += (grp->sym.offset & 0xF);
++                        break;
++                    }
++                }
++            }
++#endif
+         }
+ 
+         switch ( fixup->type ) {
+
+--------------------------------------------------------------------------------
+diff --git i/src/omffixup.c w/src/omffixup.c
+index 0f98657..873182a 100644
+--- i/src/omffixup.c
++++ w/src/omffixup.c
+@@ -265,7 +265,13 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
+         lr->target_meth = fixup->frame_type;
+         lr->target_datum = fixup->frame_datum;
+         lr->frame_meth = FRAME_TARG;
+-#if 1
++
++        /* v2.20: removed again; example:
++         * v1 dw offset _BSS:6     ; offset may be plain number or symbolic constant
++         * fixup must NOT refer to the group the segment is belonging to!!!
++         */
++//#if 1
++#if 0
+         /* v2.15: modify frame if segment (used in override) is in a group; see lea2.asm.
+          *       note that this mod also affects test offset12.asm!
+          */
+

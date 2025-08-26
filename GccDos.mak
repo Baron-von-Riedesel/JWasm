@@ -12,12 +12,13 @@ inc_dirs  = -Isrc/H
 
 #cflags stuff
 
+BOUT=build
 ifeq ($(DEBUG),1)
 extra_c_flags = -DDEBUG_OUT -g
-OUTD=build\DJGPPd
+OUTD=$(BOUT)\DJGPPd
 else
 extra_c_flags = -DNDEBUG -O2
-OUTD=build\DJGPPr
+OUTD=$(BOUT)\DJGPPr
 endif
 
 c_flags = $(extra_c_flags)
@@ -31,7 +32,10 @@ include gccmod.inc
 
 TARGET1=$(OUTD)/$(name).exe
 
-ALL: $(OUTD) $(TARGET1)
+ALL: $(BOUT) $(OUTD) $(TARGET1)
+
+$(BOUT):
+	mkdir $(BOUT)
 
 $(OUTD):
 	mkdir $(OUTD)
