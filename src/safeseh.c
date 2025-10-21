@@ -64,7 +64,7 @@ ret_code SafeSEHDirective( int i, struct asm_tok tokenarray[] )
             node = NULL;
         }
         if ( node == NULL ) {
-            sym->used = TRUE; /* make sure an external reference will become strong */
+            sym->referenced = TRUE; /* make sure an external reference will become strong */
 #if 0 /* v2.11: use QAddItem() */
             node = LclAlloc( sizeof( struct qnode ) );
             node->elmt = sym;

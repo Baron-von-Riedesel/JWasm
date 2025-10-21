@@ -370,19 +370,24 @@ static ret_code WriteModule( struct module_info *modinfo )
     /* is the -Fd option given with a file name? */
     if ( Options.names[OPTN_LNKDEF_FN] ) {
         FILE *ld;
+        struct dll_desc *dll;
+        struct impnode *node;
         ld = fopen( Options.names[OPTN_LNKDEF_FN], "w" );
         if ( ld == NULL ) {
             return( EmitErr( CANNOT_OPEN_FILE, Options.names[OPTN_LNKDEF_FN], ErrnoStr() ) );
         }
-        for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
-            DebugMsg(("WriteModule: ext=%s, isproc=%u, weak=%u\n", curr->sym.name, curr->sym.isproc, curr->sym.weak ));
-            if ( curr->sym.isproc && ( curr->sym.weak == FALSE || curr->sym.iat_used ) &&
-                curr->sym.dll && *(curr->sym.dll->name) != NULLC ) {
+        /* v3.20: scan the import lib queue for referenced entries;
+         */
+        for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
+            for ( node = dll->imports; node; node = node->next ) {
                 int size;
-                Mangle( &curr->sym, StringBufferEnd );
-                size = sprintf( CurrSource, "import '%s'  %s.%s\n", StringBufferEnd, curr->sym.dll->name, curr->sym.name );
-                if ( fwrite( CurrSource, 1, size, ld ) != size )
-                    WriteError();
+                if ( node->iatsym ) {
+                    curr = (struct dsym *)node->sym;
+                    Mangle( node->sym, StringBufferEnd );
+                    size = sprintf( CurrSource, "import '%s'  %s.%s\n", StringBufferEnd, dll->name, node->sym->name );
+                    if ( fwrite( CurrSource, 1, size, ld ) != size )
+                        WriteError();
+                }
             }
         }
         fclose( ld );
@@ -616,7 +621,7 @@ static void ModulePassInit( void )
     enum cpu_info cpu = Options.cpu;
     enum model_type model = Options.model;
 #if DLLIMPORT
-    struct dsym *curr;
+    //struct dsym *curr;
 #endif
 
     DebugMsg(( "ModulePassInit() enter\n" ));
@@ -681,7 +686,7 @@ static void ModulePassInit( void )
 #if PROCALIGN
     ModuleInfo.procalign = 0;
 #endif
-#if DLLIMPORT
+#if 0//DLLIMPORT
     /* if OPTION DLLIMPORT was used, reset all iat_used flags */
     if ( ModuleInfo.g.DllQueue )
         for ( curr = SymTables[TAB_EXT].head; curr; curr = curr->next )
@@ -857,7 +862,7 @@ static void PassOneChecks( void )
             }
             /* make sure it becomes a strong external */
             if ( sym->state == SYM_EXTERNAL )
-                sym->used = TRUE;
+                sym->referenced = TRUE;
         }
     }
  #endif
@@ -868,15 +873,16 @@ static void PassOneChecks( void )
 
     for( curr = SymTables[TAB_EXT].head ; curr; curr = next ) {
         next = curr->next;
-        /* v2.01: externdefs which have been "used" become "strong" */
-        if ( curr->sym.used )
+        /* v2.01: externdefs which have been referenced become "strong" */
+        if ( curr->sym.referenced )
             curr->sym.weak = FALSE;
         /* remove unused EXTERNDEF/PROTO items from queue. */
         if ( curr->sym.weak == TRUE
-#if DLLIMPORT
-            && curr->sym.iat_used == FALSE
+#if 0//DLLIMPORT /* v2.20: obsolete, since SymTables[TAB_EXT] isn't scanned anymore for import table generation */
+            && curr->sym.isimported == FALSE
 #endif
            ) {
+            DebugMsg(("PassOneChecks: unreferenced external removed: %s\n", curr->sym.name ));
             sym_remove_table( &SymTables[TAB_EXT], curr );
 #ifdef DEBUG_OUT
             cntUnusedExt++;
@@ -1479,7 +1485,7 @@ int EXPQUAL AssembleModule( const char *source )
 
 #ifdef DEBUG_OUT
         if ( curr_written < prev_written && prev_written != -1 ) {
-            printf( "size shrank from %" I32_SPEC "X to %" I32_SPEC "X in pass %u\n", prev_written, curr_written, Parse_Pass + 1 );
+            printf( "total size shrank from %" I32_SPEC "X to %" I32_SPEC "X in pass %u\n", prev_written, curr_written, Parse_Pass + 1 );
         }
 #endif
 

@@ -1194,7 +1194,7 @@ static void pe_emit_export_data( void )
     }
 }
 
-/* write import data.
+/* write import data, called by pe_enddirhook().
  * convention:
  * .idata$2: import directory
  * .idata$3: final import directory NULL entry
@@ -1220,7 +1220,9 @@ static void pe_emit_import_data( void )
 
     DebugMsg1(("pe_emit_import_data enter\n" ));
     for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
-        if ( p->cnt ) {
+        struct impnode *node;
+        for ( node = p->imports; node && !node->iatsym; node = node->next ); /* any IAT defined? */
+        if ( node ) {
             struct dsym *curr;
             struct dsym *alias;
             char *pdot;
@@ -1242,8 +1244,11 @@ static void pe_emit_import_data( void )
             /* emit ILT */
             AddLineQueueX( "%s" IMPILTSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
             AddLineQueueX( "@%s_ilt label %r", p->name, ptrtype );
-            for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
-                if ( curr->sym.iat_used && curr->sym.dll == p ) {
+
+            /* emit ILT entries */
+            for ( node = p->imports; node; node = node->next ) {
+                if ( node->iatsym ) {
+                    curr = (struct dsym *)node->sym;
                     /* v2.16: allow imports by number */
                     for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
                     if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
@@ -1263,8 +1268,10 @@ static void pe_emit_import_data( void )
             AddLineQueueX( "%s" IMPIATSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
             AddLineQueueX( "@%s_iat label %r", p->name, ptrtype );
 
-            for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
-                if ( curr->sym.iat_used && curr->sym.dll == p ) {
+            /* emit IAT entries */
+            for ( node = p->imports; node; node = node->next ) {
+                if ( node->iatsym ) {
+                    curr = (struct dsym *)node->sym;
                     Mangle( &curr->sym, StringBufferEnd );
                     /* v2.16: allow imports by number */
                     for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
@@ -1284,8 +1291,11 @@ static void pe_emit_import_data( void )
 
             /* emit name table */
             AddLineQueueX( "%s" IMPSTRSUF " %r %r %s", idataname, T_SEGMENT, T_WORD, idataattr );
-            for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
-                if ( curr->sym.iat_used && curr->sym.dll == p ) {
+
+            /* emit name entries */
+            for ( node = p->imports; node; node = node->next ) {
+                if ( node->iatsym ) {
+                    curr = (struct dsym *)node->sym;
                     /* v2.16: allow imports by number */
                     for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
                     if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
@@ -2424,15 +2434,22 @@ static ret_code bin_write_module( struct module_info *modinfo )
 }
 #endif
 
+/* check after pass 1 has finished;
+ * PassOneChecks() has already changed all referenced externals to "strong".
+ */
+
 static ret_code bin_check_external( struct module_info *modinfo )
 /***************************************************************/
 {
     struct dsym *curr;
-    for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next )
-        if( curr->sym.weak == FALSE || curr->sym.used == TRUE ) {
-            DebugMsg(("CheckExternal: error, %s weak=%u\n", curr->sym.name, curr->sym.weak ));
+    for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
+        DebugMsg(("bin_check_external: %s weak=%u, referenced=%u\n", curr->sym.name, curr->sym.weak, curr->sym.referenced ));
+        //if( !curr->sym.isimported && curr->sym.weak == FALSE ) {
+        if( curr->sym.weak == FALSE ) {
+            DebugMsg(("bin_check_external: error, %s weak=%u imported=%u\n", curr->sym.name, curr->sym.weak, curr->sym.isimported ));
             return( EmitErr( FORMAT_DOESNT_SUPPORT_EXTERNALS, curr->sym.name ) );
         }
+    }
     return( NOT_ERROR );
 }
 

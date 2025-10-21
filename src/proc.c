@@ -1239,7 +1239,7 @@ ret_code ParseProc( struct dsym *proc, int i, struct asm_tok tokenarray[], bool 
             if ( sym == NULL ) {
                 sym = SymCreate( tokenarray[i].string_ptr );
                 sym->state = SYM_UNDEFINED;
-                sym->used = TRUE;
+                sym->referenced = TRUE;
                 sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym ); /* add UNDEFINED */
             } else if ( sym->state != SYM_UNDEFINED &&
                        sym->state != SYM_INTERNAL &&
@@ -1789,11 +1789,11 @@ static void ProcFini( struct dsym *proc )
     /* v2.03: for W3+, check for unused params and locals */
     if ( Options.warning_level > 2 && Parse_Pass == PASS_1 ) {
         for ( curr = proc->e.procinfo->paralist; curr; curr = curr->nextparam ) {
-            if ( curr->sym.used == FALSE )
+            if ( curr->sym.referenced == FALSE )
                 EmitWarn( 3, PROCEDURE_ARGUMENT_OR_LOCAL_NOT_REFERENCED, curr->sym.name );
         }
         for ( curr = proc->e.procinfo->locallist; curr; curr = curr->nextlocal ) {
-            if ( curr->sym.used == FALSE )
+            if ( curr->sym.referenced == FALSE )
                 EmitWarn( 3, PROCEDURE_ARGUMENT_OR_LOCAL_NOT_REFERENCED, curr->sym.name );
         }
     }

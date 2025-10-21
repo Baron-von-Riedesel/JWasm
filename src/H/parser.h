@@ -82,7 +82,7 @@ enum queue_type {
     TAB_EXT,      /* externals (EXTERNDEF, EXTERN, COMM, PROTO ) */
     TAB_SEG,      /* SEGMENT items */
     TAB_GRP,      /* GROUP items */
-    TAB_PROC,     /* PROC items */
+    TAB_PROC,     /* PROC items (no PROTOs so long as they are extern!) */
     TAB_ALIAS,    /* ALIAS items */
     TAB_LAST,
 };

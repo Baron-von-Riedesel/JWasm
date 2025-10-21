@@ -539,7 +539,7 @@ static uint_32 coff_write_symbols( struct module_info *modinfo, struct coffmod *
     for( curr = SymTables[TAB_EXT].head ; curr != NULL ;curr = curr->next ) {
         /* skip "weak" (=unused) externdefs */
         if ( curr->sym.iscomm == FALSE && curr->sym.weak == TRUE ) {
-            DebugMsg(("coff_write_symbols(EXT+COMM): %s skipped, used=%u, comm=%u, weak=%u\n", curr->sym.name, curr->sym.used, curr->sym.iscomm, curr->sym.weak ));
+            DebugMsg(("coff_write_symbols(EXT+COMM): %s skipped, referenced=%u, comm=%u, weak=%u\n", curr->sym.name, curr->sym.referenced, curr->sym.iscomm, curr->sym.weak ));
             continue;
         }
         len = Mangle( &curr->sym, buffer );
@@ -1236,6 +1236,8 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
     //struct dsym *exp;
     struct qnode *qexp;
 #if DLLIMPORT
+    struct dll_desc *dll;
+    struct impnode *node;
     struct dsym *imp = NULL;
 #endif
     char buffer[MAX_ID_LEN + MANGLE_BYTES + 1];
@@ -1249,18 +1251,24 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             break;
     }
 #if DLLIMPORT
-    /* check if an impdef record is there */
-    if ( Options.write_impdef && !Options.names[OPTN_LNKDEF_FN] )
-        for ( imp = SymTables[TAB_EXT].head; imp; imp = imp->next )
-            if ( imp->sym.isproc && ( imp->sym.weak == FALSE || imp->sym.iat_used == TRUE ) )
-                if ( imp->sym.dll && *imp->sym.dll->name )
-                    break;
+    /* cmdline option -Fd without file name argument? */
+    if ( Options.write_impdef && !Options.names[OPTN_LNKDEF_FN] ) {
+        DebugMsg(("coff_create_drectve: option -Fd given without filename, checking imports\n" ));
+        /* check if an impdef record is there */
+        for ( dll = ModuleInfo.g.DllQueue; dll && !imp; dll = dll->next ) {
+            for ( node = dll->imports; node && !imp; node = node->next )
+                if ( node->iatsym ) {
+                    imp = (struct dsym *)node->sym;
+                    DebugMsg(("coff_create_drectve: imports (starting with %s) will be written\n", imp->sym.name ));
+                }
+        }
+    }
 #endif
     /* add a .drectve section if
      - a start_label is defined    and/or
      - a library is included       and/or
      - a proc/variable is exported and/or
-     - impdefs are to be written (-Zd)
+     - impdefs are to be written (-Fd)
      */
     if ( modinfo->g.start_label != NULL ||
         modinfo->g.LibQueue.head != NULL ||
@@ -1299,17 +1307,19 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             size += GetStartLabel( modinfo, buffer, TRUE );
 #if DLLIMPORT
             /* 4. impdefs */
-            for( tmp = imp; tmp ; tmp = tmp->next ) {
-                if ( tmp->sym.isproc && ( tmp->sym.weak == FALSE || tmp->sym.iat_used == TRUE ) &&
-                    tmp->sym.dll && *tmp->sym.dll->name ) {
-                    /* format is:
-                     * "-import:<mangled_name>=<module_name>.<unmangled_name>" or
-                     * "-import:<mangled_name>=<module_name>"
-                     */
-                    size += sizeof("-import:");
-                    size += Mangle( &tmp->sym, buffer );
-                    size += 1 + strlen( tmp->sym.dll->name );
-                    size += 1 + tmp->sym.name_size;
+            for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
+                for ( node = dll->imports; node; node = node->next ) {
+                    if ( node->iatsym ) {
+                        tmp = (struct dsym *)node->sym;
+                        /* format is:
+                         * "-import:<mangled_name>=<module_name>.<unmangled_name>" or
+                         * "-import:<mangled_name>=<module_name>"
+                         */
+                        size += sizeof("-import:");
+                        size += Mangle( &tmp->sym, buffer );
+                        size += 1 + strlen( dll->name );
+                        size += 1 + tmp->sym.name_size;
+                    }
                 }
             }
 #endif
@@ -1347,19 +1357,21 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             }
 #if DLLIMPORT
             /* 4. impdefs */
-            for( tmp = imp; tmp ; tmp = tmp->next ) {
-                if ( tmp->sym.isproc && ( tmp->sym.weak == FALSE || tmp->sym.iat_used == TRUE ) &&
-                    tmp->sym.dll && *tmp->sym.dll->name ) {
-                    strcpy( (char *)p, "-import:" );
-                    p += 8;
-                    p += Mangle( &tmp->sym, (char *)p );
-                    *p++ = '=';
-                    strcpy( (char *)p, tmp->sym.dll->name );
-                    p += strlen( (char *)p );
-                    *p++ = '.';
-                    memcpy( p, tmp->sym.name, tmp->sym.name_size );
-                    p += tmp->sym.name_size;
-                    *p++ = ' ';
+            for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
+                for ( node = dll->imports; node; node = node->next ) {
+                    if ( node->iatsym ) {
+                        tmp = (struct dsym *)node->sym;
+                        strcpy( (char *)p, "-import:" );
+                        p += 8;
+                        p += Mangle( &tmp->sym, (char *)p );
+                        *p++ = '=';
+                        strcpy( (char *)p, dll->name );
+                        p += strlen( (char *)p );
+                        *p++ = '.';
+                        memcpy( p, tmp->sym.name, tmp->sym.name_size );
+                        p += tmp->sym.name_size;
+                        *p++ = ' ';
+                    }
                 }
             }
 #endif

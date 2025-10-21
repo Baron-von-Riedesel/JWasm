@@ -1737,35 +1737,25 @@ ret_code InvokeDirective( int i, struct asm_tok tokenarray[] )
     p = StringBufferEnd;
     strcpy( p, " call " );
     p += 6;
-    /* v2.09: 'uselabel' obsolete */
-    //if ( uselabel ) {
-    //    DebugMsg1(("InvokeDir: opnd.label_tok is used: %s\n", opnd.label_tok->string_ptr ));
-    //    strcpy( p, opnd.label_tok->string_ptr );
-    //} else {
+
 #if DLLIMPORT
-        if ( sym->state == SYM_EXTERNAL && sym->dll ) {
-            char *iatname = p;
-            strcpy( p, ModuleInfo.g.imp_prefix );
-            p += strlen( p );
-            p += Mangle( sym, p );
-            namepos++;
-            DebugMsg1(("InvokeDir: externdef, iatname=%s\n", iatname ));
-            if ( sym->iat_used == FALSE ) {
-                sym->iat_used = TRUE;
-                sym->dll->cnt++;
-                if ( sym->langtype != LANG_NONE && sym->langtype != ModuleInfo.langtype )
-                    AddLineQueueX( " externdef %r %s: %r %r", sym->langtype + T_C - 1, iatname, T_PTR, T_PROC );
-                else
-                    AddLineQueueX( " externdef %s: %r %r", iatname, T_PTR, T_PROC );
-            }
-        }
-#endif
-        size = tokenarray[parmpos].tokpos - tokenarray[namepos].tokpos;
-        memcpy( p, tokenarray[namepos].tokpos, size );
-        *(p+size) = NULLC;
-#if 0  /* v2.09: uselabel obsolete */
+    if ( sym->isimported ) {
+        char *iatname = p;
+        strcpy( p, ModuleInfo.g.imp_prefix );
+        p += strlen( p );
+        p += Mangle( sym, p );
+        namepos++;
+        DebugMsg1(("InvokeDir, dllimport: externdef, iatname=%s\n", iatname ));
+        if ( sym->langtype != LANG_NONE && sym->langtype != ModuleInfo.langtype )
+            AddLineQueueX( " externdef %r %s: %r %r", sym->langtype + T_C - 1, iatname, T_PTR, T_PROC );
+        else
+            AddLineQueueX( " externdef %s: %r %r", iatname, T_PTR, T_PROC );
     }
 #endif
+    size = tokenarray[parmpos].tokpos - tokenarray[namepos].tokpos;
+    memcpy( p, tokenarray[namepos].tokpos, size );
+    *(p+size) = NULLC;
+
     AddLineQueue( StringBufferEnd );
 
     if (( sym->langtype == LANG_C || sym->langtype == LANG_SYSCALL ) &&

@@ -134,13 +134,13 @@ struct asym {
     struct asym     *segment;      /* used by SYM_INTERNAL, SYM_EXTERNAL */
     enum sym_state  state;
     enum memtype    mem_type;
-    unsigned char   used:1,       /* symbol has been referenced */
+    unsigned char   referenced:1,  /* symbol has been referenced */
                     isdefined:1,  /* symbol is "defined" in this pass */
                     scoped:1,     /* symbol is local label or SYM_STACK */
                     /* v2.07: removed */
                     //isglobal:1,   /* symbol has been added to the globals queue */
 #if DLLIMPORT
-                    iat_used:1,   /* v2.07: IAT entry of symbol used (SYM_EXTERNAL + isproc==1 only) */
+                    isimported:1, /* v2.07: symbol belongs to an import lib */
 #endif
                     isequate:1,   /* symbol has been defined with EQU */
                     predefined:1, /* symbol is predefined */
@@ -213,9 +213,6 @@ struct asym {
         uint_32         total_size;   /* total number of bytes (sizeof) */
         /* for SYM_INTERNAL, isequate=1 (numeric equates) */
         int_32          value3264;    /* high bits for equates */
-#if DLLIMPORT
-        struct dll_desc *dll;         /* SYM_EXTERNAL (isproc=1) */
-#endif
         /* for SYM_SEG,SYM_GRP; v2.11: moved here to make segment's offset field contain "local start offset" (=0) */
         int_32          max_offset;
     };

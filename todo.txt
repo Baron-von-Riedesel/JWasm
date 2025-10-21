@@ -1,7 +1,7 @@
 
 da.asm: 
  - check changes in omffixup.c, bin.c (marked with v2.20, see below)
- - see if regression test lea2.asm fails now
+ - regression tests lea2.asm/lea3.asm/offset12.asm/offset13.asm fail?
  - add - renamed - da.asm to regression tests
  
  --------------------------------------------------------------------------------

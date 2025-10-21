@@ -730,6 +730,10 @@ OPTFUNC( SetWin64 )
 
 #if DLLIMPORT
 
+/* helper for OPTION DLLIMPORT: search name of dll in queue;
+ * if not found, setup a new item and add it to the queue;
+ */
+
 static struct dll_desc *IncludeDll( const char *name )
 /****************************************************/
 {
@@ -746,7 +750,7 @@ static struct dll_desc *IncludeDll( const char *name )
     }
     node = LclAlloc( sizeof( struct dll_desc ) + strlen( name ) );
     node->next = NULL;
-    node->cnt = 0;
+    node->imports = NULL;
     strcpy( node->name, name );
     *q = node;
 

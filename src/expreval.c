@@ -564,9 +564,9 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                          * their "successor".
                          */
                         if ( sym->state == SYM_UNDEFINED ) {
-                            DebugMsg1(("get_operand(%s): symbol not (yet) defined, CurrProc=%s, used=%u\n", tmp, CurrProc ? CurrProc->sym.name : "NULL", sym->used ));
+                            DebugMsg1(("get_operand(%s): symbol not (yet) defined, CurrProc=%s, referenced=%u\n", tmp, CurrProc ? CurrProc->sym.name : "NULL", sym->referenced ));
                             /* v2.18: don't add undefined symbols multiple times! */
-                            if ( sym->used == FALSE ) {
+                            if ( sym->referenced == FALSE ) {
                                 sym_add_table( &SymTables[TAB_UNDEF], (struct dsym *)sym ); /* add UNDEFINED */
                             }
 #if 0 /* v2.18: first fix, now replaced by code above, that handles the "is_dot" case without creating an undef symbol */
@@ -618,7 +618,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
 #endif
         }
         /* set default values */
-        sym->used = TRUE;
+        sym->referenced = TRUE;
         DebugMsg1(("get_operand(%s): sym->state=%u type=>%s< ofs=%X memtype=%Xh total_size=%d defined=%u\n",
                 tokenarray[i].string_ptr, sym->state, sym->type ? sym->type->name : "NULL", sym->offset, sym->mem_type, sym->total_size, sym->isdefined ));
         switch ( sym->state ) {

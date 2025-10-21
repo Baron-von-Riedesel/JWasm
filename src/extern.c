@@ -177,13 +177,36 @@ static struct asym *CreateProto( int i, struct asm_tok tokenarray[], const char 
         if ( ParseProc( dir, i, tokenarray, FALSE, langtype ) == ERROR )
             return( NULL );
 #if DLLIMPORT
-        sym->dll = ModuleInfo.CurrDll;
+        if ( ModuleInfo.CurrDll ) {
+            struct impnode *node;
+            sym->isimported = TRUE;
+            node = LclAlloc( sizeof( struct impnode ));
+            node->sym = sym;
+            node->iatsym = NULL;
+            node->next = ModuleInfo.CurrDll->imports;
+            ModuleInfo.CurrDll->imports = node;
+        }
 #endif
     } else {
         sym->isdefined = TRUE;
     }
     return( sym );
 }
+
+#if DLLIMPORT
+
+/* v2.20: pretty hackish demangle func, for Win32/Win64 only */
+
+static char *DeMangle( char *name, struct asym *sym )
+{
+    char *p;
+    if (*name == '_') name++;
+    strcpy(StringBufferEnd, name );
+    if (p = strchr( StringBufferEnd,'@'))
+        *p = NULLC;
+    return StringBufferEnd;
+}
+#endif
 
 /* externdef [ attr ] symbol:type [, symbol:type,...] */
 
@@ -314,6 +337,37 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
                 sym->type = ti.symtype;
             else
                 sym->target_type = ti.symtype;
+
+#if DLLIMPORT
+            /* v2.20: for option -pe and/or option -Fd: check if external is an IAT name */
+            if ( Options.write_impdef || ( Options.output_format == OFORMAT_BIN && ModuleInfo.sub_format == SFORMAT_PE)) {
+                if ( ModuleInfo.g.imp_prefix && !memcmp( ModuleInfo.g.imp_prefix, sym->name, strlen( ModuleInfo.g.imp_prefix ))) {
+                    /*
+                     * the prototype name part in the IAT entry name is decorated; how to
+                     * find the symbol? To demangle safely is a problem ...
+                     */
+                    char *pName = DeMangle( sym->name + strlen(ModuleInfo.g.imp_prefix), sym );
+                    struct asym *symProto = SymSearch( pName );
+                    if ( symProto && symProto->isimported ) {
+#if 0
+                        symProto->referenced = TRUE;
+#else
+                        struct dll_desc *dll;
+                        struct impnode *node;
+                        /* find the dll and add the IAT entry */
+                        for ( dll = ModuleInfo.g.DllQueue, node = NULL; dll && node == NULL; dll = dll->next ) {
+                            for ( node = dll->imports; node; node = node->next ) {
+                                if ( node->sym == symProto ) {
+                                    node->iatsym = sym;
+                                    break;
+                                }
+                            }
+                        }
+#endif
+                    }
+                }
+            }
+#endif
 
             /* v2.04: only set language if there was no previous definition */
             SetMangler( sym, langtype, mangle_type );
@@ -511,7 +565,7 @@ static ret_code HandleAltname( char *altname, struct asym *sym )
              * v2.11: don't do this for OMF ( maybe neither for COFF/ELF? )
              */
             if ( Options.output_format != OFORMAT_OMF )
-                symalt->used = TRUE;
+                symalt->referenced = TRUE;
             /* symbol inserted in the "weak external" queue?
              * currently needed for OMF only.
              */

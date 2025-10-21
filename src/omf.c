@@ -438,7 +438,7 @@ static void omf_write_ledata( struct dsym *seg )
             /* if the COMDAT symbol has been referenced in a FIXUPP,
              * a CEXTDEF has to be written.
              */
-            if ( seg->sym.used ) {
+            if ( seg->sym.referenced ) {
                 omf_InitRec( &obj, CMD_CEXTDEF );
                 AttachData( &obj, (uint_8 *)StringBufferEnd, 2 * sizeof( uint_16 ) );
                 PutIndex( &obj, seg->e.seginfo->comdat_idx ); /* Index */
@@ -1408,7 +1408,7 @@ static ret_code omf_write_pubdef( void )
                 if ( seg->e.seginfo->comdat_idx == 0 ) {
                     struct omf_rec obj;
                     seg->e.seginfo->comdat_idx = ++startitem;
-                    seg->sym.used = sym->used;
+                    seg->sym.referenced = sym->referenced;
                     omf_InitRec( &obj, CMD_LNAMES );
                     len = Mangle( sym, StringBufferEnd + 1 );
                     *StringBufferEnd = len;

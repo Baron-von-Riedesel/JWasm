@@ -646,9 +646,15 @@ struct MZDATA {
 #endif
 
 #if DLLIMPORT
+struct impnode {
+    void *next;
+    struct asym *sym;
+    struct asym *iatsym;
+};
+/* format PE only */
 struct dll_desc {
     struct dll_desc *next;
-    int cnt;     /* a function of this dll was used by INVOKE */
+    struct impnode *imports;
     char name[1];
 };
 #endif
@@ -742,7 +748,7 @@ struct module_info {
     char                *proc_prologue;  /* prologue macro if PEM_MACRO */
     char                *proc_epilogue;  /* epilogue macro if PEM_MACRO */
 #if DLLIMPORT
-    struct dll_desc     *CurrDll;        /* OPTION DLLIMPORT dll */
+    struct dll_desc     *CurrDll;        /* set by OPTION DLLIMPORT */
 #endif
     const struct format_options *fmtopt; /* v2.07: added */
     unsigned            hll_label;       /* hll directive label counter */

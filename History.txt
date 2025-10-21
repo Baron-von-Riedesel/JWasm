@@ -16,6 +16,8 @@
    -  sample Win32_5 updated in manual.html.
    -  OPTION CODEVIEW got another switch, to suppress line number generation
       for segments that don't have class 'CODE'.
+   -  option -pe: IAT entry generation now triggered by EXTERNDEF, not
+      by INVOKE; see pe13.asm, pe14.asm.
 
    24.01.2025, v2.19:
 

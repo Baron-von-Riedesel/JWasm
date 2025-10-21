@@ -918,6 +918,19 @@ static const char *get_sym_seg_name( const struct asym *sym )
     }
 }
 
+#if DLLIMPORT
+static char *GetDllName( const struct asym *sym )
+{
+    struct dll_desc *dll;
+    struct impnode *node;
+    for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next )
+        for ( node = dll->imports; node; node = node->next )
+            if ( node->sym == sym )
+                return( dll->name );
+    return( "???" );
+}
+#endif
+
 /* list Procedures and Prototypes */
 
 static void log_proc( const struct asym *sym )
@@ -958,8 +971,8 @@ static void log_proc( const struct asym *sym )
     } else {
         LstPrintf( sym->weak ? "*%-8s " : "%-9s ", strings[LS_EXTERNAL] );
 #if DLLIMPORT
-        if ( sym->dll )
-            LstPrintf( "(%.8s) ", sym->dll->name );
+        if ( sym->isimported )
+            LstPrintf( "(%.8s) ", GetDllName(sym) );
 #endif
     }
 
@@ -1124,7 +1137,7 @@ static void log_symbol( const struct asym *sym )
         if ( sym->fwdref )
             LstPrintf( "(F) " );
         /* list unused global variables if they have a size and aren't public */
-        if ( sym->state == SYM_INTERNAL && (!sym->used) && !(sym->mem_type & MT_ADDRESS) && !sym->ispublic )
+        if ( sym->state == SYM_INTERNAL && (!sym->referenced) && !(sym->mem_type & MT_ADDRESS) && !sym->ispublic )
             LstPrintf( "(U) " );
 #endif
         if ( sym->state == SYM_EXTERNAL && sym->iscomm == TRUE )
