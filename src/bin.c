@@ -35,6 +35,7 @@
 #include "equate.h"
 #include "expreval.h"
 
+#define TRANSFER_CODE 1 /* v2.20: attach imported external to transfer code label */
 #define RAWSIZE_ROUND 1 /* SectionHeader.SizeOfRawData is multiple FileAlign. Required by MS COFF spec */
 #define IMGSIZE_ROUND 1 /* OptionalHeader.SizeOfImage is multiple ObjectAlign. Required by MS COFF spec */
 
@@ -44,6 +45,8 @@
 #define IMPIATSUF  "5"  /* IAT segment suffix */
 #define IMPSTRSUF  "6"  /* import strings segment suffix */
 
+#else
+#define TRANSFER_CODE 0
 #endif
 
 /* pespec.h contains MZ header declaration */
@@ -547,6 +550,18 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
         codeptr.db = curr->e.seginfo->CodeBuffer +
             ( fixup->locofs - curr->e.seginfo->start_loc );
 
+#if TRANSFER_CODE
+        /* v2.20: attach mangled internal label to imported external;
+         * example: external=kernel32.ExitProcess internal=_ExitProcess@4
+         */
+        if ( fixup->sym && fixup->sym->isimported && fixup->sym->state == SYM_EXTERNAL ) {
+            struct asym *sym;
+            Mangle( fixup->sym, StringBufferEnd );
+            /* if() should always succeed - no other externals are allowed; see bin_check_external */
+            if ((sym = SymSearch( StringBufferEnd )) && sym->state == SYM_INTERNAL )
+                fixup->sym = sym;
+        }
+#endif
         //if ( fixup->sym && fixup->sym->segment ) { /* v2.08: changed */
         if ( fixup->sym && ( fixup->sym->segment || fixup->sym->isvariable ) ) {
             /* assembly time variable (also $ symbol) in reloc? */
@@ -1221,104 +1236,106 @@ static void pe_emit_import_data( void )
     DebugMsg1(("pe_emit_import_data enter\n" ));
     for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
         struct impnode *node;
-        for ( node = p->imports; node && !node->iatsym; node = node->next ); /* any IAT defined? */
-        if ( node ) {
-            struct dsym *curr;
-            struct dsym *alias;
-            char *pdot;
-            if ( !type ) {
-                type = 1;
-                AddLineQueueX( "@LPPROC %r %r %r", T_TYPEDEF, T_PTR, T_PROC );
-                AddLineQueueX( "%r DOTNAME", T_OPTION );
-            }
-
-            /* avoid . in IDs */
-            if ( pdot = strchr( p->name, '.') )
-                *pdot = '_';
-
-            /* import directory entry */
-            AddLineQueueX( "%s" IMPDIRSUF " %r %r %s", idataname, T_SEGMENT, T_DWORD, idataattr );
-            AddLineQueueX( "DD %r @%s_ilt, 0, 0, %r @%s_name, %r @%s_iat", T_IMAGEREL, p->name, T_IMAGEREL, p->name, T_IMAGEREL, p->name );
-            AddLineQueueX( "%s" IMPDIRSUF " %r", idataname, T_ENDS );
-
-            /* emit ILT */
-            AddLineQueueX( "%s" IMPILTSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
-            AddLineQueueX( "@%s_ilt label %r", p->name, ptrtype );
-
-            /* emit ILT entries */
-            for ( node = p->imports; node; node = node->next ) {
-                if ( node->iatsym ) {
-                    curr = (struct dsym *)node->sym;
-                    /* v2.16: allow imports by number */
-                    for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
-                    if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
-                        pp++;
-                        myatoi128( pp, num, 10, strlen( pp ) );
-                        AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
-                        continue;
-                    }
-                    AddLineQueueX( "@LPPROC %r @%s_name", T_IMAGEREL, curr->sym.name );
-                }
-            }
-            /* ILT termination entry */
-            AddLineQueueX( "@LPPROC 0" );
-            AddLineQueueX( "%s" IMPILTSUF " %r", idataname, T_ENDS );
-
-            /* emit IAT */
-            AddLineQueueX( "%s" IMPIATSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
-            AddLineQueueX( "@%s_iat label %r", p->name, ptrtype );
-
-            /* emit IAT entries */
-            for ( node = p->imports; node; node = node->next ) {
-                if ( node->iatsym ) {
-                    curr = (struct dsym *)node->sym;
-                    Mangle( &curr->sym, StringBufferEnd );
-                    /* v2.16: allow imports by number */
-                    for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
-                    if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
-                        pp++;
-                        myatoi128( pp, num, 10, strlen( pp ) );
-                        DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
-                        AddLineQueueX( "%s%s @LPPROC 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, (uint_32)num[0] );
-                        continue;
-                    }
-                    AddLineQueueX( "%s%s @LPPROC %r @%s_name", ModuleInfo.g.imp_prefix, StringBufferEnd, T_IMAGEREL, curr->sym.name );
-                }
-            }
-            /* IAT termination entry */
-            AddLineQueueX( "@LPPROC 0" );
-            AddLineQueueX( "%s" IMPIATSUF " %r", idataname, T_ENDS );
-
-            /* emit name table */
-            AddLineQueueX( "%s" IMPSTRSUF " %r %r %s", idataname, T_SEGMENT, T_WORD, idataattr );
-
-            /* emit name entries */
-            for ( node = p->imports; node; node = node->next ) {
-                if ( node->iatsym ) {
-                    curr = (struct dsym *)node->sym;
-                    /* v2.16: allow imports by number */
-                    for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
-                    if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
-                        DebugMsg1(("pe_emit_import_data: import by number: %s, nothing written to name table\n", curr->sym.name ));
-                        continue;
-                    }
-                    AddLineQueueX( "@%s_name dw 0", curr->sym.name );
-                    AddLineQueueX( "db '%s',0", curr->sym.name );
-                    AddLineQueue( "even" );
-                }
-            }
-            /* dll name table entry */
-            if ( pdot ) {
-                *pdot = NULLC;
-                AddLineQueueX( "@%s_%s_name db '%s.%s',0", p->name, pdot+1, p->name, pdot+1 );
-                *pdot = '.';  /* restore '.' in dll name */
-            } else
-                AddLineQueueX( "@%s_name db '%s',0", p->name, p->name );
-
-            AddLineQueue( "even" );
-            AddLineQueueX( "%s" IMPSTRSUF " %r", idataname, T_ENDS );
-
+        struct dsym *curr;
+        struct dsym *alias;
+        char *pdot;
+        for ( node = p->imports; node ; node = node->next )
+            if ( node->iatsym && node->iatsym->referenced ) /* any IAT entry referenced? */
+                break;
+        if ( !node )
+            continue;
+        if ( !type ) {
+            type = 1;
+            AddLineQueueX( "@LPPROC %r %r %r", T_TYPEDEF, T_PTR, T_PROC );
+            AddLineQueueX( "%r DOTNAME", T_OPTION );
         }
+
+        /* avoid . in IDs */
+        if ( pdot = strchr( p->name, '.') )
+            *pdot = '_';
+
+        /* import directory entry */
+        AddLineQueueX( "%s" IMPDIRSUF " %r %r %s", idataname, T_SEGMENT, T_DWORD, idataattr );
+        AddLineQueueX( "DD %r @%s_ilt, 0, 0, %r @%s_name, %r @%s_iat", T_IMAGEREL, p->name, T_IMAGEREL, p->name, T_IMAGEREL, p->name );
+        AddLineQueueX( "%s" IMPDIRSUF " %r", idataname, T_ENDS );
+
+        /* emit ILT */
+        AddLineQueueX( "%s" IMPILTSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
+        AddLineQueueX( "@%s_ilt label %r", p->name, ptrtype );
+
+        /* emit ILT entries */
+        for ( node = p->imports; node; node = node->next ) {
+            if ( node->iatsym && node->iatsym->referenced ) {
+                curr = (struct dsym *)node->sym;
+                /* v2.16: allow imports by number */
+                for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                    pp++;
+                    myatoi128( pp, num, 10, strlen( pp ) );
+                    AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
+                    continue;
+                }
+                AddLineQueueX( "@LPPROC %r @%s_name", T_IMAGEREL, curr->sym.name );
+            }
+        }
+        /* ILT termination entry */
+        AddLineQueueX( "@LPPROC 0" );
+        AddLineQueueX( "%s" IMPILTSUF " %r", idataname, T_ENDS );
+
+        /* emit IAT */
+        AddLineQueueX( "%s" IMPIATSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
+        AddLineQueueX( "@%s_iat label %r", p->name, ptrtype );
+
+        /* emit IAT entries */
+        for ( node = p->imports; node; node = node->next ) {
+            if ( node->iatsym && node->iatsym->referenced ) {
+                curr = (struct dsym *)node->sym;
+                Mangle( &curr->sym, StringBufferEnd );
+                /* v2.16: allow imports by number */
+                for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                    pp++;
+                    myatoi128( pp, num, 10, strlen( pp ) );
+                    DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
+                    AddLineQueueX( "%s%s @LPPROC 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, (uint_32)num[0] );
+                    continue;
+                }
+                AddLineQueueX( "%s%s @LPPROC %r @%s_name", ModuleInfo.g.imp_prefix, StringBufferEnd, T_IMAGEREL, curr->sym.name );
+            }
+        }
+        /* IAT termination entry */
+        AddLineQueueX( "@LPPROC 0" );
+        AddLineQueueX( "%s" IMPIATSUF " %r", idataname, T_ENDS );
+
+        /* emit name table */
+        AddLineQueueX( "%s" IMPSTRSUF " %r %r %s", idataname, T_SEGMENT, T_WORD, idataattr );
+
+        /* emit name entries */
+        for ( node = p->imports; node; node = node->next ) {
+            if ( node->iatsym && node->iatsym->referenced ) {
+                curr = (struct dsym *)node->sym;
+                /* v2.16: allow imports by number */
+                for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                    DebugMsg1(("pe_emit_import_data: import by number: %s, nothing written to name table\n", curr->sym.name ));
+                    continue;
+                }
+                AddLineQueueX( "@%s_name dw 0", curr->sym.name );
+                AddLineQueueX( "db '%s',0", curr->sym.name );
+                AddLineQueue( "even" );
+            }
+        }
+        /* dll name table entry */
+        if ( pdot ) {
+            *pdot = NULLC;
+            AddLineQueueX( "@%s_%s_name db '%s.%s',0", p->name, pdot+1, p->name, pdot+1 );
+            *pdot = '.';  /* restore '.' in dll name */
+        } else
+            AddLineQueueX( "@%s_name db '%s',0", p->name, p->name );
+
+        AddLineQueue( "even" );
+        AddLineQueueX( "%s" IMPSTRSUF " %r", idataname, T_ENDS );
+
     }
     if ( is_linequeue_populated() ) {
         /* import directory NULL entry */
@@ -2435,22 +2452,34 @@ static ret_code bin_write_module( struct module_info *modinfo )
 #endif
 
 /* check after pass 1 has finished;
- * PassOneChecks() has already changed all referenced externals to "strong".
+ * PassOneChecks() has already changed all referenced externals to "strong"
+ * - and removed the weak externals from TAB_EXT!
  */
 
 static ret_code bin_check_external( struct module_info *modinfo )
 /***************************************************************/
 {
+#if TRANSFER_CODE
     struct dsym *curr;
     for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
-        DebugMsg(("bin_check_external: %s weak=%u, referenced=%u\n", curr->sym.name, curr->sym.weak, curr->sym.referenced ));
-        //if( !curr->sym.isimported && curr->sym.weak == FALSE ) {
-        if( curr->sym.weak == FALSE ) {
-            DebugMsg(("bin_check_external: error, %s weak=%u imported=%u\n", curr->sym.name, curr->sym.weak, curr->sym.isimported ));
+        //if( curr->sym.weak == FALSE ) {
+            if ( curr->sym.isimported ) {
+                struct asym *sym;
+                Mangle( &curr->sym, StringBufferEnd );
+                if ( (sym = SymSearch( StringBufferEnd )) && sym->state == SYM_INTERNAL ) {
+                    DebugMsg(("bin_check_external: external %s assigned to label %s\n", curr->sym.name, StringBufferEnd ));
+                    continue;
+                }
+            }
+            DebugMsg(("bin_check_external: error, strong external %s\n", curr->sym.name ));
             return( EmitErr( FORMAT_DOESNT_SUPPORT_EXTERNALS, curr->sym.name ) );
-        }
+        //}
     }
     return( NOT_ERROR );
+#else
+    DebugMsg(("bin_check_external: queue=%s\n", SymTables[TAB_EXT].head ? SymTables[TAB_EXT].head->sym.name : "NULL" ));
+    return( SymTables[TAB_EXT].head ? EmitErr(FORMAT_DOESNT_SUPPORT_EXTERNALS, SymTables[TAB_EXT].head->sym.name) : NOT_ERROR );
+#endif
 }
 
 

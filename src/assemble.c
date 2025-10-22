@@ -376,15 +376,17 @@ static ret_code WriteModule( struct module_info *modinfo )
         if ( ld == NULL ) {
             return( EmitErr( CANNOT_OPEN_FILE, Options.names[OPTN_LNKDEF_FN], ErrnoStr() ) );
         }
-        /* v3.20: scan the import lib queue for referenced entries;
+        /* v2.20: scan the import lib queue for referenced entries;
          */
         for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
             for ( node = dll->imports; node; node = node->next ) {
                 int size;
-                if ( node->iatsym ) {
+                if ( node->iatsym && node->iatsym->referenced ) {
                     curr = (struct dsym *)node->sym;
                     Mangle( node->sym, StringBufferEnd );
-                    size = sprintf( CurrSource, "import '%s'  %s.%s\n", StringBufferEnd, dll->name, node->sym->name );
+                    /* v2.20: if dll name contains a dot, enclose it in single quotes */
+                    size = sprintf( CurrSource, strchr( dll->name, '.') ? "import '%s'  '%s'.%s\n" : "import '%s'  %s.%s\n",
+                                   StringBufferEnd, dll->name, node->sym->name );
                     if ( fwrite( CurrSource, 1, size, ld ) != size )
                         WriteError();
                 }
