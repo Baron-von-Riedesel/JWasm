@@ -105,6 +105,9 @@ struct global_options Options = {
 #if COCTALS
     /* allow_c_octals        */     FALSE,
 #endif
+#if DLLIMPORT
+    /* local_imports         */     FALSE,
+#endif
     /* no_comment_data_in_code_records */   FALSE,
     /* no_opt_farcall        */     FALSE,
     /* no_dependencies       */ //    FALSE,
@@ -696,6 +699,9 @@ static struct cmdloption const cmdl_options[] = {
     { "Zf",     optofs( all_symbols_public ),  Set_True },
     { "Zg",     optofs( masm_compat_gencode ), Set_True },
     { "Zi=#",   CVEX_NORMAL, Set_Zi },
+#if DLLIMPORT
+    { "Zli",    optofs( local_imports ), Set_True },
+#endif
     { "Zm",     optofs( masm51_compat ),      Set_True },
     { "Zne",    optofs( strict_masm_compat ), Set_True },
     { "Zp=#",   0,        Set_Zp },

@@ -899,7 +899,7 @@ code segment must be at least the value of OPTION PROCALIGN.
         call _GetModuleHandle@4
         ...
     _GetModuleHandle@4:
-        jmp DWORD PTR [_imp__GetModuleHandle@4]  ;stub added by the linker
+        jmp DWORD PTR [_imp__GetModuleHandle@4]  ;thunk added by the linker
 </font></pre> 
 
 <H3>    c) OPTION DLLIMPORT in Conjunction with -Fd Switch </H3>

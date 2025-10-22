@@ -18,6 +18,8 @@
       for segments that don't have class 'CODE'.
    -  option -pe: IAT entry generation now triggered by EXTERNDEF, not
       by INVOKE; see pe13.asm, pe14.asm.
+   -  new option -Zli, format pe only: generates "local imports", thunks to
+      call import addresses in the IAT.
 
    24.01.2025, v2.19:
 

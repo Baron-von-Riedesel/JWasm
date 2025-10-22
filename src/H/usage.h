@@ -62,6 +62,9 @@
 "-Zg\0"             "Generated code is to exactly match Masm's one\0"
 "-Zi[{0|1|2|3}]\0"  "Add symbolic debug info (OMF & COFF): 0=globals\0"
 "\0"                "1= +locals, 2= +types (default), 3= +constants\0"
+#if DLLIMPORT
+"-Zli\0"            "Generate local imports (-pe only)\0"
+#endif
 "-zlc\0"            "No OMF records about data in code\0"
 "-zld\0"            "No OMF records about far call optimization\0"
 #if COFF_SUPPORT

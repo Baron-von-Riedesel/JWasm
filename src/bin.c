@@ -35,7 +35,7 @@
 #include "equate.h"
 #include "expreval.h"
 
-#define TRANSFER_CODE 1 /* v2.20: attach imported external to transfer code label */
+#define LOCAL_IMPORTS 1 /* v2.20: option -Zli; an import will trigger a local label creation */
 #define RAWSIZE_ROUND 1 /* SectionHeader.SizeOfRawData is multiple FileAlign. Required by MS COFF spec */
 #define IMGSIZE_ROUND 1 /* OptionalHeader.SizeOfImage is multiple ObjectAlign. Required by MS COFF spec */
 
@@ -46,7 +46,7 @@
 #define IMPSTRSUF  "6"  /* import strings segment suffix */
 
 #else
-#define TRANSFER_CODE 0
+#define LOCAL_IMPORTS 0
 #endif
 
 /* pespec.h contains MZ header declaration */
@@ -550,16 +550,21 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
         codeptr.db = curr->e.seginfo->CodeBuffer +
             ( fixup->locofs - curr->e.seginfo->start_loc );
 
-#if TRANSFER_CODE
-        /* v2.20: attach mangled internal label to imported external;
-         * example: external=kernel32.ExitProcess internal=_ExitProcess@4
+#if LOCAL_IMPORTS
+        /* v2.20: fix imported external by a local label.
+         * the label has either been defined internally if option -Zli was given;
+         * or it has been defined manually ( and hence has state SYM_INTERNAL now ).
          */
         if ( fixup->sym && fixup->sym->isimported && fixup->sym->state == SYM_EXTERNAL ) {
             struct asym *sym;
-            Mangle( fixup->sym, StringBufferEnd );
-            /* if() should always succeed - no other externals are allowed; see bin_check_external */
-            if ((sym = SymSearch( StringBufferEnd )) && sym->state == SYM_INTERNAL )
+            if ( sym = SymSearch( "@local_imports" ) ) {
+                fixup->offset = fixup->sym->offset;
                 fixup->sym = sym;
+            } else {
+                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X, %s): error, start of local imports not found\n", curr->sym.name, fixup->locofs, fixup->sym->name ));
+                EmitErr( FORMAT_DOESNT_SUPPORT_EXTERNALS, fixup->sym->name );
+                continue;
+            }
         }
 #endif
         //if ( fixup->sym && fixup->sym->segment ) { /* v2.08: changed */
@@ -1207,6 +1212,37 @@ static void pe_emit_export_data( void )
         AddLineQueueX( "%s %r", edataname, T_ENDS );
         RunLineQueue();
     }
+    return;
+}
+
+/* write local import thunks
+ * called by pe_enddirhook() if option -Zli is set
+ */
+
+static void pe_emit_local_imports( void )
+/***************************************/
+{
+    struct dll_desc *p;
+    struct impnode *node;
+    unsigned currOfs = 0;
+    for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
+        for ( node = p->imports; node; node = node->next ) {
+            if ( node->sym->referenced && node->sym->state == SYM_EXTERNAL ) {
+                if ( !currOfs ) {
+                    AddLineQueueX( "\t%r %s$Z", T_DOT_CODE, SimGetSegName(SIM_CODE) );
+                    AddLineQueueX( "@local_imports:" );
+                }
+                Mangle( node->sym, StringBufferEnd );
+                AddLineQueueX( "%r %s%s: %r %r", T_EXTERNDEF, ModuleInfo.g.imp_prefix, StringBufferEnd, T_PTR, T_PROC );
+                AddLineQueueX( "\t%r [%s%s]", T_JMP, ModuleInfo.g.imp_prefix, StringBufferEnd );
+                node->sym->offset = currOfs;
+                currOfs += 6;
+            }
+        }
+    }
+    if ( is_linequeue_populated() )
+        RunLineQueue();
+    return;
 }
 
 /* write import data, called by pe_enddirhook().
@@ -1344,6 +1380,7 @@ static void pe_emit_import_data( void )
         AddLineQueueX( "%s" IMPNDIRSUF " %r", idataname, T_ENDS );
         RunLineQueue();
     }
+    return;
 }
 
 static int get_bit( int value )
@@ -2084,8 +2121,11 @@ static ret_code pe_enddirhook( struct module_info *modinfo )
     pe_create_MZ_header( modinfo );
     //pe_create_PE_header(); /* the PE header is created when the .MODEL directive is found */
     pe_emit_export_data();
-    if ( modinfo->g.DllQueue )
+    if ( modinfo->g.DllQueue ) {
+        if ( Options.local_imports )
+            pe_emit_local_imports();
         pe_emit_import_data();
+    }
     pe_create_section_table();
     return( NOT_ERROR );
 }
@@ -2459,21 +2499,15 @@ static ret_code bin_write_module( struct module_info *modinfo )
 static ret_code bin_check_external( struct module_info *modinfo )
 /***************************************************************/
 {
-#if TRANSFER_CODE
+#if LOCAL_IMPORTS
     struct dsym *curr;
     for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
-        //if( curr->sym.weak == FALSE ) {
-            if ( curr->sym.isimported ) {
-                struct asym *sym;
-                Mangle( &curr->sym, StringBufferEnd );
-                if ( (sym = SymSearch( StringBufferEnd )) && sym->state == SYM_INTERNAL ) {
-                    DebugMsg(("bin_check_external: external %s assigned to label %s\n", curr->sym.name, StringBufferEnd ));
-                    continue;
-                }
-            }
-            DebugMsg(("bin_check_external: error, strong external %s\n", curr->sym.name ));
-            return( EmitErr( FORMAT_DOESNT_SUPPORT_EXTERNALS, curr->sym.name ) );
-        //}
+        if ( curr->sym.isimported ) {
+            if ( Options.local_imports ) /* assume -Zli will fix all imports */
+                continue;
+        }
+        DebugMsg(("bin_check_external: error, strong external %s\n", curr->sym.name ));
+        return( EmitErr( FORMAT_DOESNT_SUPPORT_EXTERNALS, curr->sym.name ) );
     }
     return( NOT_ERROR );
 #else

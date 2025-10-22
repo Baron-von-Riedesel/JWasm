@@ -348,14 +348,12 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
                      */
                     char *pName = DeMangle( sym->name + strlen(ModuleInfo.g.imp_prefix), sym );
                     struct asym *symProto = SymSearch( pName );
+                    /* found an import? */
                     if ( symProto && symProto->isimported ) {
-#if 0
-                        symProto->referenced = TRUE;
-#else
                         struct dll_desc *dll;
                         struct impnode *node;
                         /* find the dll and add the IAT entry */
-                        for ( dll = ModuleInfo.g.DllQueue, node = NULL; dll && node == NULL; dll = dll->next ) {
+                        for ( dll = ModuleInfo.g.DllQueue, node = NULL; dll && !node; dll = dll->next ) {
                             for ( node = dll->imports; node; node = node->next ) {
                                 if ( node->sym == symProto ) {
                                     node->iatsym = sym;
@@ -363,7 +361,6 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
                                 }
                             }
                         }
-#endif
                     }
                 }
             }

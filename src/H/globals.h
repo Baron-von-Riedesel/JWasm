@@ -590,6 +590,9 @@ struct global_options {
 #if COCTALS
     bool        allow_c_octals;          /* -o option */
 #endif
+#if DLLIMPORT
+    bool        local_imports;           /* -ZLi option; v2.20 */
+#endif
     bool        no_comment_data_in_code_records; /* -zlc option */
     bool        no_opt_farcall;          /* -zld option */
 //    bool        no_dependencies;         /* -zld option */
