@@ -381,7 +381,7 @@ static ret_code WriteModule( struct module_info *modinfo )
         for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
             for ( node = dll->imports; node; node = node->next ) {
                 int size;
-                if ( node->iatsym && node->iatsym->referenced ) {
+                if ( ( node->iatsym && node->iatsym->referenced) || node->sym->referenced ) {
                     curr = (struct dsym *)node->sym;
                     Mangle( node->sym, StringBufferEnd );
                     /* v2.20: if dll name contains a dot, enclose it in single quotes */

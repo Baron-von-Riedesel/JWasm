@@ -550,7 +550,7 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
         codeptr.db = curr->e.seginfo->CodeBuffer +
             ( fixup->locofs - curr->e.seginfo->start_loc );
 
-#if LOCAL_IMPORTS
+#if 0//LOCAL_IMPORTS
         /* v2.20: fix imported external by a local label.
          * the label has either been defined internally if option -Zli was given;
          * or it has been defined manually ( and hence has state SYM_INTERNAL now ).
@@ -1224,19 +1224,27 @@ static void pe_emit_local_imports( void )
 {
     struct dll_desc *p;
     struct impnode *node;
-    unsigned currOfs = 0;
+    unsigned currOfs;
+    struct asym *sym = NULL;
     for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
         for ( node = p->imports; node; node = node->next ) {
-            if ( node->sym->referenced && node->sym->state == SYM_EXTERNAL ) {
-                if ( !currOfs ) {
+            if ( node->sym->referenced ) {
+                if ( !sym ) {
                     AddLineQueueX( "\t%r %s$Z", T_DOT_CODE, SimGetSegName(SIM_CODE) );
                     AddLineQueueX( "@local_imports:" );
+                    RunLineQueue();
+                    sym = SymSearch( "@local_imports" );
+                    currOfs = 0;
                 }
                 Mangle( node->sym, StringBufferEnd );
                 AddLineQueueX( "%r %s%s: %r %r", T_EXTERNDEF, ModuleInfo.g.imp_prefix, StringBufferEnd, T_PTR, T_PROC );
                 AddLineQueueX( "\t%r [%s%s]", T_JMP, ModuleInfo.g.imp_prefix, StringBufferEnd );
-                node->sym->offset = currOfs;
-                currOfs += 6;
+                if ( Parse_Pass == PASS_1 ) {
+                    sym_ext2int(node->sym);
+                    node->sym->segment = sym->segment;
+                    node->sym->offset = currOfs;
+                    currOfs += 6;
+                }
             }
         }
     }
@@ -2499,7 +2507,7 @@ static ret_code bin_write_module( struct module_info *modinfo )
 static ret_code bin_check_external( struct module_info *modinfo )
 /***************************************************************/
 {
-#if LOCAL_IMPORTS
+#if 0//LOCAL_IMPORTS
     struct dsym *curr;
     for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
         if ( curr->sym.isimported ) {
