@@ -972,7 +972,7 @@ static void log_proc( const struct asym *sym )
         LstPrintf( sym->weak ? "*%-8s " : "%-9s ", strings[LS_EXTERNAL] );
 #if DLLIMPORT
         if ( sym->isimported )
-            LstPrintf( "(%.8s) ", GetDllName(sym) );
+            LstPrintf( "(%s) ", GetDllName(sym) );
 #endif
     }
 

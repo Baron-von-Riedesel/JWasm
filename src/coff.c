@@ -1257,7 +1257,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
         /* check if an impdef record is there */
         for ( dll = ModuleInfo.g.DllQueue; dll && !imp; dll = dll->next ) {
             for ( node = dll->imports; node && !imp; node = node->next )
-                if ( node->iatsym && node->iatsym->referenced ) {
+                if ( node->sym->referenced || (node->iatsym && node->iatsym->referenced) ) {
                     imp = (struct dsym *)node->sym;
                     DebugMsg(("coff_create_drectve: imports (starting with %s) will be written\n", imp->sym.name ));
                 }
@@ -1309,7 +1309,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             /* 4. impdefs */
             for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
                 for ( node = dll->imports; node; node = node->next ) {
-                    if ( node->iatsym && node->iatsym->referenced ) {
+                    if ( node->sym->referenced || (node->iatsym && node->iatsym->referenced ) ) {
                         tmp = (struct dsym *)node->sym;
                         /* format is:
                          * "-import:<mangled_name>=<module_name>.<unmangled_name>" or
@@ -1359,7 +1359,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             /* 4. impdefs */
             for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
                 for ( node = dll->imports; node; node = node->next ) {
-                    if ( node->iatsym && node->iatsym->referenced ) {
+                    if ( node->sym->referenced || (node->iatsym && node->iatsym->referenced )) {
                         tmp = (struct dsym *)node->sym;
                         strcpy( (char *)p, "-import:" );
                         p += 8;

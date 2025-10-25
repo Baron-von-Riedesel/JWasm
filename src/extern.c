@@ -179,12 +179,25 @@ static struct asym *CreateProto( int i, struct asm_tok tokenarray[], const char 
 #if DLLIMPORT
         if ( ModuleInfo.CurrDll ) {
             struct impnode *node;
+            struct impnode *node2;
             sym->isimported = TRUE;
             node = LclAlloc( sizeof( struct impnode ));
             node->sym = sym;
             node->iatsym = NULL;
+            
+# if 0 /* v2.20: for compatibility with previous versions, the import should be added at the end */
             node->next = ModuleInfo.CurrDll->imports;
             ModuleInfo.CurrDll->imports = node;
+# else
+            node->next = NULL;
+            node2 = ModuleInfo.CurrDll->imports;
+            if (!node2)
+                ModuleInfo.CurrDll->imports = node;
+            else {
+                while ( node2->next ) node2 = node2->next;
+                node2->next = node;
+            }
+# endif
         }
 #endif
     } else {
@@ -198,6 +211,7 @@ static struct asym *CreateProto( int i, struct asm_tok tokenarray[], const char 
 /* v2.20: pretty hackish demangle func, for Win32/Win64 only */
 
 static char *DeMangle( char *name, struct asym *sym )
+/***************************************************/
 {
     char *p;
     if (*name == '_') name++;

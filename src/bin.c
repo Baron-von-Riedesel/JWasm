@@ -35,7 +35,6 @@
 #include "equate.h"
 #include "expreval.h"
 
-#define LOCAL_IMPORTS 1 /* v2.20: option -Zli; an import will trigger a local label creation */
 #define RAWSIZE_ROUND 1 /* SectionHeader.SizeOfRawData is multiple FileAlign. Required by MS COFF spec */
 #define IMGSIZE_ROUND 1 /* OptionalHeader.SizeOfImage is multiple ObjectAlign. Required by MS COFF spec */
 
@@ -45,8 +44,6 @@
 #define IMPIATSUF  "5"  /* IAT segment suffix */
 #define IMPSTRSUF  "6"  /* import strings segment suffix */
 
-#else
-#define LOCAL_IMPORTS 0
 #endif
 
 /* pespec.h contains MZ header declaration */
@@ -550,23 +547,6 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
         codeptr.db = curr->e.seginfo->CodeBuffer +
             ( fixup->locofs - curr->e.seginfo->start_loc );
 
-#if 0//LOCAL_IMPORTS
-        /* v2.20: fix imported external by a local label.
-         * the label has either been defined internally if option -Zli was given;
-         * or it has been defined manually ( and hence has state SYM_INTERNAL now ).
-         */
-        if ( fixup->sym && fixup->sym->isimported && fixup->sym->state == SYM_EXTERNAL ) {
-            struct asym *sym;
-            if ( sym = SymSearch( "@local_imports" ) ) {
-                fixup->offset = fixup->sym->offset;
-                fixup->sym = sym;
-            } else {
-                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X, %s): error, start of local imports not found\n", curr->sym.name, fixup->locofs, fixup->sym->name ));
-                EmitErr( FORMAT_DOESNT_SUPPORT_EXTERNALS, fixup->sym->name );
-                continue;
-            }
-        }
-#endif
         //if ( fixup->sym && fixup->sym->segment ) { /* v2.08: changed */
         if ( fixup->sym && ( fixup->sym->segment || fixup->sym->isvariable ) ) {
             /* assembly time variable (also $ symbol) in reloc? */
@@ -1215,7 +1195,7 @@ static void pe_emit_export_data( void )
     return;
 }
 
-/* write local import thunks
+/* write local import thunks;
  * called by pe_enddirhook() if option -Zli is set
  */
 
@@ -1224,27 +1204,33 @@ static void pe_emit_local_imports( void )
 {
     struct dll_desc *p;
     struct impnode *node;
-    unsigned currOfs;
+    unsigned currOfs = 0;
     struct asym *sym = NULL;
+    /* scan all dllimport items */
     for ( p = ModuleInfo.g.DllQueue; p; p = p->next ) {
         for ( node = p->imports; node; node = node->next ) {
+            /* is the import referenced directly ( that is, NOT via IAT )? */
             if ( node->sym->referenced ) {
-                if ( !sym ) {
+                /* create the start label */
+                if ( !currOfs ) {
                     AddLineQueueX( "\t%r %s$Z", T_DOT_CODE, SimGetSegName(SIM_CODE) );
                     AddLineQueueX( "@local_imports:" );
-                    RunLineQueue();
-                    sym = SymSearch( "@local_imports" );
-                    currOfs = 0;
                 }
+                /* add externdef for IAT - may probably be omitted if this func is called AFTER pe_emit_import data() */
                 Mangle( node->sym, StringBufferEnd );
                 AddLineQueueX( "%r %s%s: %r %r", T_EXTERNDEF, ModuleInfo.g.imp_prefix, StringBufferEnd, T_PTR, T_PROC );
+                /* add the indirect JMP using the IAT entry */
                 AddLineQueueX( "\t%r [%s%s]", T_JMP, ModuleInfo.g.imp_prefix, StringBufferEnd );
+                /* in pass 1, change import to INTERNAL and set the address offset */
                 if ( Parse_Pass == PASS_1 ) {
-                    sym_ext2int(node->sym);
-                    node->sym->segment = sym->segment;
-                    node->sym->offset = currOfs;
-                    currOfs += 6;
+                    RunLineQueue(); /* must be done to get a valid sym */
+                    if (sym = SymSearch( "@local_imports" ) ) {
+                        sym_ext2int(node->sym);
+                        node->sym->segment = sym->segment;
+                        node->sym->offset = currOfs;
+                    }
                 }
+                currOfs += 6;
             }
         }
     }
@@ -2507,21 +2493,8 @@ static ret_code bin_write_module( struct module_info *modinfo )
 static ret_code bin_check_external( struct module_info *modinfo )
 /***************************************************************/
 {
-#if 0//LOCAL_IMPORTS
-    struct dsym *curr;
-    for ( curr = SymTables[TAB_EXT].head; curr != NULL ; curr = curr->next ) {
-        if ( curr->sym.isimported ) {
-            if ( Options.local_imports ) /* assume -Zli will fix all imports */
-                continue;
-        }
-        DebugMsg(("bin_check_external: error, strong external %s\n", curr->sym.name ));
-        return( EmitErr( FORMAT_DOESNT_SUPPORT_EXTERNALS, curr->sym.name ) );
-    }
-    return( NOT_ERROR );
-#else
     DebugMsg(("bin_check_external: queue=%s\n", SymTables[TAB_EXT].head ? SymTables[TAB_EXT].head->sym.name : "NULL" ));
     return( SymTables[TAB_EXT].head ? EmitErr(FORMAT_DOESNT_SUPPORT_EXTERNALS, SymTables[TAB_EXT].head->sym.name) : NOT_ERROR );
-#endif
 }
 
 
