@@ -8,7 +8,8 @@ VCDIR  = \msvc71
 W32LIB = \WinInc\Lib
 LIBC   = \msvc71\lib\libc.lib
 
-OUTD=build\Msvc71
+BOUT=build
+OUTD=$(BOUT)\Msvc71
 inc_dirs  = -Isrc\H -I"$(VCDIR)\include"
 linker = $(VCDIR)\Bin\link.exe
 lib = $(VCDIR)\Bin\lib.exe
@@ -26,7 +27,10 @@ CC=$(VCDIR)\bin\cl.exe -c -nologo $(inc_dirs) $(c_flags)
 proj_obj = \
 !include msmod.inc
 
-ALL: $(OUTD) $(TARGET1)
+ALL: $(BOUT) $(OUTD) $(TARGET1)
+
+$(BOUT):
+	@mkdir $(BOUT)
 
 $(OUTD):
 	@mkdir $(OUTD)

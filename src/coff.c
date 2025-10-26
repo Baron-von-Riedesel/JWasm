@@ -1238,7 +1238,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
 #if DLLIMPORT
     struct dll_desc *dll;
     struct impnode *node;
-    struct dsym *imp = NULL;
+    uint_32 impdatasize = 0;
 #endif
     char buffer[MAX_ID_LEN + MANGLE_BYTES + 1];
 
@@ -1255,13 +1255,18 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
     if ( Options.write_impdef && !Options.names[OPTN_LNKDEF_FN] ) {
         DebugMsg(("coff_create_drectve: option -Fd given without filename, checking imports\n" ));
         /* check if an impdef record is there */
-        for ( dll = ModuleInfo.g.DllQueue; dll && !imp; dll = dll->next ) {
-            for ( node = dll->imports; node && !imp; node = node->next )
+        for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next )
+            for ( node = dll->imports; node; node = node->next )
                 if ( node->sym->referenced || (node->iatsym && node->iatsym->referenced) ) {
-                    imp = (struct dsym *)node->sym;
-                    DebugMsg(("coff_create_drectve: imports (starting with %s) will be written\n", imp->sym.name ));
+                    /* format is:
+                     * "-import:<mangled_name>=<module_name>.<unmangled_name>" or
+                     * "-import:<mangled_name>=<module_name>"
+                     */
+                    impdatasize += sizeof("-import:");
+                    impdatasize += Mangle( node->sym, buffer );
+                    impdatasize += 1 + strlen( dll->name );
+                    impdatasize += 1 + node->sym->name_size;
                 }
-        }
     }
 #endif
     /* add a .drectve section if
@@ -1273,11 +1278,10 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
     if ( modinfo->g.start_label != NULL ||
         modinfo->g.LibQueue.head != NULL ||
 #if DLLIMPORT
-        imp != NULL ||
+        impdatasize ||
 #endif
         qexp != NULL ) {
         if ( cm->directives = (struct dsym *)CreateIntSegment( szdrectve, "", MAX_SEGALIGNMENT, modinfo->Ofssize, FALSE ) ) {
-            struct dsym *tmp;
             struct qnode *texp;
             int size = 0;
             struct qitem *q;
@@ -1306,22 +1310,7 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             /* 3. start label */
             size += GetStartLabel( modinfo, buffer, TRUE );
 #if DLLIMPORT
-            /* 4. impdefs */
-            for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
-                for ( node = dll->imports; node; node = node->next ) {
-                    if ( node->sym->referenced || (node->iatsym && node->iatsym->referenced ) ) {
-                        tmp = (struct dsym *)node->sym;
-                        /* format is:
-                         * "-import:<mangled_name>=<module_name>.<unmangled_name>" or
-                         * "-import:<mangled_name>=<module_name>"
-                         */
-                        size += sizeof("-import:");
-                        size += Mangle( &tmp->sym, buffer );
-                        size += 1 + strlen( dll->name );
-                        size += 1 + tmp->sym.name_size;
-                    }
-                }
-            }
+            size += impdatasize; /* 4. impdefs */
 #endif
             cm->directives->sym.max_offset = size;
             /* v2.09: allocate 1 byte more, because sprintf() is used, which
@@ -1357,23 +1346,21 @@ static void coff_create_drectve( struct module_info *modinfo, struct coffmod *cm
             }
 #if DLLIMPORT
             /* 4. impdefs */
-            for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next ) {
-                for ( node = dll->imports; node; node = node->next ) {
-                    if ( node->sym->referenced || (node->iatsym && node->iatsym->referenced )) {
-                        tmp = (struct dsym *)node->sym;
-                        strcpy( (char *)p, "-import:" );
-                        p += 8;
-                        p += Mangle( &tmp->sym, (char *)p );
-                        *p++ = '=';
-                        strcpy( (char *)p, dll->name );
-                        p += strlen( (char *)p );
-                        *p++ = '.';
-                        memcpy( p, tmp->sym.name, tmp->sym.name_size );
-                        p += tmp->sym.name_size;
-                        *p++ = ' ';
-                    }
-                }
-            }
+            if ( impdatasize )
+                for ( dll = ModuleInfo.g.DllQueue; dll; dll = dll->next )
+                    for ( node = dll->imports; node; node = node->next )
+                        if ( node->sym->referenced || (node->iatsym && node->iatsym->referenced )) {
+                            strcpy( (char *)p, "-import:" );
+                            p += 8;
+                            p += Mangle( node->sym, (char *)p );
+                            *p++ = '=';
+                            strcpy( (char *)p, dll->name );
+                            p += strlen( (char *)p );
+                            *p++ = '.';
+                            memcpy( p, node->sym->name, node->sym->name_size );
+                            p += node->sym->name_size;
+                            *p++ = ' ';
+                        }
 #endif
             /**/myassert( size == p - cm->directives->e.seginfo->CodeBuffer );
             //size_drectve = p - directives->e.seginfo->CodeBuffer; /* v2.11:removed */

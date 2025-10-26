@@ -46,7 +46,7 @@ TRMEM=0
 !endif
 
 !ifndef OUTD
-BOUT=Build
+BOUT=build
 !if $(DEBUG)
 OUTD=$(BOUT)\OWDOS32D
 !else
