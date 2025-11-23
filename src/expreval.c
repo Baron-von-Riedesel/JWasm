@@ -43,6 +43,7 @@
 #include "label.h"
 #include "atofloat.h"
 #include "myassert.h"
+#include "data.h" /* v2.20: InitStructuredVar() may now be called */
 
 #define ALIAS_IN_EXPR 1 /* allow alias names in expression */
 
@@ -641,11 +642,21 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
             //if ( tokenarray[i-1].token != T_DOT && tokenarray[i+1].token != T_DOT )
             /* v2.06: the default value for RECORD types is the mask value */
             if ( sym->typekind == TYPE_RECORD ) {
+                /* v2.20: a record type may be followed by an initializer string!
+                 */
+                if ( tokenarray[i+1].token == T_STRING ) {
+                    if ( ERROR == InitStructuredVar( i+1, tokenarray, (struct dsym *)sym, opnd, NULL ) )
+                        opnd->kind = EXPR_ERROR;
+                    else
+                        (*idx)++; /* the literal has been consumed */
+                } else {
 #if AMD64_SUPPORT
-                opnd->llvalue = GetRecordMask( (struct dsym *)sym );
+                    opnd->llvalue = GetRecordMask( (struct dsym *)sym );
 #else
-                opnd->value = GetRecordMask( (struct dsym *)sym );
+                    opnd->value = GetRecordMask( (struct dsym *)sym );
 #endif
+                }
+
             } else if ( ( sym->mem_type & MT_SPECIAL_MASK ) == MT_ADDRESS ) { /* v2.09: added */
                 if ( sym->mem_type == MT_PROC ) {
                     opnd->value = sym->total_size;

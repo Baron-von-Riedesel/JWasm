@@ -20,6 +20,9 @@
       by INVOKE; see pe13.asm, pe14.asm.
    -  new option -Zli, format pe only: generates thunks to call import
       addresses in the IAT; see pezli.asm.
+   -  Open Watcom DOS32 target: added check in C startup code for DOS extender
+      presence.
+   -  record initializer literals now accepted in expressions; see record5.asm.
 
    24.01.2025, v2.19:
 

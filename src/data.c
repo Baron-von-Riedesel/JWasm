@@ -187,8 +187,8 @@ static ret_code InitializeArray( const struct sfield *f, int *pi, struct asm_tok
  * Since this function may be reentered, it's necessary to save/restore
  * global variable Token_Count.
  */
-static ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct dsym *symtype, struct asym *embedded )
-/****************************************************************************************************************************/
+ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct dsym *symtype, struct expr *pOpndx, struct asym *embedded )
+/******************************************************************************************************************************************/
 {
     //char            *ptr;
     struct sfield   *f;
@@ -203,7 +203,7 @@ static ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const
     uint_32         dwRecInit;
 #endif
     bool            is_record_set;
-    struct expr     opndx;
+    struct expr     opndx; /* used for RECORD items only */
     //char            line[MAX_LINE_LEN];
 
     DebugMsg1(("InitStructuredVar(%s) enter, total_size=%" I32_SPEC "u, init=>%s<, embedded=%s, alignm=%u\n",
@@ -284,7 +284,7 @@ static ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const
         //} else if ( f->init_dir == NULL ) {  /* embedded struct? */
         } else if ( f->ivalue[0] == NULLC ) {  /* embedded struct? */
 
-            InitStructuredVar( i, tokenarray, (struct dsym *)f->sym.type, &f->sym );
+            InitStructuredVar( i, tokenarray, (struct dsym *)f->sym.type, NULL, &f->sym );
             if ( tokenarray[i].token == T_STRING )
                 i++;
 
@@ -380,7 +380,15 @@ static ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const
 #endif
         default: no_of_bytes = 4;
         }
-        if ( is_record_set )
+        /* v2.20: function may now be called by expression evaluator */
+        if ( pOpndx ) {
+#if AMD64_SUPPORT
+            pOpndx->llvalue = dwRecInit;
+#else
+            pOpndx->value = dwRecInit;
+#endif
+            pOpndx->kind = opndx.kind;
+        } else if ( is_record_set )
             OutputDataBytes( (uint_8 *)&dwRecInit, no_of_bytes );
         else
             SetCurrOffset( CurrSeg, no_of_bytes, TRUE, TRUE );
@@ -508,7 +516,7 @@ next_item:  /* <--- continue scan if a comma has been detected */
              */
             while ( type_sym->type ) type_sym = type_sym->type;
             if( inside_struct == FALSE ) {
-                if ( InitStructuredVar( i, tokenarray, (struct dsym *)type_sym, NULL ) == ERROR )
+                if ( InitStructuredVar( i, tokenarray, (struct dsym *)type_sym, NULL, NULL ) == ERROR )
                     return( ERROR );
             } else {
                 /* v2.09: emit a warning if a TYPEDEF member is a simple type,

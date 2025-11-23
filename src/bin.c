@@ -44,6 +44,8 @@
 #define IMPIATSUF  "5"  /* IAT segment suffix */
 #define IMPSTRSUF  "6"  /* import strings segment suffix */
 
+static const char lpproctype[] = "@LPPROC";
+
 #endif
 
 /* pespec.h contains MZ header declaration */
@@ -1195,7 +1197,7 @@ static void pe_emit_export_data( void )
     return;
 }
 
-/* write local import thunks;
+/* v2.20: write local import thunks;
  * called by pe_enddirhook() if option -Zli is set
  */
 
@@ -1252,7 +1254,7 @@ static void pe_emit_import_data( void )
 /*************************************/
 {
     struct dll_desc *p;
-    int type = 0;
+    bool type_defined = FALSE;
     char *pp;
     uint_64 num[2];
 #if AMD64_SUPPORT
@@ -1274,70 +1276,18 @@ static void pe_emit_import_data( void )
                 break;
         if ( !node )
             continue;
-        if ( !type ) {
-            type = 1;
-            AddLineQueueX( "@LPPROC %r %r %r", T_TYPEDEF, T_PTR, T_PROC );
+        if ( !type_defined ) {
+            type_defined = TRUE;
+            AddLineQueueX( "%s %r %r %r", lpproctype, T_TYPEDEF, T_PTR, T_PROC );
             AddLineQueueX( "%r DOTNAME", T_OPTION );
         }
 
-        /* avoid . in IDs */
-        if ( pdot = strchr( p->name, '.') )
-            *pdot = '_';
+        /* check if dll name contains a '.' */
+        pdot = strchr( p->name, '.');
 
-        /* import directory entry */
-        AddLineQueueX( "%s" IMPDIRSUF " %r %r %s", idataname, T_SEGMENT, T_DWORD, idataattr );
-        AddLineQueueX( "DD %r @%s_ilt, 0, 0, %r @%s_name, %r @%s_iat", T_IMAGEREL, p->name, T_IMAGEREL, p->name, T_IMAGEREL, p->name );
-        AddLineQueueX( "%s" IMPDIRSUF " %r", idataname, T_ENDS );
-
-        /* emit ILT */
-        AddLineQueueX( "%s" IMPILTSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
-        AddLineQueueX( "@%s_ilt label %r", p->name, ptrtype );
-
-        /* emit ILT entries */
-        for ( node = p->imports; node; node = node->next ) {
-            if ( node->iatsym && node->iatsym->referenced ) {
-                curr = (struct dsym *)node->sym;
-                /* v2.16: allow imports by number */
-                for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
-                if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
-                    pp++;
-                    myatoi128( pp, num, 10, strlen( pp ) );
-                    AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
-                    continue;
-                }
-                AddLineQueueX( "@LPPROC %r @%s_name", T_IMAGEREL, curr->sym.name );
-            }
-        }
-        /* ILT termination entry */
-        AddLineQueueX( "@LPPROC 0" );
-        AddLineQueueX( "%s" IMPILTSUF " %r", idataname, T_ENDS );
-
-        /* emit IAT */
-        AddLineQueueX( "%s" IMPIATSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
-        AddLineQueueX( "@%s_iat label %r", p->name, ptrtype );
-
-        /* emit IAT entries */
-        for ( node = p->imports; node; node = node->next ) {
-            if ( node->iatsym && node->iatsym->referenced ) {
-                curr = (struct dsym *)node->sym;
-                Mangle( &curr->sym, StringBufferEnd );
-                /* v2.16: allow imports by number */
-                for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
-                if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
-                    pp++;
-                    myatoi128( pp, num, 10, strlen( pp ) );
-                    DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
-                    AddLineQueueX( "%s%s @LPPROC 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, (uint_32)num[0] );
-                    continue;
-                }
-                AddLineQueueX( "%s%s @LPPROC %r @%s_name", ModuleInfo.g.imp_prefix, StringBufferEnd, T_IMAGEREL, curr->sym.name );
-            }
-        }
-        /* IAT termination entry */
-        AddLineQueueX( "@LPPROC 0" );
-        AddLineQueueX( "%s" IMPIATSUF " %r", idataname, T_ENDS );
-
-        /* emit name table */
+        /* 1. emit name table;
+         * v2.20: now written first to avoid forward refs.
+         */
         AddLineQueueX( "%s" IMPSTRSUF " %r %r %s", idataname, T_SEGMENT, T_WORD, idataattr );
 
         /* emit name entries */
@@ -1352,19 +1302,77 @@ static void pe_emit_import_data( void )
                 }
                 AddLineQueueX( "@%s_name dw 0", curr->sym.name );
                 AddLineQueueX( "db '%s',0", curr->sym.name );
-                AddLineQueue( "even" );
+                AddLineQueueX( "%r", T_EVEN );
             }
         }
         /* dll name table entry */
         if ( pdot ) {
             *pdot = NULLC;
             AddLineQueueX( "@%s_%s_name db '%s.%s',0", p->name, pdot+1, p->name, pdot+1 );
-            *pdot = '.';  /* restore '.' in dll name */
+            *pdot = '_';
         } else
             AddLineQueueX( "@%s_name db '%s',0", p->name, p->name );
 
-        AddLineQueue( "even" );
+        AddLineQueueX( "%r", T_EVEN );
         AddLineQueueX( "%s" IMPSTRSUF " %r", idataname, T_ENDS );
+
+        /* 2. emit ILT */
+        AddLineQueueX( "%s" IMPILTSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
+        AddLineQueueX( "@%s_ilt %r %r", p->name, T_LABEL, ptrtype );
+
+        /* ILT entries */
+        for ( node = p->imports; node; node = node->next ) {
+            if ( node->iatsym && node->iatsym->referenced ) {
+                curr = (struct dsym *)node->sym;
+                /* v2.16: allow imports by number */
+                for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                    pp++;
+                    myatoi128( pp, num, 10, strlen( pp ) );
+                    AddLineQueueX( "dd 80000000h+%" I32_SPEC "u", (uint_32)num[0] );
+                    continue;
+                }
+                AddLineQueueX( "%s %r @%s_name", lpproctype, T_IMAGEREL, curr->sym.name );
+            }
+        }
+        /* ILT termination entry */
+        AddLineQueueX( "%s 0", lpproctype );
+        AddLineQueueX( "%s" IMPILTSUF " %r", idataname, T_ENDS );
+
+        /* 3. emit IAT */
+        AddLineQueueX( "%s" IMPIATSUF " %r %s %s", idataname, T_SEGMENT, align, idataattr );
+        AddLineQueueX( "@%s_iat %r %r", p->name, T_LABEL, ptrtype );
+
+        /* IAT entries */
+        for ( node = p->imports; node; node = node->next ) {
+            if ( node->iatsym && node->iatsym->referenced ) {
+                curr = (struct dsym *)node->sym;
+                Mangle( &curr->sym, StringBufferEnd );
+                /* v2.16: allow imports by number */
+                for ( alias = SymTables[TAB_ALIAS].head; alias && alias->sym.substitute != &curr->sym ; alias = alias->next );
+                if ( alias && ( pp = strchr( alias->sym.name, '.' ) ) && isdigit( *(pp+1) ) ) {
+                    pp++;
+                    myatoi128( pp, num, 10, strlen( pp ) );
+                    DebugMsg1(("pe_emit_import_data: import by number: %s  (%" I32_SPEC "u)\n", curr->sym.name, (uint_32)num[0] ));
+                    AddLineQueueX( "%s%s %s 80000000h+%" I32_SPEC "u", ModuleInfo.g.imp_prefix, StringBufferEnd, lpproctype, (uint_32)num[0] );
+                    continue;
+                }
+                AddLineQueueX( "%s%s %s %r @%s_name", ModuleInfo.g.imp_prefix, StringBufferEnd, lpproctype, T_IMAGEREL, curr->sym.name );
+            }
+        }
+        /* IAT termination entry */
+        AddLineQueueX( "%s 0", lpproctype );
+        AddLineQueueX( "%s" IMPIATSUF " %r", idataname, T_ENDS );
+
+        /* 4. emit import directory entry;
+         * v2.20: now written last to avoid forward refs.
+         */
+        AddLineQueueX( "%s" IMPDIRSUF " %r %r %s", idataname, T_SEGMENT, T_DWORD, idataattr );
+        AddLineQueueX( "DD %r @%s_ilt, 0, 0, %r @%s_name, %r @%s_iat", T_IMAGEREL, p->name, T_IMAGEREL, p->name, T_IMAGEREL, p->name );
+        AddLineQueueX( "%s" IMPDIRSUF " %r", idataname, T_ENDS );
+
+        if ( pdot )
+            *pdot = '.'; /* restore dll name */
 
     }
     if ( is_linequeue_populated() ) {
@@ -2116,7 +2124,7 @@ static ret_code pe_enddirhook( struct module_info *modinfo )
     //pe_create_PE_header(); /* the PE header is created when the .MODEL directive is found */
     pe_emit_export_data();
     if ( modinfo->g.DllQueue ) {
-        if ( Options.local_imports )
+        if ( Options.local_imports ) /* v2.20: option -Zli set? */
             pe_emit_local_imports();
         pe_emit_import_data();
     }
