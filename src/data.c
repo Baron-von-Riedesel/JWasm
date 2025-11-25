@@ -251,11 +251,13 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
 
         /* is it a RECORD field? */
         if ( f->sym.mem_type == MT_BITS ) {
-            if ( tokenarray[i].token == T_COMMA || tokenarray[i].token == T_FINAL ) {
-                if ( f->ivalue[0] ) {
+            if ( tokenarray[i].token == T_COMMA || tokenarray[i].token == T_FINAL ) { /* initializer given? */
+                if ( f->ivalue[0] ) { /* initializer defined at record definition? */
                     int j = Token_Count + 1;
                     int max_item = Tokenize( f->ivalue, j, tokenarray, TOK_RESCAN );
-                    EvalOperand( &j, tokenarray, max_item, &opndx, 0 );
+                    /* v2.20: stop parsing at error */
+                    if ( ERROR == EvalOperand( &j, tokenarray, max_item, &opndx, 0 ) )
+                        break;
                     is_record_set = TRUE;
                 } else {
                     opndx.value = 0;
@@ -263,10 +265,14 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
                     opndx.quoted_string = NULL;
                 }
             } else {
-                EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 );
+                /* v2.20: stop parsing at error */
+                if ( ERROR == EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) )
+                    break;
                 is_record_set = TRUE;
             }
-            if ( opndx.kind != EXPR_CONST || opndx.quoted_string != NULL )
+            /* v2.20: accept string literals as record field value */
+            //if ( opndx.kind != EXPR_CONST || opndx.quoted_string != NULL )
+            if ( opndx.kind != EXPR_CONST )
                 EmitError( CONSTANT_EXPECTED );
 
             /* fixme: max bits in 64-bit is 64 - see MAXRECBITS! */
