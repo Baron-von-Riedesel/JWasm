@@ -193,6 +193,7 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
     //char            *ptr;
     struct sfield   *f;
     int_32          nextofs;
+    ret_code        rc = NOT_ERROR; /* v2.20: avoid emitting too many errors */
     int             i;
     int             old_tokencount = Token_Count;
     char            *old_stringbufferend = StringBufferEnd;
@@ -256,30 +257,30 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
                     int j = Token_Count + 1;
                     int max_item = Tokenize( f->ivalue, j, tokenarray, TOK_RESCAN );
                     /* v2.20: stop parsing at error */
-                    if ( ERROR == EvalOperand( &j, tokenarray, max_item, &opndx, 0 ) )
+                    if (ERROR == (rc = EvalOperand( &j, tokenarray, max_item, &opndx, 0 ) ) )
                         break;
                     is_record_set = TRUE;
                 } else {
                     opndx.value = 0;
                     opndx.kind = EXPR_CONST;
-                    opndx.quoted_string = NULL;
+                    //opndx.quoted_string = NULL;
                 }
             } else {
                 /* v2.20: stop parsing at error */
-                if ( ERROR == EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) )
+                if ( ERROR == ( rc = EvalOperand( &i, tokenarray, Token_Count, &opndx, 0 ) ) )
                     break;
                 is_record_set = TRUE;
             }
             /* v2.20: accept string literals as record field value */
             //if ( opndx.kind != EXPR_CONST || opndx.quoted_string != NULL )
             if ( opndx.kind != EXPR_CONST )
-                EmitError( CONSTANT_EXPECTED );
+                rc = EmitError( CONSTANT_EXPECTED );
 
             /* fixme: max bits in 64-bit is 64 - see MAXRECBITS! */
             if ( f->sym.total_size < 32 ) {
                 uint_32 dwMax = (1 << f->sym.total_size);
                 if ( opndx.value >= dwMax )
-                    EmitErr( INITIALIZER_MAGNITUDE_TOO_LARGE, f->sym.name );
+                    rc = EmitErr( INITIALIZER_MAGNITUDE_TOO_LARGE, f->sym.name );
             }
 #if AMD64_SUPPORT
             dwRecInit |= opndx.llvalue << f->sym.offset;
@@ -290,14 +291,14 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
         //} else if ( f->init_dir == NULL ) {  /* embedded struct? */
         } else if ( f->ivalue[0] == NULLC ) {  /* embedded struct? */
 
-            InitStructuredVar( i, tokenarray, (struct dsym *)f->sym.type, NULL, &f->sym );
+            rc = InitStructuredVar( i, tokenarray, (struct dsym *)f->sym.type, NULL, &f->sym );
             if ( tokenarray[i].token == T_STRING )
                 i++;
 
         } else if ( f->sym.isarray &&
                     tokenarray[i].token != T_FINAL &&
                     tokenarray[i].token != T_COMMA ) {
-            if ( ERROR == InitializeArray( f, &i, tokenarray ) )
+            if ( ERROR == ( rc = InitializeArray( f, &i, tokenarray ) ) )
                 break;
 
         } else if ( f->sym.total_size == f->sym.total_length &&
@@ -306,7 +307,7 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
                    ( tokenarray[i].string_delim == '"' ||
                     tokenarray[i].string_delim == '\'' ) ) {
             /* v2.07: it's a byte type, but no array, string initializer must have true length 1 */
-            EmitError( STRING_OR_TEXT_LITERAL_TOO_LONG );
+            rc = EmitError( STRING_OR_TEXT_LITERAL_TOO_LONG );
             i++;
         } else {
             //struct asym *sym;
@@ -337,10 +338,10 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
                         c++; /* v2.08: check added */
                 }
                 if ( c ) {
-                    EmitErr( INITIALIZER_MUST_BE_A_STRING_OR_SINGLE_ITEM, tokenarray[j].tokpos );
+                    rc = EmitErr( INITIALIZER_MUST_BE_A_STRING_OR_SINGLE_ITEM, tokenarray[j].tokpos );
                 } else
                     if ( ERROR == data_item( &j, tokenarray, NULL, no_of_bytes, f->sym.type, 1, FALSE, f->sym.mem_type & MT_FLOAT, FALSE, i ) ) {
-                        EmitErr( INVALID_DATA_INITIALIZER, f->sym.name );
+                        rc = EmitErr( INVALID_DATA_INITIALIZER, f->sym.name );
                     }
             }
         }
@@ -369,7 +370,7 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
                 if ( tokenarray[i].token == T_COMMA )
                     i++;
                 else {
-                    EmitErr( SYNTAX_ERROR_EX, tokenarray[i].tokpos );
+                    rc = EmitErr( SYNTAX_ERROR_EX, tokenarray[i].tokpos );
                     while ( tokenarray[i].token != T_FINAL && tokenarray[i].token != T_COMMA )
                         i++;
                 }
@@ -377,39 +378,28 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
     }  /* end for */
 
     if ( symtype->sym.typekind == TYPE_RECORD ) {
-        int no_of_bytes;
-        switch ( symtype->sym.mem_type ) {
-        case MT_BYTE: no_of_bytes = 1; break;
-        case MT_WORD: no_of_bytes = 2; break;
+        /* v2.20: for records, always use pOpndx to return the value;
+         * previously, OutputDataBytes/SetCurrOffset was called here!
+         */
+        pOpndx->scale = is_record_set; /* tell the caller if initialized data exists */
 #if AMD64_SUPPORT
-        case MT_QWORD: no_of_bytes = 8; break;
-#endif
-        default: no_of_bytes = 4;
-        }
-        /* v2.20: function may now be called by expression evaluator */
-        if ( pOpndx ) {
-#if AMD64_SUPPORT
-            pOpndx->llvalue = dwRecInit;
+        pOpndx->llvalue = dwRecInit;
 #else
-            pOpndx->value = dwRecInit;
+        pOpndx->value = dwRecInit;
 #endif
-            pOpndx->kind = opndx.kind;
-        } else if ( is_record_set )
-            OutputDataBytes( (uint_8 *)&dwRecInit, no_of_bytes );
-        else
-            SetCurrOffset( CurrSeg, no_of_bytes, TRUE, TRUE );
+        //pOpndx->kind = opndx.kind;
     }
 
-    if ( tokenarray[i].token != T_FINAL ) {
+    if ( tokenarray[i].token != T_FINAL && rc == NOT_ERROR ) {
         DebugMsg1(("InitStructuredVar(%s): error, i=%u token=%s\n", symtype->sym.name, i, tokenarray[i].string_ptr ));
-        EmitErr( TOO_MANY_INITIAL_VALUES_FOR_STRUCTURE, tokenarray[i].tokpos );
+        rc = EmitErr( TOO_MANY_INITIAL_VALUES_FOR_STRUCTURE, tokenarray[i].tokpos );
     }
 
     /* restore token status */
     Token_Count = old_tokencount;
     StringBufferEnd = old_stringbufferend;
     DebugMsg1(("InitStructuredVar(%s) exit, current ofs=%" I32_SPEC "X\n", symtype->sym.name, GetCurrOffset() ));
-    return( NOT_ERROR );
+    return( rc );
 }
 
 /*
@@ -522,8 +512,29 @@ next_item:  /* <--- continue scan if a comma has been detected */
              */
             while ( type_sym->type ) type_sym = type_sym->type;
             if( inside_struct == FALSE ) {
-                if ( InitStructuredVar( i, tokenarray, (struct dsym *)type_sym, NULL, NULL ) == ERROR )
+                if ( InitStructuredVar( i, tokenarray, (struct dsym *)type_sym, &opndx, NULL ) == ERROR )
                     return( ERROR );
+                /* v2.20: following if() moved from InitStructuredVar */
+                if ( type_sym->typekind == TYPE_RECORD ) {
+                    int no_of_bytes;
+                    switch ( type_sym->mem_type ) {
+                    case MT_BYTE: no_of_bytes = 1; break;
+                    case MT_WORD: no_of_bytes = 2; break;
+#if AMD64_SUPPORT
+                    case MT_QWORD: no_of_bytes = 8; break;
+#endif
+                    default: no_of_bytes = 4;
+                    }
+                    /* field scale used to return a flag if initialized data exists */
+                    if ( opndx.scale ) {
+                        /* v2.20: warn about initialized data in BSS/AT segments */
+                        if ( Parse_Pass == PASS_2 && (CurrSeg->e.seginfo->segtype == SEGTYPE_BSS || CurrSeg->e.seginfo->segtype == SEGTYPE_ABS) )
+                            EmitWarn( 2, INITIALIZED_DATA_NOT_SUPPORTED_IN_SEGMENT, (CurrSeg->e.seginfo->segtype == SEGTYPE_BSS) ? "BSS" : "AT" );
+                        OutputDataBytes( (uint_8 *)&opndx.llvalue, no_of_bytes );
+                    } else
+                        SetCurrOffset( CurrSeg, no_of_bytes, TRUE, TRUE );
+                }
+
             } else {
                 /* v2.09: emit a warning if a TYPEDEF member is a simple type,
                  * but is initialized with a literal.
@@ -662,7 +673,8 @@ next_item:  /* <--- continue scan if a comma has been detected */
         goto item_done;
     }
 
-    /* warn about initialized data in BSS/AT segments */
+    /* warn about initialized data in BSS/AT segments
+     */
     if ( Parse_Pass == PASS_2 &&
         inside_struct == FALSE  &&
         // CurrSeg != NULL &&  /* this is already ensured to be true */
@@ -1099,6 +1111,7 @@ next_item:  /* <--- continue scan if a comma has been detected */
         DebugMsg(("data_item: error, opndx.kind=%u\n", opndx.kind ));
         return( EmitError( SYNTAX_ERROR ) );
     } /* end switch (opndx.kind) */
+
 item_done:
     if( sym && first && Parse_Pass == PASS_1 ) {
         sym->first_length = total;

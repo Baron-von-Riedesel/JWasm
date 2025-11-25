@@ -13,6 +13,8 @@
    -  regression in v2.19: option -Sg without option -Fl caused a GPF.
    -  string literals used as record field initializers gave error 'constant
       expected'; see record6.asm.
+   -  no warning was emitted if initialized record data items in BSS segments
+      were detected; see record7.asm.
 
    Other changes:
    -  sample Win32_5 updated in manual.html.
