@@ -261,7 +261,11 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
                         break;
                     is_record_set = TRUE;
                 } else {
+#if AMD64_SUPPORT
+                    opndx.llvalue = 0; /* v2.20: support 64-bit records; fixes error "constant value too large" */
+#else
                     opndx.value = 0;
+#endif
                     opndx.kind = EXPR_CONST;
                     //opndx.quoted_string = NULL;
                 }
@@ -276,14 +280,20 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
             if ( opndx.kind != EXPR_CONST )
                 rc = EmitError( CONSTANT_EXPECTED );
 
-            /* fixme: max bits in 64-bit is 64 - see MAXRECBITS! */
+#if AMD64_SUPPORT
+            if ( f->sym.total_size < 64 ) { /* v2.20: support 64-bit records */
+                uint_64 dwMax = (1 << f->sym.total_size);
+                if ( opndx.llvalue >= dwMax )
+#else
             if ( f->sym.total_size < 32 ) {
                 uint_32 dwMax = (1 << f->sym.total_size);
                 if ( opndx.value >= dwMax )
+#endif
                     rc = EmitErr( INITIALIZER_MAGNITUDE_TOO_LARGE, f->sym.name );
             }
 #if AMD64_SUPPORT
             dwRecInit |= opndx.llvalue << f->sym.offset;
+            //DebugMsg1(("InitStructuredVar: current dwRecInit=%" I64_SPEC "X\n", dwRecInit ));
 #else
             dwRecInit |= opndx.value << f->sym.offset;
 #endif
@@ -384,8 +394,10 @@ ret_code InitStructuredVar( int index, struct asm_tok tokenarray[], const struct
         pOpndx->scale = is_record_set; /* tell the caller if initialized data exists */
 #if AMD64_SUPPORT
         pOpndx->llvalue = dwRecInit;
+        DebugMsg1(("InitStructuredVar: RECORD type, final value=%" I64_SPEC "X\n", dwRecInit ));
 #else
         pOpndx->value = dwRecInit;
+        DebugMsg1(("InitStructuredVar: RECORD type, final value=%" I32_SPEC "X\n", dwRecInit ));
 #endif
         //pOpndx->kind = opndx.kind;
     }
