@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.____, v2.20:
+   01.12.2025, v2.20:
 
    Bugfixes:
    -  warning level 3 about prologue not triggered at PROC start may have

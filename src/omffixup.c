@@ -266,9 +266,10 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
         lr->target_datum = fixup->frame_datum;
         lr->frame_meth = FRAME_TARG;
 
-        /* v2.20: removed again; example:
+        /* v2.20: change below reverted; example:
          * v1 dw offset _BSS:6     ; offset may be plain number or symbolic constant
          * fixup must NOT refer to the group the segment is belonging to!!!
+         * this fixes test cases lea2.asm and offset12.asm.
          */
 //#if 1
 #if 0

@@ -608,8 +608,8 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                         curr->sym.name, fixup->locofs, fixup->sym->name, seg->e.seginfo->start_offset, fixup->offset, offset ));
                 break;
             default:
-#if 1
-# if PE_SUPPORT
+#if PE_SUPPORT
+# if 1
                 /* v2.19: ensure that all DIR32 offsets have image base added ( even if segment is 16-bit )
                  * Actually, this "moves" the segment to FLAT - and shows up accordingly in the listing.
                  * Perhaps there's a better fix possible?
@@ -628,10 +628,10 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                     value = (seg->e.seginfo->group->offset & 0xF) + seg->e.seginfo->start_offset + fixup->offset + offset;
 #if PE_SUPPORT
                     if ( ModuleInfo.sub_format == SFORMAT_PE ) {
-#if AMD64_SUPPORT
+# if AMD64_SUPPORT
                         if ( curr->e.seginfo->Ofssize == USE64 )
                             value64 = value + cp->imagebase64;
-#endif
+# endif
                         value += cp->imagebase;
                     }
 #endif
@@ -655,8 +655,8 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
             /* v2.10: member segment_var is for assembly-time variables only */
             //seg = (struct dsym *)fixup->segment_var;
             seg = NULL;
-            DebugMsg(("DoFixup(%s, %04" I32_SPEC "X, %s): target segment=0, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
-                      curr->sym.name, fixup->locofs, fixup->sym ? fixup->sym->name : "", fixup->offset ? offset : 0 ));
+            DebugMsg(("DoFixup(%s, %04" I32_SPEC "X, %s): target segment=0 frame_type=%u fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh\n",
+                      curr->sym.name, fixup->locofs, fixup->sym ? fixup->sym->name : "<anonymous>", fixup->frame_type, fixup->offset ? offset : 0 ));
             value = 0;
             /* v2.14: use fixup->offset; see flatgrp2.asm. todo: check if this should be done generally */
             /* v2.20: if fixup->sym != NULL, it's an equate - and that should be handled like a constant */
@@ -668,18 +668,19 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                     if ( seg->e.seginfo->seg_idx == fixup->frame_datum ) {
                         /* if the segment is in a group, add the segment's start offset */
                         if ( seg->e.seginfo->group ) {
-#if 0 /* v2.20: this is very questionable - the omf linker won't do that (see da.asm) */
-                            value += seg->e.seginfo->start_offset;
-#else
-                            value += (seg->e.seginfo->group->offset & 0xF);
-#endif
+                            /* v2.15-2.19: add segment's start offset; see lea3.asm.
+                             * v2.20: do this for -pe only (see below).
+                             */
+                            //value += seg->e.seginfo->start_offset; /* v2.15-2.19 */
+                            value += (seg->e.seginfo->group->offset & 0xF); /* v2.20 added; */
 #if PE_SUPPORT
                             /* v2.15: add imagebase. see lea3.asm */
                             if ( ModuleInfo.sub_format == SFORMAT_PE ) {
-#if AMD64_SUPPORT
+# if AMD64_SUPPORT
                                 if ( curr->e.seginfo->Ofssize == USE64 )
                                     value64 = value + cp->imagebase64;
-#endif
+# endif
+                                value += seg->e.seginfo->start_offset; /* v2.20 */
                                 value += cp->imagebase;
                             }
 #endif
