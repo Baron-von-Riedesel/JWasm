@@ -1,6 +1,12 @@
 
    Changelog
 
+   __.__.____, v2.21:
+
+   Bugfixes:
+   -  bin format, absolute segments: if segment wasn't referenced directly,
+      but by the SEG operator, invalid code was generated; see absseg4.asm.
+
    01.12.2025, v2.20:
 
    Bugfixes:

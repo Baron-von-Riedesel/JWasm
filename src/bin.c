@@ -782,8 +782,9 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                 *codeptr.dw = ((struct dsym *)fixup->sym)->e.seginfo->abs_frame;
                 break;
             }
-#if MZ_SUPPORT
-            if ( ModuleInfo.sub_format == SFORMAT_MZ ) {
+//#if MZ_SUPPORT /* v2.21: handle bin (or pe) just like -mz; the check for ABS comes below. */
+#if 1
+            //if ( ModuleInfo.sub_format == SFORMAT_MZ ) {
                 DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_SEG frame=%u, ", curr->sym.name, fixup->locofs, fixup->frame_type ));
                 if ( fixup->sym->state == SYM_GRP ) {
                     seg = (struct dsym *)fixup->sym;
@@ -804,8 +805,11 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                     *codeptr.dw = seg->e.seginfo->start_offset >> 4;
                     DebugMsg(("segment.offset=%" I32_SPEC "Xh\n", seg->e.seginfo->start_offset ));
                 }
+                /* v2.21: for -bin (or -pe), seg must be absolute */
+                if ( ModuleInfo.sub_format != SFORMAT_MZ && seg->e.seginfo->segtype != SEGTYPE_ABS )
+                    EmitErr( INVALID_FIXUP_TYPE, ModuleInfo.fmtopt->formatname, fixup->type, curr->sym.name, fixup->locofs );
                 break;
-            }
+            //}
 #endif
         case FIX_PTR16:
 #if 1
