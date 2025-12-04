@@ -646,7 +646,7 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                         value += (seg->e.seginfo->start_offset & 0xF) + fixup->offset + offset;
                     }
                 }
-                DebugMsg(("DoFixup(%s): loc=%04" I32_SPEC "X, sym=%s, target->start_offset=%" I32_SPEC "Xh, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh, fixup->frame_type=%u\n",
+                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): sym=%s, target->start_offset=%" I32_SPEC "Xh, fixup->offset=%" I32_SPEC "Xh, fixup->sym->offset=%" I32_SPEC "Xh, fixup->frame_type=%u\n",
                         curr->sym.name, fixup->locofs, fixup->sym->name, seg->e.seginfo->start_offset, fixup->offset, offset, fixup->frame_type ));
                 break;
             }
@@ -775,52 +775,56 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
             DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_HIBYTE, value=%" I32_SPEC "Xh, *target=%Xh\n", curr->sym.name, fixup->locofs, value, *codeptr.db ));
             break;
         case FIX_SEG:
-            /* absolute segments are ok */
+            /* absolute segments are ok for bin/pe */
             if ( fixup->sym &&
                 fixup->sym->state == SYM_SEG &&
                 ((struct dsym *)fixup->sym)->e.seginfo->segtype == SEGTYPE_ABS ) {
                 *codeptr.dw = ((struct dsym *)fixup->sym)->e.seginfo->abs_frame;
+                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_SEG ABS abs_frame=%X\n",
+                          curr->sym.name, fixup->locofs, ((struct dsym *)fixup->sym)->e.seginfo->abs_frame ));
                 break;
             }
 //#if MZ_SUPPORT /* v2.21: handle bin (or pe) just like -mz; the check for ABS comes below. */
-#if 1
             //if ( ModuleInfo.sub_format == SFORMAT_MZ ) {
-                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_SEG frame=%u, ", curr->sym.name, fixup->locofs, fixup->frame_type ));
-                if ( fixup->sym->state == SYM_GRP ) {
-                    seg = (struct dsym *)fixup->sym;
-                    *codeptr.dw = seg->sym.offset >> 4;
-                    DebugMsg(("GROUP symbol, offset=%" I32_SPEC "Xh codeptr=%p\n", seg->sym.offset, codeptr ));
-                } else if ( fixup->sym->state == SYM_SEG ) {
-                    /* v2.04: added */
-                    seg = (struct dsym *)fixup->sym;
-                    *codeptr.dw = ( seg->e.seginfo->start_offset + ( seg->e.seginfo->group ? seg->e.seginfo->group->offset : 0 ) ) >> 4;
-                    DebugMsg(("SEGMENT symbol, start_offset=%" I32_SPEC "Xh\n", seg->e.seginfo->start_offset ));
+            DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_SEG frame=%u, ", curr->sym.name, fixup->locofs, fixup->frame_type ));
+            if ( fixup->sym->state == SYM_GRP ) {
+                /* v2.21: don't init seg variable with a group; see check below */
+                //seg = (struct dsym *)fixup->sym;
+                //*codeptr.dw = seg->sym.offset >> 4;
+                //DebugMsg(("GROUP symbol, offset=%" I32_SPEC "Xh codeptr=%p\n", seg->sym.offset, codeptr ));
+                *codeptr.dw = fixup->sym->offset >> 4;
+                DebugMsg(("GROUP symbol, offset=%" I32_SPEC "Xh codeptr=%p\n", fixup->sym->offset, codeptr ));
+            } else if ( fixup->sym->state == SYM_SEG ) {
+                /* v2.04: added */
+                seg = (struct dsym *)fixup->sym;
+                *codeptr.dw = ( seg->e.seginfo->start_offset + ( seg->e.seginfo->group ? seg->e.seginfo->group->offset : 0 ) ) >> 4;
+                DebugMsg(("SEGMENT symbol, start_offset=%" I32_SPEC "Xh\n", seg->e.seginfo->start_offset ));
                 //} else if ( seg->e.seginfo->group ) {
-                } else if ( fixup->frame_type == FRAME_GRP ) {
-                    /* v2.04: changed */
-                    //*codeptr.dw = (seg->e.seginfo->start_offset + seg->e.seginfo->group->offset) >> 4;
-                    *codeptr.dw = seg->e.seginfo->group->offset >> 4;
-                    DebugMsg(("group.offset=%" I32_SPEC "Xh\n", seg->e.seginfo->group->offset ));
-                } else {
-                    *codeptr.dw = seg->e.seginfo->start_offset >> 4;
-                    DebugMsg(("segment.offset=%" I32_SPEC "Xh\n", seg->e.seginfo->start_offset ));
-                }
-                /* v2.21: for -bin (or -pe), seg must be absolute */
-                if ( ModuleInfo.sub_format != SFORMAT_MZ && seg->e.seginfo->segtype != SEGTYPE_ABS )
-                    EmitErr( INVALID_FIXUP_TYPE, ModuleInfo.fmtopt->formatname, fixup->type, curr->sym.name, fixup->locofs );
-                break;
+            } else if ( fixup->frame_type == FRAME_GRP ) {
+                /* v2.04: changed */
+                //*codeptr.dw = (seg->e.seginfo->start_offset + seg->e.seginfo->group->offset) >> 4;
+                *codeptr.dw = seg->e.seginfo->group->offset >> 4;
+                DebugMsg(("group.offset=%" I32_SPEC "Xh\n", seg->e.seginfo->group->offset ));
+            } else {
+                *codeptr.dw = seg->e.seginfo->start_offset >> 4;
+                DebugMsg(("segment.offset=%" I32_SPEC "Xh\n", seg->e.seginfo->start_offset ));
+            }
+            /* v2.21: for -bin (or -pe), seg must be absolute */
+            if ( ModuleInfo.sub_format != SFORMAT_MZ && (seg == NULL || seg->e.seginfo->segtype != SEGTYPE_ABS ))
+                EmitErr( INVALID_FIXUP_TYPE, ModuleInfo.fmtopt->formatname, fixup->type, curr->sym.name, fixup->locofs );
+            break;
             //}
-#endif
+//#endif
         case FIX_PTR16:
-#if 1
-            /* v2.10: absolute segments are ok */
+            /* v2.10: absolute segments are ok for bin/pe */
             if ( seg && seg->e.seginfo->segtype == SEGTYPE_ABS ) {
                 *codeptr.dw = value & 0xffff;
                 codeptr.dw++;
                 *codeptr.dw = seg->e.seginfo->abs_frame;
+                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_PTR16 ABS value=%X abs_frame=%X\n",
+                          curr->sym.name, fixup->locofs, value & 0xffff, seg->e.seginfo->abs_frame ));
                 break;
             }
-#endif
 #if MZ_SUPPORT
             if ( ModuleInfo.sub_format == SFORMAT_MZ ) {
                 DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_PTR16, seg->start=%Xh\n", curr->sym.name, fixup->locofs, seg->e.seginfo->start_offset ));
@@ -839,16 +843,17 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                 break;
             }
 #endif
+            /* fall thru */
         case FIX_PTR32:
-#if 1
-            /* v2.10: absolute segments are ok */
+            /* v2.10: absolute segments are ok for bin/pe */
             if ( seg && seg->e.seginfo->segtype == SEGTYPE_ABS ) {
                 *codeptr.dd = value;
                 codeptr.dd++;
                 *codeptr.dw = seg->e.seginfo->abs_frame;
+                DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_PTR32 ABS value=%X abs_frame=%X\n",
+                          curr->sym.name, fixup->locofs, value, seg->e.seginfo->abs_frame ));
                 break;
             }
-#endif
 #if MZ_SUPPORT
             if ( ModuleInfo.sub_format == SFORMAT_MZ ) {
                 DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): FIX_PTR32\n", curr->sym.name, fixup->locofs ));
@@ -867,6 +872,7 @@ static ret_code DoFixup( struct dsym *curr, struct calc_param *cp )
                 break;
             }
 #endif
+            /* fall thru */
         default:
             DebugMsg(("DoFixup(%s, %04" I32_SPEC "X): invalid fixup %u\n", curr->sym.name, fixup->locofs, fixup->type ));
             EmitErr( INVALID_FIXUP_TYPE, ModuleInfo.fmtopt->formatname, fixup->type, curr->sym.name, fixup->locofs );

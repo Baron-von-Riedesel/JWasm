@@ -2108,7 +2108,7 @@ static ret_code write_userdef_prologue( struct asm_tok tokenarray[] )
 /*******************************************************************/
 {
     int                 len;
-    int                 i;
+    int                 idx;
     struct proc_info    *info;
     char                *p;
     bool                is_exitm;
@@ -2174,11 +2174,11 @@ static ret_code write_userdef_prologue( struct asm_tok tokenarray[] )
     sprintf( buffer," (%s, 0%XH, 0%XH, 0%XH, <<%s>>, <%s>)",
              CurrProc->sym.name, flags, info->parasize, info->localsize,
             reglst, info->prologuearg ? info->prologuearg : "" );
-    i = Token_Count + 1;
-    Token_Count = Tokenize( buffer, i, tokenarray, TOK_RESCAN );
+    idx = Token_Count;
+    Token_Count = Tokenize( buffer, idx + 1, tokenarray, TOK_RESCAN );
 
-    RunMacro( dir, i, tokenarray, buffer, 0, &is_exitm );
-    Token_Count = i - 1;
+    RunMacro( dir, idx + 1, tokenarray, buffer, 0, &is_exitm );
+    Token_Count = idx;
     DebugMsg(("write_userdef_prologue: macro %s returned >%s<\n", ModuleInfo.proc_prologue, buffer ));
 
     if ( Parse_Pass == PASS_1 ) {
@@ -2952,7 +2952,7 @@ static ret_code write_userdef_epilogue( bool flag_iret, struct asm_tok tokenarra
 /***********************************************************************************/
 {
     uint_16 *regs;
-    int i;
+    int idx;
     char *p;
     bool is_exitm;
     struct proc_info   *info;
@@ -3005,15 +3005,17 @@ static ret_code write_userdef_epilogue( bool flag_iret, struct asm_tok tokenarra
     sprintf( buffer,"%s, 0%XH, 0%XH, 0%XH, <<%s>>, <%s>",
             CurrProc->sym.name, flags, info->parasize, info->localsize,
             reglst, info->prologuearg ? info->prologuearg : "" );
-    i = Token_Count + 1;
-    Tokenize( buffer, i, tokenarray, TOK_RESCAN );
+    idx = Token_Count;
+    /* v2.21: update Token_Count var - it's used inside RunMacro() */
+    //Tokenize( buffer, idx + 1, tokenarray, TOK_RESCAN );
+    Token_Count = Tokenize( buffer, idx + 1, tokenarray, TOK_RESCAN );
 
     /* if -EP is on, emit "epilogue: none" */
     if ( Options.preprocessor_stdout )
         printf( "option epilogue:none\n" );
 
-    RunMacro( dir, i, tokenarray, NULL, 0, &is_exitm );
-    Token_Count = i - 1;
+    RunMacro( dir, idx + 1, tokenarray, NULL, 0, &is_exitm );
+    Token_Count = idx;
     return( NOT_ERROR );
 }
 

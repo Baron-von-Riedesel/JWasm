@@ -122,9 +122,9 @@ static void SkipMacro( struct asm_tok tokenarray[] )
 /* run a macro.
  * - macro:  macro item
  * - out:    value to return (for macro functions)
- * - label:  token of label ( or -1 if none )
+ * - mflags: flags (MF_LABEL, MF_NOSAVE, MF_IGNARGS)
  * - is_exitm: returns TRUE if EXITM has been hit
- * returns index of token not processed or -1 on errors
+ * returns index of first non-processed token or -1 on errors
  */
 int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *out, int mflags, bool *is_exitm )
 /*************************************************************************************************************/
@@ -184,7 +184,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
         return( idx );
     }
 
-    DebugMsg1(( "RunMacro(%s): params=>%s< parmcnt=%u vararg=%u\n", macro->sym.name, tokenarray[idx].tokpos, info->parmcnt, macro->sym.mac_vararg ));
+    DebugMsg1(( "RunMacro(%s): params=>%s< parmcnt=%u vararg=%u, Token_Count=%u\n", macro->sym.name, tokenarray[idx].tokpos, info->parmcnt, macro->sym.mac_vararg, Token_Count ));
 
     if ( info->parmcnt ) {
         mi.parm_array = (char **)myalloca( info->parmcnt * sizeof( char * ) + PARMSTRINGSIZE );
@@ -218,6 +218,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
     /* v2.08: allow T_FINAL to be chained, lastidx==0 is true final */
     tokenarray[Token_Count].lastidx = 0;
 
+    /* now scan the macro arguments */
     for( varargcnt = 0, skipcomma = FALSE; parmidx < info->parmcnt; parmidx++ ) {
 
         /* v2.09: don't skip comma if it was the last argument.
@@ -228,6 +229,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
             idx++;
         skipcomma = TRUE;
 
+        /* is the argument "empty"? */
         if ( tokenarray[idx].token == T_FINAL ||
             tokenarray[idx].token == parm_end_delim ||
             ( tokenarray[idx].token == T_COMMA &&
@@ -248,7 +250,6 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
             }
 
         } else {
-            int  inside_literal = 0;
             int  inside_angle_brackets = 0;
             int  old_tokencount = Token_Count;
 
@@ -256,17 +257,15 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
 
             DebugMsg1(( "RunMacro(%s.%u), >%s<\n", macro->sym.name, parmidx, tokenarray[idx].tokpos ));
 
-            for( ptr = currparm; ( tokenarray[idx].token != T_FINAL && tokenarray[idx].token != T_COMMA ) || inside_literal; idx++ ) {
+            /* v2.21: variable inside_literal removed, replaced by inside_angle_brackets in next line;
+             * this means, a comma in {}-delimited literal will exit the for loop.
+             */
+            for( ptr = currparm; ( tokenarray[idx].token != T_FINAL && tokenarray[idx].token != T_COMMA ) || inside_angle_brackets; idx++ ) {
 
-                /* if were're inside a literal, go up one level and continue scanning the argument */
-                if ( tokenarray[idx].token == T_FINAL ) {
-                    idx = tokenarray[idx].lastidx; /* restore token index */
-                    inside_literal--;
-                    if ( tokenarray[idx].string_delim == '<' )
-                        inside_angle_brackets = 0;
-                    else {
-                        *ptr++ = '}';
-                    }
+                if ( tokenarray[idx].token == T_FINAL && tokenarray[idx].lastidx ) {
+                    /* if were're inside a <>-literal, restore token index and continue scanning the argument */
+                    idx = tokenarray[idx].lastidx;
+                    inside_angle_brackets = 0;
                     continue;
                 }
 
@@ -277,7 +276,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                     /* expansion of macro parameters.
                      * if the token behind % is not a text macro or macro function
                      * the expression will be always expanded and evaluated.
-                     * Else it is expanded, but only evaluated if
+                     * Else it is expanded, but only evaluated if ???
                      */
                     idx++;
                     DebugMsg1(("RunMacro(%s.%u): %% token found\n", macro->sym.name, parmidx ));
@@ -373,24 +372,38 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                     ptr += strlen( ptr );
                     /**/myassert( ptr < parmstrings + PARMSTRINGSIZE );
                     continue;
-                }
+                } /* end if(token == T_PERCENT) */
 
+                /* v2.21: literals with curly braces delimiters weren't handled masm-compatible;
+                 * they must be tokenized, but any comma inside the string proceed to the next argument!
+                 */
                 if ( tokenarray[idx].token == T_STRING && tokenarray[idx].string_delim == '{' ) {
-                    char *p = tokenarray[idx].string_ptr;
+                    //char *p = tokenarray[idx].string_ptr;
                     int tmp = idx;
-                    /* copy the '{' */
+                    /* v2.21: tokpos is used now, since the original string value WITH the ending "}"
+                     * has to be tokenized. To make Tokenize() work, the string must be nul-terminated.
+                     */
+                    char *p = tokenarray[idx].tokpos+1;
+                    char chr = *(p+tokenarray[idx].stringlen+1);
+                    *(p+tokenarray[idx].stringlen+1) = NULLC;
+
+                    /* re-insert the '{' */
                     *ptr++ = '{';
-                    DebugMsg1(("RunMacro(%s.%u): retokenizing {} string\n", macro->sym.name, parmidx ));
-                    /* the string must be tokenized */
-                    inside_literal++;
+
+                    DebugMsg1(("RunMacro(%s.%u): tokenizing {} string\n", macro->sym.name, parmidx ));
                     idx = Token_Count;
                     Token_Count = Tokenize( p, idx + 1, tokenarray, TOK_RESCAN | TOK_NOCURLBRACES );
+
+                    *(p+tokenarray[tmp].stringlen+1) = chr; /* v2.21: restore modified src line char */
+
                     tokenarray[Token_Count].lastidx = tmp;
                     continue;
                 }
 
                 if ( inside_angle_brackets == 0 ) {
-                    /* track brackets for macro functions; exit if one more ')' than '(' is found */
+                    /* track brackets for macro functions (bracket_level is > 0 then);
+                     * exit if one more ')' than '(' is found.
+                     */
                     if ( bracket_level > 0 ) {
                         if ( tokenarray[idx].token == T_OP_BRACKET ) {
                             bracket_level++;
@@ -431,7 +444,6 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                         StringBufferEnd = GetAlignedPointer( p, size );
                         //strcpy( tmpline, tokenarray[idx].string_ptr );
                         /* the string must be tokenized */
-                        inside_literal++;
                         inside_angle_brackets = 1;
                         idx = Token_Count;
                         Token_Count = Tokenize( p, idx + 1, tokenarray, TOK_RESCAN );
@@ -483,10 +495,12 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                             }
                         }
                     }
-                }
+                } /* end if(inside_angle_brackets == 0) */
+
                 /* get length of item */
                 i = tokenarray[idx+1].tokpos - tokenarray[idx].tokpos;
-                if ( !inside_literal && ( tokenarray[idx+1].token == T_COMMA ||
+                /* v2.21: next line, inside_literal replaced by inside_angle_brackets */
+                if ( !inside_angle_brackets && ( tokenarray[idx+1].token == T_COMMA ||
                     tokenarray[idx+1].token == parm_end_delim ) ) {
                     while ( isspace( *(tokenarray[idx].tokpos+i-1 ) ) ) i--;
                 }
@@ -509,8 +523,15 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                 memcpy( ptr, tokenarray[idx].tokpos, i );
                 ptr += i;
 
-            } /* end for */
+            } /* end for ( ptr = currparm; ...) */
 
+            /* v2.21: if we're at the end of a {}-literal, restore token index */
+            if ( tokenarray[idx].token == T_FINAL && tokenarray[idx].lastidx )
+                idx = tokenarray[idx].lastidx + 1;
+#ifdef DEBUG_OUT
+            if ( idx > Token_Count )
+                printf("%s: idx > Token_Count (%u > %u)\n", macro->sym.name, idx, Token_Count);
+#endif
             *ptr = NULLC;
 
             /* restore input status values */
@@ -545,8 +566,8 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                 mi.parm_array[parmidx] = "";
                 DebugMsg1(("RunMacro(%s.%u): curr parameter value=><\n", macro->sym.name, parmidx ));
             }
-        } /*end if */
-    } /* end for  */
+        } /* end if(nonempty argument) */
+    } /* end for( varargcnt = 0,...)  */
 
     /* for macro functions, check for the terminating ')' */
     if ( bracket_level >= 0 ) {
@@ -570,8 +591,9 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
         /* v2.09: don't emit a warning if it's a FOR directive
          * (in this case, the caller knows better what to do ).
          */
-        if ( !(mflags & MF_IGNARGS) )
+        if ( !(mflags & MF_IGNARGS) ) {
             EmitWarn( 1, TOO_MANY_ARGUMENTS_IN_MACRO_CALL, macro->sym.name, tokenarray[idx].tokpos );
+        }
         //return( -1 );
     }
 

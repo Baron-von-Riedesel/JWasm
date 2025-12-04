@@ -51,6 +51,8 @@
 .ixline 'Option -Zi'
 .ixsect CMDOPTZLOMF
 .ixline 'Options -zlc and -zld
+.ixsect CMDOPTZLI
+.ixline 'Options -zli
 .ixsect CMDOPTZLCOFF
 .ixline 'Options -zlf, -zlp and -zls'
 .ixsect CMDOPTZM
