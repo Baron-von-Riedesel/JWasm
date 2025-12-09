@@ -8,6 +8,8 @@
       but by the SEG operator, invalid code was generated; see absseg4.asm.
    -  macro arguments: curly braces now handled Masm-compatible; see
       macro25.asm.
+   -  operator MOD returned wrong results for negative operands; see mod1.asm,
+      mod2.asm.
 
    01.12.2025, v2.20:
 

@@ -697,6 +697,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                 opnd->hvalue = sym->value3264;
                 DebugMsg1(("get_operand(%s): equate hval=%Xh, lval=%Xh\n", sym->name, opnd->hvalue, opnd->uvalue ));
                 opnd->mem_type = sym->mem_type;
+                opnd->is_signed = sym->is_signed; /* v2.21: added */
                 /* don't set the symbol reference, it isn't a label */
             } else if( sym->state == SYM_EXTERNAL &&
                       sym->mem_type == MT_EMPTY &&
@@ -2411,7 +2412,7 @@ static ret_code negative_op( struct expr *opnd1, struct expr *opnd2 )
          */
         if ( opnd2->hlvalue )
             opnd1->hlvalue = -opnd2->hlvalue - 1;
-        opnd1->negative = 1 - opnd2->negative; /* ??? supposed to be used for EXPR_FLOAT only! */
+        opnd1->is_signed = 1; /* v2.21: added */
     } else if( opnd2->kind == EXPR_FLOAT ) {
         opnd1->kind = EXPR_FLOAT;
         opnd1->float_tok = opnd2->float_tok;
@@ -2919,8 +2920,18 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
         case T_MOD:
             if ( opnd2->llvalue == 0 ) {
                 return( fnEmitErr( DIVIDE_BY_ZERO_IN_EXPR ) );
-            } else
+            }
+            /* v2.21: use new is_signed flag for constants */
+            if ( opnd1->is_signed ) {
+                DebugMsg1(("calculate(MOD) signed %" I64_SPEC "d mod %" I64_SPEC "d = %" I64_SPEC "d\n", opnd1->value64, opnd2->value64, opnd1->value64 % opnd2->value64 ));
+                opnd1->value64 %= opnd2->value64;
+            } else {
+                /* sign of the divisor doesn't matter for the result - convert it to positive */
+                if ( opnd2->is_signed && opnd2->value64 < 0 )
+                    opnd2->value64 = -opnd2->value64;
+                DebugMsg1(("calculate(MOD) unsigned %" I64_SPEC "u mod %" I64_SPEC "d = %" I64_SPEC "d\n", opnd1->llvalue, opnd2->llvalue, opnd1->llvalue % opnd2->llvalue ));
                 opnd1->llvalue %= opnd2->llvalue;
+            }
             break;
         case T_SHL:
             /* v2.04: check for shift count < 0 */

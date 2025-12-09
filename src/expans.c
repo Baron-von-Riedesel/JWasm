@@ -159,7 +159,9 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
     info->count++;
 #endif
 
-    /* invokation of macro functions requires params enclosed in "()" */
+    /* invokation of macro functions requires params enclosed in "()";
+     * without the brackets the preprocessor won't even call RunMacro().
+     */
 
     parm_end_delim = T_FINAL;
     if ( macro->sym.isfunc ) {
@@ -215,7 +217,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
 
     *is_exitm = FALSE;
 
-    /* v2.08: allow T_FINAL to be chained, lastidx==0 is true final */
+    /* v2.08: allow T_FINAL to be chained, lastidx==0 is original T_FINAL */
     tokenarray[Token_Count].lastidx = 0;
 
     /* now scan the macro arguments */
@@ -250,7 +252,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
             }
 
         } else {
-            int  inside_angle_brackets = 0;
+            int  inside_angle_brackets = FALSE;
             int  old_tokencount = Token_Count;
 
             *currparm = NULLC;
@@ -262,33 +264,34 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
              */
             for( ptr = currparm; ( tokenarray[idx].token != T_FINAL && tokenarray[idx].token != T_COMMA ) || inside_angle_brackets; idx++ ) {
 
-                if ( tokenarray[idx].token == T_FINAL && tokenarray[idx].lastidx ) {
-                    /* if were're inside a <>-literal, restore token index and continue scanning the argument */
+                /* T_FINAL inside this for loop means the end of a <>-literal has been reached;
+                 * then restore token index and continue scanning */
+                if ( tokenarray[idx].token == T_FINAL ) {
                     idx = tokenarray[idx].lastidx;
-                    inside_angle_brackets = 0;
+                    inside_angle_brackets = FALSE;
                     continue;
                 }
 
                 if ( tokenarray[idx].token == T_PERCENT ) {
                     int max;
                     int cnt;
-                    int cnt_opnum;
+                    int is_num; /* flag; 0: no numeric expression, 1: numeric, call EvalOperand() */
                     /* expansion of macro parameters.
                      * if the token behind % is not a text macro or macro function
                      * the expression will be always expanded and evaluated.
-                     * Else it is expanded, but only evaluated if ???
+                     * Else it is expanded only.
                      */
                     idx++;
                     DebugMsg1(("RunMacro(%s.%u): %% token found\n", macro->sym.name, parmidx ));
                     while ( tokenarray[idx].token == T_PERCENT ) idx++;
                     i = idx;
-                    cnt_opnum = 1;
+                    is_num = TRUE;
                     if ( tokenarray[i].token == T_ID ) {
                         sym = SymSearch( tokenarray[i].string_ptr );
                         if ( sym && sym->isdefined &&
                             ( sym->state == SYM_TMACRO ||
                              ( sym->state == SYM_MACRO && sym->isfunc == TRUE && tokenarray[i+1].token == T_OP_BRACKET ) ) )
-                            cnt_opnum = 0;
+                            is_num = FALSE;
                     }
 
                     for( cnt = 0; tokenarray[i].token != T_FINAL && tokenarray[i].token != T_COMMA; i++ ) {
@@ -296,7 +299,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                             if ( tokenarray[i+1].token == T_OP_BRACKET ) {
                                 int cnt2;
                                 i += 2;
-                                for ( cnt2 = 1;cnt2 && tokenarray[i].token != T_FINAL; i++ ) {
+                                for ( cnt2 = 1; cnt2 && tokenarray[i].token != T_FINAL; i++ ) {
                                     if ( tokenarray[i].token == T_OP_BRACKET )
                                         cnt2++;
                                     else if ( tokenarray[i].token == T_CL_BRACKET )
@@ -306,7 +309,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                             }
                             continue;
                         }
-                        /* count brackets */
+                        /* count brackets if a macro function is running */
                         if ( parm_end_delim == T_CL_BRACKET )
                             if ( tokenarray[i].token == T_OP_BRACKET )
                                 cnt++;
@@ -324,8 +327,8 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                         if ( tokenarray[i].token == T_DOT || tokenarray[i].token == '&' || tokenarray[i].token == '%' )
                             ;
                         else
-                            cnt_opnum++; /* anything else will trigger numeric evaluation */
-                    }
+                            is_num = TRUE; /* anything else will trigger numeric evaluation */
+                    } /* end for() */
 
                     if ( i == idx ) { /* no items except %? */
                         idx--;
@@ -341,17 +344,19 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                         return(-1);
                     }
                     idx = i - 1;
-                    if ( cnt_opnum ) {
-                        /* convert numeric expression into a string */
-                        max = Tokenize( ptr, Token_Count+1, tokenarray, TOK_RESCAN );
+                    if ( is_num ) {
+                        /* re-tokenize this parameter */
                         i = Token_Count + 1;
+                        max = Tokenize( ptr, i, tokenarray, TOK_RESCAN );
                         DebugMsg1(( "RunMacro(%s.%u), num expansion: >%s<\n", macro->sym.name, parmidx, ptr ));
                         /* the % operator won't accept forward references.
                          * v2.09: flag EXPF_NOUNDEF set.
                          */
-                        if ( EvalOperand( &i, tokenarray, max, &opndx, EXPF_NOUNDEF ) == ERROR )
+                        if ( EvalOperand( &i, tokenarray, max, &opndx, EXPF_NOUNDEF ) == ERROR ) {
+                            /* v2.21: skip the item that caused the error, to avoid multiple error msgs */
+                            if ( i < max ) i++;
                             opndx.llvalue = 0;
-                        else if ( opndx.kind != EXPR_CONST ) {
+                        } else if ( opndx.kind != EXPR_CONST ) {
                             EmitError( CONSTANT_EXPECTED );
                             opndx.llvalue = 0;
                         }
@@ -400,7 +405,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                     continue;
                 }
 
-                if ( inside_angle_brackets == 0 ) {
+                if ( inside_angle_brackets == FALSE ) {
                     /* track brackets for macro functions (bracket_level is > 0 then);
                      * exit if one more ')' than '(' is found.
                      */
@@ -419,7 +424,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                      * tokenize the item (Token_Count must be adjusted, since RunMacro()
                      * might be called later!)
                      */
-                    if ( tokenarray[idx].token == T_STRING && tokenarray[idx].string_delim == '<' && inside_angle_brackets == 0 ) {
+                    if ( tokenarray[idx].token == T_STRING && tokenarray[idx].string_delim == '<' && inside_angle_brackets == FALSE ) {
                         char *p;
                         int tmp;
                         int size;
@@ -444,7 +449,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                         StringBufferEnd = GetAlignedPointer( p, size );
                         //strcpy( tmpline, tokenarray[idx].string_ptr );
                         /* the string must be tokenized */
-                        inside_angle_brackets = 1;
+                        inside_angle_brackets = TRUE;
                         idx = Token_Count;
                         Token_Count = Tokenize( p, idx + 1, tokenarray, TOK_RESCAN );
                         tokenarray[Token_Count].lastidx = tmp;
@@ -495,7 +500,7 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
                             }
                         }
                     }
-                } /* end if(inside_angle_brackets == 0) */
+                } /* end if(inside_angle_brackets == FALSE) */
 
                 /* get length of item */
                 i = tokenarray[idx+1].tokpos - tokenarray[idx].tokpos;
@@ -539,6 +544,8 @@ int RunMacro( struct dsym *macro, int idx, struct asm_tok tokenarray[], char *ou
             StringBufferEnd = savedStringBuffer;
 
             /* store the macro argument in the parameter array */
+
+            /* check for VARARG argument */
             if (  macro->sym.mac_vararg && ( parmidx == info->parmcnt - 1 ) ) {
                 if ( varargcnt == 0 )
                     mi.parm_array[parmidx] = currparm;

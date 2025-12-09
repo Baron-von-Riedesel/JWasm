@@ -42,7 +42,7 @@
  */
 enum sym_state {
     SYM_UNDEFINED,
-    SYM_INTERNAL,       /*  1 internal label */
+    SYM_INTERNAL,       /*  1 internal label, equate, assembly-time variable */
     SYM_EXTERNAL,       /*  2 external       */
     SYM_SEG,            /*  3 segment        */
     SYM_GRP,            /*  4 group          */
@@ -160,9 +160,9 @@ struct asym {
                     isexport:1,   /* v2.19: symbol exported ( SYM_INTERNAL ) */
                     included:1;   /* COFF: static symbol added to public queue. ELF:symbol added to symbol table (SYM_INTERNAL) */
     union {
-        /* for SYM_INTERNAL (data labels, memtype != NEAR|FAR), SYM_STRUCT_FIELD */
+        /* for SYM_INTERNAL (data labels, memtype != NEAR|FAR|EMPTY), SYM_STRUCT_FIELD */
         uint_32         first_size;   /* size of 1st initializer's dimension in bytes */
-        /* for SYM_INTERNAL (memtype == NEAR|FAR),
+        /* for SYM_INTERNAL (memtype == NEAR|FAR|EMPTY),
          * SYM_GRP (Ofssize),
          * SYM_EXTERNAL (seg_ofssize, iscomm, weak, isfar, is_ptr, ptr_memtype),
          * SYM_STACK (Ofssize, isfar, is_vararg, is_ptr, ptr_memtype ),
@@ -180,6 +180,7 @@ struct asym {
             unsigned char   weak:1;    /* 1 if an unused "externdef" */
             unsigned char   isfar:1;   /* SYM_EXTERNAL, SYM_TYPE, SYM_STACK */
             unsigned char   is_vararg:1;/* SYM_STACK, VARARG param */
+            unsigned char   is_signed:1;/* v2.21: SYM_INTERNAL (mem_type EMPTY) */
         };
         /* for SYM_MACRO */
         struct {

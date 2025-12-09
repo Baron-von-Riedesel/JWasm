@@ -68,6 +68,7 @@ static void SetValue( struct asym *sym, struct expr *opndx )
         sym->value3264 = opndx->hvalue;
         sym->segment = NULL;
         sym->isproc = FALSE;
+        sym->is_signed = opndx->is_signed; /* v2.21: added */
     } else {
         sym->isproc = opndx->sym->isproc;
         /* for a PROC alias, copy the procinfo extension! */
@@ -145,6 +146,7 @@ static struct asym *CreateAssemblyTimeVariable( struct asm_tok tokenarray[] )
     check_number:
         opnd.kind = EXPR_CONST;
         opnd.mem_type = MT_EMPTY; /* v2.07: added */
+        opnd.flags1 = 0; /* v2.21: added */
         /* v2.08: check added. the number must be 32-bit */
         if ( opnd.hlvalue != 0 ||
             opnd.value64 < minintvalues[ModuleInfo.Ofssize] ||

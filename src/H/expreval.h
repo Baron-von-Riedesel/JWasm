@@ -114,9 +114,14 @@ struct expr {
             unsigned is_type  : 1;  /* constant is a type */
             unsigned is_opattr: 1;  /* current operator is OPATTR */
             unsigned negative : 1;  /* for EXPR_FLOAT only */
-            //unsigned ftype    : 1;  /* for EXPR_FLOAT only (float type) */
             unsigned assumecheck: 1;/* v2.07: for ASSUMEd std registers */
             unsigned is_dot: 1;     /* v2.10: see regression test dotop5.asm */
+        };
+        /* OW doesn't allow to "redefine" single bits; this is to redefine is_signed */
+        struct {
+            unsigned __redef1__: 5;
+            unsigned is_signed: 1;  /* v2.21: for EXPR_CONST only */
+            unsigned __redef2__: 2;
         };
     };
     struct asym     *sym;   /* label used */

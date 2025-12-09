@@ -36,7 +36,7 @@
 
 #define CODEBYTES 9
 //#define OFSSIZE 8
-#define PREFFMTSTR "25"
+#define PREFFMTSTR "25" /* size for EQU rendering */
 #define SHOWRELOCS 1 /* v2.18: 1=show relocs in code lines */
 #define CODELINE2 1 /* v2.18: 1=emit a second line for code lines if first line cannot render all bytes */
 
@@ -386,11 +386,11 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         if ( sym->value3264 != 0 && ( sym->value3264 != -1 || sym->value >= 0 ) )
             /* v2.13: the addition & shift did not work. */
             //sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value + ( (uint_64)sym->value3264 << 32 ) );
-#if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
+# if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
             p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
-#else
+# else
             p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
-#endif
+# endif
         else
 #endif
             p2 += sprintf( p2, "%-" PREFFMTSTR I32_SPEC "X", sym->value );
