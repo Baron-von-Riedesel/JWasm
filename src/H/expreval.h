@@ -117,7 +117,7 @@ struct expr {
             unsigned assumecheck: 1;/* v2.07: for ASSUMEd std registers */
             unsigned is_dot: 1;     /* v2.10: see regression test dotop5.asm */
         };
-        /* OW doesn't allow to "redefine" single bits; this is to redefine is_signed */
+        /* OW doesn't allow to "redefine" single bits; this is to redefine member 'negative' */
         struct {
             unsigned __redef1__: 5;
             unsigned is_signed: 1;  /* v2.21: for EXPR_CONST only */

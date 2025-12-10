@@ -2759,8 +2759,9 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
          * The only formats allowed are:
          *        constant / constant
          */
-        DebugMsg1(("calculate(/): t1-t2 kind %u-%u values %" I64_SPEC "d-%" I64_SPEC "d\n",
+        DebugMsg1(("calculate(/): kind=%u-%u sign=%u-%u value=%" I64_SPEC "d - %" I64_SPEC "d\n",
                    opnd1->kind,    opnd2->kind,
+                   opnd1->is_signed,opnd2->is_signed,
                    opnd1->value64, opnd2->value64 ));
         MakeConst( opnd1 );
         MakeConst( opnd2 );
@@ -2775,7 +2776,17 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
             return( fnEmitErr( DIVIDE_BY_ZERO_IN_EXPR ) );
         }
 
-        opnd1->value64 /= opnd2->value64;
+        /* v2.21: previously it was generally a signed division; now it depends
+         * on the is_signed flag. Problem is U64 / S64 and bit 63 of U64 = 1.
+         */
+        if ( opnd1->is_signed || ( opnd2->is_signed && opnd1->value64 > 0 ) ) {
+            /* S64 / U64 in C changes result to unsigned! So always use signed divisor here */
+            opnd1->value64 /= opnd2->value64;
+        } else if ( opnd2->is_signed && opnd2->value64 < 0 ) {
+            opnd1->llvalue /= -opnd2->value64;
+            opnd1->value64 = -opnd1->value64;
+        } else
+            opnd1->llvalue /= opnd2->llvalue;
         break;
     case T_BINARY_OPERATOR:
         DebugMsg1(("calculate(%s [T_BINARY_OPERATOR] ): t1-t2 kind %d/%d memtype %X-%X sym %s-%s type %s-%s\n",

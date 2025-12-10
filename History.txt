@@ -10,6 +10,8 @@
       macro25.asm.
    -  operator MOD returned wrong results for negative operands; see mod1.asm,
       mod2.asm.
+   -  wrong results of operator / (division) if divisor was negative; see
+      div2.asm.
 
    01.12.2025, v2.20:
 
