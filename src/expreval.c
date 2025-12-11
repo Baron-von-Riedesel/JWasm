@@ -1889,7 +1889,10 @@ static ret_code minus_op( struct expr *opnd1, struct expr *opnd2 )
 
     if( check_same( opnd1, opnd2, EXPR_CONST ) ) {
 
-        DebugMsg1(("minus_op: CONST-CONST\n" ));
+        DebugMsg1(("minus_op: CONST-CONST sign=%u-%u\n", opnd1->is_signed, opnd2->is_signed ));
+        /* v2.21: set signed flag; needed in case the / operator is applied */
+        if ( opnd1->llvalue < opnd2->llvalue )
+            opnd1->is_signed = 1;
         opnd1->llvalue -= opnd2->llvalue;
 
     } else if( opnd1->kind == EXPR_ADDR &&
@@ -2719,6 +2722,7 @@ static ret_code calculate( struct expr *opnd1, struct expr *opnd2, const struct 
 
         if( check_same( opnd1, opnd2, EXPR_CONST ) ) {
             opnd1->llvalue *= opnd2->llvalue;
+            opnd1->is_signed = opnd1->is_signed | opnd2->is_signed; /* v2.21 */
         } else if( check_both( opnd1, opnd2, EXPR_REG, EXPR_CONST ) ) {
             if( check_direct_reg( opnd1, opnd2 ) == ERROR ) {
                 DebugMsg(("calculate(*) error direct register\n"));

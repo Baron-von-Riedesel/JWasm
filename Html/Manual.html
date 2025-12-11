@@ -1859,6 +1859,10 @@ _DATA                           C      10C        12        12
 <TR BGCOLOR="#E0E0E0"><TD>23</TD><TD>Masm's MOD operator will return wrong results if one of the operands
       is negative.
 </TD><TD>-</TD></TR>
+<TR BGCOLOR="#E0E0E0"><TD>24</TD><TD>the 32-bit variant of Masm has problems with 64-bit math. If a 64-bit
+      number is used in an expression, the lower 32 bits of that number may "get lost" - that is, the number
+      is shifted 32 bits to the right.
+</TD><TD>-</TD></TR>
 </TABLE>
 
     It's slightly dangerous to fix old Masm bugs, since some code might
