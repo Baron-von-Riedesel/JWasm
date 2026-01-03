@@ -251,9 +251,9 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
             /* v2.07: inline addend for ELF32 only.
              * Also, in 64-bit, pdata may be a int_64 pointer (FIX_OFF64)!
              */
-#if AMD64_SUPPORT
+# if AMD64_SUPPORT
             if ( ModuleInfo.defOfssize == USE64 ) {
-#if 0
+#  if 0
                 /* this won't work currently because fixup.offset may have to
                  * save *(int_64) pdata, but it is 32-bit only!
                  */
@@ -261,17 +261,17 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
                     *(int_64 *)pdata = 0;
                 else
                     *pdata = 0;
-#endif
+#  endif
             } else
-#endif
+# endif
             if ( fixup->type == FIX_RELOFF32 )
                 *pdata = -4;
-#if GNURELOCS /* v2.04: added */
+# if GNURELOCS /* v2.04: added */
             else if ( fixup->type == FIX_RELOFF16 )
                 *pdata = -2;
             else if ( fixup->type == FIX_RELOFF8 )
                 *pdata = -1;
-#endif
+# endif
         }
 #endif
 #if COFF_SUPPORT && DJGPP_SUPPORT

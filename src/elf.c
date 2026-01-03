@@ -799,8 +799,8 @@ static unsigned int Get_Alignment( struct dsym *curr )
 enum {
     NULL_ABBREV_CODE = 0,
     COMPUNIT_ABBREV_CODE,
-    LABEL_ABBREV_CODE,
-    VARIABLE_ABBREV_CODE,
+    //LABEL_ABBREV_CODE,
+    //VARIABLE_ABBREV_CODE,
 };
 
 #pragma pack( 1 )
@@ -814,6 +814,7 @@ static const char FlatStandardAbbrevs[] = {
     DW_AT_stmt_list,    DW_FORM_data4,
     DW_AT_name,         DW_FORM_string,
     0,                  0,
+#if 0
     LABEL_ABBREV_CODE,
     DW_TAG_label,
     DW_CHILDREN_no,
@@ -828,14 +829,24 @@ static const char FlatStandardAbbrevs[] = {
     DW_AT_external,     DW_FORM_flag,
     DW_AT_name,         DW_FORM_string,
     0,                  0,
+#endif
     0,                  0
 };
 
-struct dwarf_info {
+struct dwarf_info32 {
     struct dwarf_compilation_unit_header32 hdr;
     unsigned char abbrev_code;
     uint_32 low_pc;
     uint_32 high_pc;
+    uint_32 stmt_list;
+    char name[1];
+};
+
+struct dwarf_info64 {
+    struct dwarf_compilation_unit_header32 hdr;
+    unsigned char abbrev_code;
+    uint_64 low_pc;
+    uint_64 high_pc;
     uint_32 stmt_list;
     char name[1];
 };
@@ -845,24 +856,25 @@ struct dwarf_info {
 static void dwarf_set_info( struct elfmod *em, struct dsym *seg_info )
 /********************************************************************/
 {
-    int size = sizeof( struct dwarf_info );
+    int size;
     struct dsym *curr;
-    struct dwarf_info *p;
+    struct dwarf_info32 *p;
     struct fixup *fixup;
 
-    size += strlen( ModuleInfo.g.FNames[0].fname );
+    size = strlen( ModuleInfo.g.FNames[0].fname );
+    size += ModuleInfo.defOfssize == USE64 ? sizeof( struct dwarf_info64 ): sizeof( struct dwarf_info32 );
     seg_info->sym.max_offset = size;
     seg_info->e.seginfo->CodeBuffer = LclAlloc( size );
-    p = (struct dwarf_info *)seg_info->e.seginfo->CodeBuffer;
+    p = (struct dwarf_info32 *)seg_info->e.seginfo->CodeBuffer;
     p->hdr.unit_length = size - 4;
     p->hdr.version = 2;
 
     p->hdr.debug_abbrev_offset = 0; /* needs a fixup */
     fixup = FixupCreate( (struct asym *)em->dwarf_seg[DWABBREV_IDX], FIX_OFF32, OPTJ_NONE );
-    fixup->locofs = offsetof(struct dwarf_info, hdr.debug_abbrev_offset);
+    fixup->locofs = offsetof(struct dwarf_info32, hdr.debug_abbrev_offset);
     store_fixup( fixup, seg_info, (int_32 *)&p->hdr.debug_abbrev_offset );
 
-    p->hdr.address_size = 4;
+    p->hdr.address_size = ModuleInfo.defOfssize == USE64 ? 8 : 4;
     p->abbrev_code = COMPUNIT_ABBREV_CODE;
 
     /* search for the first segment with line numbers */
@@ -871,22 +883,46 @@ static void dwarf_set_info( struct elfmod *em, struct dsym *seg_info )
             break;
 
     if ( curr ) {
-        p->low_pc = 0;
-        fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
-        fixup->locofs = offsetof(struct dwarf_info, low_pc);
-        store_fixup( fixup, seg_info, (int_32 *)&p->low_pc );
+        if ( ModuleInfo.defOfssize == USE64 ) {
+            struct dwarf_info64 *p;
+            p = (struct dwarf_info64 *)seg_info->e.seginfo->CodeBuffer;
 
-        p->high_pc = curr->sym.max_offset;
-        fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
-        fixup->locofs = offsetof(struct dwarf_info, high_pc);
-        store_fixup( fixup, seg_info, (int_32 *)&p->high_pc );
+            p->low_pc = 0;
+            fixup = FixupCreate( &curr->sym, FIX_OFF64, OPTJ_NONE );
+            fixup->locofs = offsetof(struct dwarf_info64, low_pc);
+            store_fixup( fixup, seg_info, (int_32 *)&p->low_pc );
+
+            p->high_pc = curr->sym.max_offset;
+            fixup = FixupCreate( &curr->sym, FIX_OFF64, OPTJ_NONE );
+            fixup->locofs = offsetof(struct dwarf_info64, high_pc);
+            store_fixup( fixup, seg_info, (int_32 *)&p->high_pc );
+
+            p->stmt_list = 0; /* needs a fixup */
+            fixup = FixupCreate( (struct asym *)em->dwarf_seg[DWLINE_IDX], FIX_OFF32, OPTJ_NONE );
+            fixup->locofs = offsetof(struct dwarf_info64, stmt_list);
+            store_fixup( fixup, seg_info, (int_32 *)&p->stmt_list );
+
+            strcpy( (char *)&p->name, ModuleInfo.g.FNames[0].fname );
+        } else {
+            p->low_pc = 0;
+            fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
+            fixup->locofs = offsetof(struct dwarf_info32, low_pc);
+            store_fixup( fixup, seg_info, (int_32 *)&p->low_pc );
+
+            p->high_pc = curr->sym.max_offset;
+            fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
+            fixup->locofs = offsetof(struct dwarf_info32, high_pc);
+            store_fixup( fixup, seg_info, (int_32 *)&p->high_pc );
+
+            p->stmt_list = 0; /* needs a fixup */
+            fixup = FixupCreate( (struct asym *)em->dwarf_seg[DWLINE_IDX], FIX_OFF32, OPTJ_NONE );
+            fixup->locofs = offsetof(struct dwarf_info32, stmt_list);
+            store_fixup( fixup, seg_info, (int_32 *)&p->stmt_list );
+
+            strcpy( (char *)&p->name, ModuleInfo.g.FNames[0].fname );
+        }
     }
-    p->stmt_list = 0; /* needs a fixup */
-    fixup = FixupCreate( (struct asym *)em->dwarf_seg[DWLINE_IDX], FIX_OFF32, OPTJ_NONE );
-    fixup->locofs = offsetof(struct dwarf_info, stmt_list);
-    store_fixup( fixup, seg_info, (int_32 *)&p->stmt_list );
 
-    strcpy( (char *)&p->name, ModuleInfo.g.FNames[0].fname );
     return;
 }
 
@@ -934,7 +970,7 @@ unsigned char *LEB128( unsigned char *buf, dw_sconst value )
 static int dwarf_line_gen( int line_incr, int addr_incr, unsigned char *buf )
 /***************************************************************************/
 {
-    uint                opcode;
+    unsigned int        opcode;
     unsigned            size;
     uint_8              *end;
     dw_addr_delta       addr;
@@ -1062,13 +1098,23 @@ static void dwarf_set_line( struct elfmod *em, struct dsym *seg_linenum )
 
             /* create "set address" extended opcode with fixup */
             *px++ = 0;
-            *px++ = 1+4;
-            *px++ = DW_LNE_set_address;
-            fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
-            fixup->locofs = px - (unsigned char *)p;
-            *(uint_32 *)px = lni->offset;
-            store_fixup( fixup, seg_linenum, (int_32 *)&px );
-            px += 4;
+            if ( ModuleInfo.defOfssize == USE64 ) {
+                *px++ = 1+8;
+                *px++ = DW_LNE_set_address;
+                fixup = FixupCreate( &curr->sym, FIX_OFF64, OPTJ_NONE );
+                fixup->locofs = px - (unsigned char *)p;
+                *(uint_64 *)px = lni->offset;
+                store_fixup( fixup, seg_linenum, (int_32 *)px );
+                px += 8;
+            } else {
+                *px++ = 1+4;
+                *px++ = DW_LNE_set_address;
+                fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
+                fixup->locofs = px - (unsigned char *)p;
+                *(uint_32 *)px = lni->offset;
+                store_fixup( fixup, seg_linenum, (int_32 *)px );
+                px += 4;
+            }
 
             px += dwarf_line_gen( lni->number - 1, lni->offset, px );
             for( ; lni; lni = lni->next ) {
@@ -1516,7 +1562,11 @@ static void write_relocs64( struct dsym *curr )
 #endif
             elftype = R_X86_64_PC32;
             break;
-        case FIX_OFF64:        elftype = R_X86_64_64;          break;
+        case FIX_OFF64:
+            /* v2.21: needed for DWARF support */
+            if ( curr->e.seginfo->internal )
+                reloc64.r_addend = fixup->offset;
+                               elftype = R_X86_64_64;          break;
         //case FIX_???:        elftype = R_X86_64_GOT32;       break;
         //case FIX_???:        elftype = R_X86_64_PLT32;       break;
         //case FIX_???:        elftype = R_X86_64_COPY;        break;
