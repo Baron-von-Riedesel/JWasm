@@ -161,9 +161,12 @@ typedef struct {
 #define SHN_HIRESERVE   0xffff
 
 // section header
+// sh_addr: 0 if section doesn't appear in memory image
+// sh_offset: offset in file (!= 0 even if SHT_NOBITS is set)
+// sh_info: for .symtab, one greater than the last local symbol index
 
 typedef struct {
-    uint_32  sh_name;        // +0 name of the section
+    uint_32  sh_name;        // +0 name of the section (index)
     uint_32  sh_type;        // +4 section type
     uint_32  sh_flags;       // +8
     uint_32  sh_addr;        // +12 starting address of section in image

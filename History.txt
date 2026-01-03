@@ -10,8 +10,12 @@
       macro25.asm.
    -  operator MOD returned wrong results for negative operands; see mod1.asm,
       mod2.asm.
-   -  wrong results of operator '/' (division) if divisor was negative and
-      dividend's highest bit (b63) was 1; see div2.asm.
+   -  operator '/': 64-bit division generally assumed signed operands, hence
+      results were wrong if dividend was unsigned with bit 63 set.
+
+   Other changes:
+   -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
+      to one file).
 
    01.12.2025, v2.20:
 

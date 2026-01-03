@@ -102,7 +102,7 @@ static const struct format_options formatoptions[] = {
 struct module_info      ModuleInfo;
 unsigned int            Parse_Pass;     /* assembly pass */
 //unsigned int            GeneratedCode; /* v2.10: moved to ModuleInfo */
-struct qdesc            LinnumQueue;    /* queue of line_num_info items */
+//struct qdesc            LinnumQueue;   /* v2.21: moved to ModuleInfo */
 
 //bool write_to_file;     /* write object module */
 
@@ -1344,7 +1344,7 @@ static void AssembleInit( const char *source )
     //start_displ   = 0;
     write_to_file = FALSE;
     //GeneratedCode = 0;
-    LinnumQueue.head = NULL;
+    ModuleInfo.g.LinnumQueue.head = NULL;
 
     SetFilenames( source );
 
@@ -1510,8 +1510,8 @@ int EXPQUAL AssembleModule( const char *source )
                 }
             } else {
 #endif
-                QueueDeleteLinnum( &LinnumQueue );
-                LinnumQueue.head = NULL;
+                QueueDeleteLinnum( &ModuleInfo.g.LinnumQueue );
+                ModuleInfo.g.LinnumQueue.head = NULL;
 #if COFF_SUPPORT
             }
 #endif

@@ -103,7 +103,7 @@ union DOS_DATETIME {
 extern void cv_write_debug_tables( struct dsym *, struct dsym *, void * );
 extern void SortSegments( int );
 
-extern struct qdesc LinnumQueue;    /* queue of line_num_info items */
+//extern struct qdesc LinnumQueue;    /* v2.21: moved to ModuleInfo */
 extern const char szNull[];
 
 /* LastCodeBufSize stores the size of the code buffer AFTER it has been written in omf_write_ledata().
@@ -353,7 +353,7 @@ static void omf_write_linnum( uint_8 is32 )
     struct line_num_info *next;
     struct omf_rec       obj;
 
-    for( node = LinnumQueue.head, data = (uint_8 *)StringBufferEnd; node; node = next ) {
+    for( node = ModuleInfo.g.LinnumQueue.head, data = (uint_8 *)StringBufferEnd; node; node = next ) {
         next = node->next;
         *(uint_16 *)data = node->number;
         data += sizeof( uint_16 );
@@ -361,7 +361,7 @@ static void omf_write_linnum( uint_8 is32 )
         data += ofssize;
         LclFree( node );
     }
-    LinnumQueue.head = NULL;
+    ModuleInfo.g.LinnumQueue.head = NULL;
 
     size = (char *)data - StringBufferEnd;
     if( size ) {
@@ -560,7 +560,7 @@ void omf_check_flush( const struct line_num_info *curr )
     uint_16 size;
 #if MULTIHDR
     if ( curr->srcfile != ln_srcfile ) {
-        if ( LinnumQueue.head )
+        if ( ModuleInfo.g.LinnumQueue.head )
             omf_FlushCurrSeg();
         /* todo: for Borland, there's a COMENT ( CMT_SRCFILE ) that could be written
          * instead of THEADR.
@@ -575,7 +575,7 @@ void omf_check_flush( const struct line_num_info *curr )
      */
     is_32 = ( curr->offset > 0xffff ? TRUE : FALSE );
     if ( ln_is32 != is_32 ) {
-        if ( LinnumQueue.head )
+        if ( ModuleInfo.g.LinnumQueue.head )
             omf_FlushCurrSeg();
         ln_is32 = is_32;
         return;
@@ -586,7 +586,7 @@ void omf_check_flush( const struct line_num_info *curr )
      * do flush ( Masm compatible ).
      */
     if ( ln_size + size > 1024 - 8 ) {
-        if ( LinnumQueue.head )
+        if ( ModuleInfo.g.LinnumQueue.head )
             omf_FlushCurrSeg();
     }
     ln_size += size;

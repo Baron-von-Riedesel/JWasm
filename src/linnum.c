@@ -27,7 +27,7 @@
 #include "linnum.h"
 #include "omf.h"
 
-extern struct qdesc   LinnumQueue;    /* queue of line_num_info items ( OMF only ) */
+//extern struct qdesc   LinnumQueue;    /* queue of line_num_info items ( OMF only ) */
 extern int            procidx;
 
 #if COFF_SUPPORT
@@ -39,8 +39,10 @@ static void AddLinnumData( struct line_num_info *data )
 /*****************************************************/
 {
     struct qdesc *q;
-#if COFF_SUPPORT
-    if ( Options.output_format == OFORMAT_COFF ) {
+#if COFF_SUPPORT || ELF_SUPPORT
+    /* v2.21: for ELF, handle line number equal to COFF (queue stored in segment) */
+    //if ( Options.output_format == OFORMAT_COFF ) {
+    if ( Options.output_format == OFORMAT_COFF || Options.output_format == OFORMAT_ELF ) {
         q = (struct qdesc *)CurrSeg->e.seginfo->LinnumQueue;
         if ( q == NULL ) {
             q = LclAlloc( sizeof( struct qdesc ) );
@@ -49,7 +51,7 @@ static void AddLinnumData( struct line_num_info *data )
         }
     } else
 #endif
-        q = &LinnumQueue;
+        q = &ModuleInfo.g.LinnumQueue;
 
     data->next = NULL;
     if ( q->head == NULL)

@@ -1149,7 +1149,7 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
             coff_write_fixups( section, &offset, &index );
         } /* end if (size) */
 
-        /* v2.07: the following block has beem moved outside of "if(size)" block,
+        /* v2.07: the following block has been moved outside of "if(size)" block,
          * because it may happen that a segment has size 0 and still debug info.
          * In any case it's important to initialize section->e.seginfo->num_linnums
          */

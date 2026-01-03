@@ -1007,7 +1007,7 @@ void cv_write_debug_tables( struct dsym *symbols, struct dsym *types, void *pv )
     cv.pt += sizeof( uint_32 );
 
     /* init symbols */
-    //memset( ps, 0, 1024 ); /* it's ensured to has at least size 1024 */
+    //memset( ps, 0, 1024 ); /* it's ensured to have at least size 1024 */
     *(uint_32 *)cv.ps = Options.debug_symbols; /* "signature" */
     cv.ps += sizeof(uint_32);
 

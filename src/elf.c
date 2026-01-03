@@ -10,6 +10,7 @@
 
 #include <ctype.h>
 #include <time.h>
+#include <stddef.h>
 
 #include "globals.h"
 #include "memalloc.h"
@@ -23,6 +24,13 @@
 #include "myassert.h"
 
 #if ELF_SUPPORT
+
+#define DWARF_SUPP 1 /* v2.21: dwarf debug info added - just line numbers ( -Zd) for now */
+
+#if DWARF_SUPP
+#include "linnum.h"
+#include "dbgdw.h"
+#endif
 
 /* v2.03: create weak externals for ALIAS symbols.
  * Since the syntax of the ALIAS directive requires
@@ -96,6 +104,20 @@ static const struct intsegparm internal_segparms[] = {
     { ".strtab",   SHT_STRTAB },
 };
 
+#if DWARF_SUPP
+enum dwarf_sections {
+    DWINFO_IDX,
+    DWABBREV_IDX,
+    DWLINE_IDX,
+    NUM_DWSEGS
+};
+static const char *dwarf_segnames[] = {
+    ".debug_info",
+    ".debug_abbrev",
+    ".debug_line",
+};
+#endif
+
 struct intseg {
     uint_32 size;
     uint_32 fileoffset;
@@ -113,6 +135,9 @@ struct elfmod {
     bool extused;           /* gnu extensions used */
 #endif
     struct intseg internal_segs[NUM_INTSEGS];
+#if DWARF_SUPP
+    struct dsym *dwarf_seg[NUM_DWSEGS];
+#endif
     union {
         Elf32_Ehdr ehdr32;
 #if AMD64_SUPPORT
@@ -675,9 +700,10 @@ static void set_symtab_values( struct elfmod *em )
 
 /* set content + size of .shstrtab section.
  * this section contains the names of all sections.
- * three groups of sections are handled:
+ * groups of sections that are handled:
  * - sections defined in the program
  * - ELF internal sections
+ * - debug sections
  * - relocation sections
  * alloc .shstrtab
  */
@@ -763,12 +789,326 @@ static unsigned int Get_Alignment( struct dsym *curr )
     return( 1 << curr->e.seginfo->alignment );
 }
 
+#if DWARF_SUPP
+
+#define DWLINE_OPCODE_BASE 13 /* max is 13 */
+#define DW_MIN_INSTR_LENGTH 1
+#define DWLINE_BASE (-1)
+#define DWLINE_RANGE 4
+
+enum {
+    NULL_ABBREV_CODE = 0,
+    COMPUNIT_ABBREV_CODE,
+    LABEL_ABBREV_CODE,
+    VARIABLE_ABBREV_CODE,
+};
+
+#pragma pack( 1 )
+
+static const char FlatStandardAbbrevs[] = {
+    COMPUNIT_ABBREV_CODE,
+    DW_TAG_compile_unit,
+    DW_CHILDREN_no,
+    DW_AT_low_pc,       DW_FORM_addr,
+    DW_AT_high_pc,      DW_FORM_addr,
+    DW_AT_stmt_list,    DW_FORM_data4,
+    DW_AT_name,         DW_FORM_string,
+    0,                  0,
+    LABEL_ABBREV_CODE,
+    DW_TAG_label,
+    DW_CHILDREN_no,
+    DW_AT_low_pc,       DW_FORM_addr,
+    DW_AT_external,     DW_FORM_flag,
+    DW_AT_name,         DW_FORM_string,
+    0,                  0,
+    VARIABLE_ABBREV_CODE,
+    DW_TAG_variable,
+    DW_CHILDREN_no,
+    DW_AT_low_pc,       DW_FORM_addr,
+    DW_AT_external,     DW_FORM_flag,
+    DW_AT_name,         DW_FORM_string,
+    0,                  0,
+    0,                  0
+};
+
+struct dwarf_info {
+    struct dwarf_compilation_unit_header32 hdr;
+    unsigned char abbrev_code;
+    uint_32 low_pc;
+    uint_32 high_pc;
+    uint_32 stmt_list;
+    char name[1];
+};
+
+#pragma pack()
+
+static void dwarf_set_info( struct elfmod *em, struct dsym *seg_info )
+/********************************************************************/
+{
+    int size = sizeof( struct dwarf_info );
+    struct dsym *curr;
+    struct dwarf_info *p;
+    struct fixup *fixup;
+
+    size += strlen( ModuleInfo.g.FNames[0].fname );
+    seg_info->sym.max_offset = size;
+    seg_info->e.seginfo->CodeBuffer = LclAlloc( size );
+    p = (struct dwarf_info *)seg_info->e.seginfo->CodeBuffer;
+    p->hdr.unit_length = size - 4;
+    p->hdr.version = 2;
+
+    p->hdr.debug_abbrev_offset = 0; /* needs a fixup */
+    fixup = FixupCreate( (struct asym *)em->dwarf_seg[DWABBREV_IDX], FIX_OFF32, OPTJ_NONE );
+    fixup->locofs = offsetof(struct dwarf_info, hdr.debug_abbrev_offset);
+    store_fixup( fixup, seg_info, (int_32 *)&p->hdr.debug_abbrev_offset );
+
+    p->hdr.address_size = 4;
+    p->abbrev_code = COMPUNIT_ABBREV_CODE;
+
+    /* search for the first segment with line numbers */
+    for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next )
+        if ( curr->e.seginfo->LinnumQueue )
+            break;
+
+    if ( curr ) {
+        p->low_pc = 0;
+        fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
+        fixup->locofs = offsetof(struct dwarf_info, low_pc);
+        store_fixup( fixup, seg_info, (int_32 *)&p->low_pc );
+
+        p->high_pc = curr->sym.max_offset;
+        fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
+        fixup->locofs = offsetof(struct dwarf_info, high_pc);
+        store_fixup( fixup, seg_info, (int_32 *)&p->high_pc );
+    }
+    p->stmt_list = 0; /* needs a fixup */
+    fixup = FixupCreate( (struct asym *)em->dwarf_seg[DWLINE_IDX], FIX_OFF32, OPTJ_NONE );
+    fixup->locofs = offsetof(struct dwarf_info, stmt_list);
+    store_fixup( fixup, seg_info, (int_32 *)&p->stmt_list );
+
+    strcpy( (char *)&p->name, ModuleInfo.g.FNames[0].fname );
+    return;
+}
+
+static void dwarf_set_abbrev( struct elfmod *em, struct dsym *curr )
+/******************************************************************/
+{
+    int size = sizeof ( FlatStandardAbbrevs );
+    char *p;
+
+    curr->sym.max_offset = size;
+    curr->e.seginfo->CodeBuffer = p = LclAlloc( size );
+    memcpy( p, FlatStandardAbbrevs, sizeof( FlatStandardAbbrevs ) );
+    return;
+}
+
+typedef int dw_addr_delta;
+typedef int dw_sconst;
+
+unsigned char *LEB128( unsigned char *buf, dw_sconst value )
+/**********************************************************/
+{
+    unsigned char byte;
+
+    /* we can only handle an arithmetic right shift */
+    if( value >= 0 ) {
+        for( ;; ) {
+            byte = value & 0x7f;
+            value >>= 7;
+            if( value == 0 && ( byte & 0x40 ) == 0 ) break;
+            *buf++ = byte | 0x80;
+        }
+    } else {
+        for( ;; ) {
+            byte = value & 0x7f;
+            value >>= 7;
+            if( value == -1 && ( byte & 0x40 ) ) break;
+            *buf++ = byte | 0x80;
+        }
+    }
+    *buf++ = byte;
+    return( buf );
+}
+
+
+static int dwarf_line_gen( int line_incr, int addr_incr, unsigned char *buf )
+/***************************************************************************/
+{
+    uint                opcode;
+    unsigned            size;
+    uint_8              *end;
+    dw_addr_delta       addr;
+
+    DebugMsg(("dwarf_line_gen: line_incr=%d, addr_incr=%d\n", line_incr, addr_incr ));
+    size = 0;
+    if( line_incr < DWLINE_BASE || line_incr > DWLINE_BASE + DWLINE_RANGE - 1) {
+        /* line_incr is out of bounds... emit standard opcode */
+        buf[ 0 ] = DW_LNS_advance_line;
+        size = LEB128( buf + 1, line_incr ) - buf;
+        line_incr = 0;
+    }
+
+    if( addr_incr < 0 ) {
+        buf[ size ] = DW_LNS_advance_pc;
+        size = LEB128( buf + size + 1, addr_incr ) - buf;
+        addr_incr = 0;
+    } else {
+        addr_incr /= DW_MIN_INSTR_LENGTH;
+    }
+    if( addr_incr == 0 && line_incr == 0 ) {
+        buf[size] = DW_LNS_copy;
+        return size + 1;
+    }
+
+    /* calculate the opcode with overflow checks */
+    line_incr -= DWLINE_BASE;
+    opcode = DWLINE_RANGE * addr_incr;
+    if( opcode < addr_incr ) goto overflow;
+    if( opcode + line_incr < opcode ) goto overflow;
+    opcode += line_incr;
+
+    /* can we use a special opcode? */
+    if( opcode <= 255 - DWLINE_OPCODE_BASE ) {
+        buf[ size ] = opcode + DWLINE_OPCODE_BASE;
+        return size + 1;
+    }
+
+    /*
+        We can't use a special opcode directly... but we may be able to
+        use a CONST_ADD_PC followed by a special opcode.  So we calculate
+        if addr_incr lies in this range.  MAX_ADDR_INCR is the addr
+        increment for special opcode 255.
+    */
+#define MAX_ADDR_INCR   ( ( 255 - DWLINE_OPCODE_BASE ) / DWLINE_RANGE )
+
+    if( addr_incr < 2*MAX_ADDR_INCR ) {
+        buf[ size ] = DW_LNS_const_add_pc;
+        size++;
+        buf[ size ] = opcode - MAX_ADDR_INCR*DWLINE_RANGE + DWLINE_OPCODE_BASE;
+        return size + 1;
+    }
+
+    /*
+        Emit an ADVANCE_PC followed by a special opcode.
+
+        We use MAX_ADDR_INCR - 1 to prevent problems if special opcode
+        255 - DWLINE_OPCODE_BASE - DWLINE_BASE + 1 isn't an integral multiple
+        of DWLINE_RANGE.
+    */
+overflow:
+    buf[ size ] = DW_LNS_advance_pc;
+    if( line_incr == 0 - DWLINE_BASE ) {
+        opcode = DW_LNS_copy;
+    } else {
+        addr = addr_incr % ( MAX_ADDR_INCR - 1 );
+        addr_incr -= addr;
+        opcode = line_incr + ( DWLINE_RANGE * addr ) + DWLINE_OPCODE_BASE;
+    }
+    end = LEB128( buf + size + 1, addr_incr );
+    *end++ = opcode;
+    return end - buf;
+}
+
+static const unsigned char stdopsparms[] = {0,1,1,1,1,0,0,0,1,0,0,1};
+
+static void dwarf_set_line( struct elfmod *em, struct dsym *seg_linenum )
+/***********************************************************************/
+{
+    int count;
+    struct dwarf_stmt_header32 *p;
+    unsigned char *px;
+    struct dsym *curr;
+    struct fixup *fixup;
+
+    DebugMsg(("dwarf_set_line: enter\n" ));
+    /* get linnum program size; currently we count the items and assume avg size is 2 */
+    for( curr = SymTables[TAB_SEG].head, count = 0; curr; curr = curr->next ) {
+        if ( curr->e.seginfo->LinnumQueue ) {
+            struct line_num_info *lni;
+            lni = (struct line_num_info *)((struct qdesc *)curr->e.seginfo->LinnumQueue)->head;
+            for( ; lni; count++, lni = lni->next );
+        }
+    }
+    seg_linenum->e.seginfo->CodeBuffer = LclAlloc( 0x200 + count * 2 );
+    p = (struct dwarf_stmt_header32 *)seg_linenum->e.seginfo->CodeBuffer;
+    p->version = 2;
+    p->minimum_instruction_length = 1;
+    p->default_is_stmt = 1;
+    p->line_base = DWLINE_BASE;
+    p->line_range = DWLINE_RANGE;
+    p->opcode_base = DWLINE_OPCODE_BASE;
+    px = (unsigned char *)&p->stdopcode_lengths;
+    /* standard opcodes lengths (number of LEB operands) */
+    memcpy( px, stdopsparms, DWLINE_OPCODE_BASE - 1 );
+    px += DWLINE_OPCODE_BASE - 1;
+    *px++ = 0; /* include directories sequence */
+    /* file entries sequence (entry consists of name and 3 LEBs (dir idx, time, size))
+     * if multiple file entries are to be supported, allocation size above has to be adjusted!
+     */
+    strcpy( px, ModuleInfo.g.FNames[0].fname );
+    px += strlen( px ) + 1;
+    *px++ = 0; /* dir idx */
+    *px++ = 0; /* time */
+    *px++ = 0; /* size */
+    *px++ = 0; /* file entries end marker */
+    p->header_length = px - (unsigned char *)&p->header_length - 4;
+
+    /* now generate the line number "program" */
+    for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
+        if ( curr->e.seginfo->LinnumQueue ) {
+            struct line_num_info *lni;
+            struct line_num_info *next;
+            lni = (struct line_num_info *)((struct qdesc *)curr->e.seginfo->LinnumQueue)->head;
+
+            /* create "set address" extended opcode with fixup */
+            *px++ = 0;
+            *px++ = 1+4;
+            *px++ = DW_LNE_set_address;
+            fixup = FixupCreate( &curr->sym, FIX_OFF32, OPTJ_NONE );
+            fixup->locofs = px - (unsigned char *)p;
+            *(uint_32 *)px = lni->offset;
+            store_fixup( fixup, seg_linenum, (int_32 *)&px );
+            px += 4;
+
+            px += dwarf_line_gen( lni->number - 1, lni->offset, px );
+            for( ; lni; lni = lni->next ) {
+                if ( lni->file != 0 ) continue; /* currently support 1 source file only */
+                next = lni->next;
+                if ( !next )
+                    px += dwarf_line_gen( 1, curr->sym.max_offset - lni->offset, px );
+                else if ( next->file != 0 ) continue;
+                else
+                    px += dwarf_line_gen( next->number - lni->number, next->offset - lni->offset, px );
+            }
+        }
+    }
+    *px++ = 0; *px++ = 1; *px++ = DW_LNE_end_sequence; /* 1. 00=extended opcode, 2. size=1, 3. opcode */
+    p->unit_length = px - (unsigned char *)&p->unit_length - 4;
+    seg_linenum->sym.max_offset = p->unit_length + 4;
+    return;
+}
+
+static void dwarf_create_sections( struct module_info *modinfo, struct elfmod *em )
+/*********************************************************************************/
+{
+    int i;
+    for ( i = 0; i < NUM_DWSEGS; i++ ) {
+        em->dwarf_seg[i] = (struct dsym *)CreateIntSegment( dwarf_segnames[i], "DWARF", 0, modinfo->Ofssize, FALSE );
+    }
+    dwarf_set_info( em, em->dwarf_seg[DWINFO_IDX] );
+    dwarf_set_abbrev( em, em->dwarf_seg[DWABBREV_IDX] );
+    dwarf_set_line( em, em->dwarf_seg[DWLINE_IDX] );
+    return;
+}
+#endif
+
 /* write ELF32 section table.
  * fileoffset: start of section data ( behind elf header and section table )
  * there are 3 groups of sections to handle:
  * - the sections defined in the module
  * - the internal ELF sections ( .shstrtab, .symtab, .strtab )
  * - the 'relocation' sections
+ * - v2.21: the dwarf debug sections ( .debug_info, .debug_abbrev, .debug_line )
  */
 
 static int elf_write_section_table32( struct module_info *modinfo, struct elfmod *em, uint_32 fileoffset )
@@ -815,6 +1155,10 @@ static int elf_write_section_table32( struct module_info *modinfo, struct elfmod
                 shdr32.sh_flags = SHF_ALLOC;
             } else if ( curr->e.seginfo->clsym && strcmp( curr->e.seginfo->clsym->name, "CONST" ) == 0 ) {
                 shdr32.sh_flags = SHF_ALLOC; /* v2.07: added */
+#if DWARF_SUPP
+            } else if ( curr->e.seginfo->internal && strcmp( curr->e.seginfo->clsym->name, "DWARF" ) == 0 ) {
+                shdr32.sh_flags = 0; /* v2.21 */
+#endif
             } else {
                 shdr32.sh_flags = SHF_WRITE | SHF_ALLOC;
             }
@@ -830,7 +1174,8 @@ static int elf_write_section_table32( struct module_info *modinfo, struct elfmod
         /* v2.12: the sh_offset field holds the file position, even for SHT_NOBITS */
         //if ( shdr32.sh_type != SHT_NOBITS ) {
             shdr32.sh_offset = fileoffset; /* start of section in file */
-            curr->e.seginfo->fileoffset = fileoffset; /* save the offset in the segment */
+            //curr->e.seginfo->fileoffset = fileoffset; /* save the offset in the segment */
+            curr->sym.fileoffset_elf = fileoffset; /* save the offset in the segment */
         //}
         /* v2.07: set size for all sections, including .bss */
         shdr32.sh_size = curr->sym.max_offset;
@@ -970,6 +1315,10 @@ static int elf_write_section_table64( struct module_info *modinfo, struct elfmod
                 shdr64.sh_flags = SHF_ALLOC;
             } else if ( curr->e.seginfo->clsym && strcmp( curr->e.seginfo->clsym->name, "CONST" ) == 0 ) {
                 shdr64.sh_flags = SHF_ALLOC; /* v2.07: added */
+#if DWARF_SUPP
+            } else if ( curr->e.seginfo->internal && strcmp( curr->e.seginfo->clsym->name, "DWARF" ) == 0 ) {
+                shdr64.sh_flags = 0; /* v2.21 */
+#endif
             } else {
                 shdr64.sh_flags = SHF_WRITE | SHF_ALLOC;
             }
@@ -985,7 +1334,8 @@ static int elf_write_section_table64( struct module_info *modinfo, struct elfmod
         /* v2.12: the sh_offset field holds the file position, even for SHT_NOBITS */
         //if ( shdr64.sh_type != SHT_NOBITS ) {
             shdr64.sh_offset = fileoffset; /* start of section in file */
-            curr->e.seginfo->fileoffset = fileoffset; /* save the offset in the segment */
+            //curr->e.seginfo->fileoffset = fileoffset; /* save the offset in the segment */
+            curr->sym.fileoffset_elf = fileoffset; /* save the offset in the segment */
         //}
         /* v2.07: set size for all sections, including .bss */
         shdr64.sh_size = curr->sym.max_offset;
@@ -1228,7 +1578,8 @@ static ret_code elf_write_data( struct module_info *modinfo, struct elfmod *em )
 
     for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
         size = curr->sym.max_offset - curr->e.seginfo->start_loc;
-        DebugMsg(("elf_write_data(%s): program data at ofs=%X, size=%X\n", curr->sym.name, curr->e.seginfo->fileoffset, size ));
+        //DebugMsg(("elf_write_data(%s): program data at ofs=%X, size=%X\n", curr->sym.name, curr->e.seginfo->fileoffset, size ));
+        DebugMsg(("elf_write_data(%s): program data at ofs=%X, size=%X\n", curr->sym.name, curr->sym.fileoffset_elf, size ));
         if ( curr->e.seginfo->segtype != SEGTYPE_BSS && size != 0 ) {
 			/* v2.19: write null bytes if start_loc != 0 */
 			//fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset + curr->e.seginfo->start_loc, SEEK_SET );
@@ -1236,7 +1587,8 @@ static ret_code elf_write_data( struct module_info *modinfo, struct elfmod *em )
 			uint_32 i;
 			for ( i = curr->e.seginfo->start_loc; i ; i--)
 				fwrite( &nullbyt, 1, 1, CurrFile[OBJ] );
-			fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
+			//fseek( CurrFile[OBJ], curr->e.seginfo->fileoffset, SEEK_SET );
+			fseek( CurrFile[OBJ], curr->sym.fileoffset_elf, SEEK_SET );
             /**/myassert( curr->e.seginfo->CodeBuffer );
             if ( fwrite( curr->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
                 WriteError();
@@ -1296,6 +1648,12 @@ static ret_code elf_write_module( struct module_info *modinfo )
            *(em.srcname-1) != '/' &&
            *(em.srcname-1) != '\\') em.srcname--;
 #endif
+
+#if DWARF_SUPP
+    if ( Options.line_numbers ) dwarf_create_sections( modinfo, &em );
+#endif
+
+
     /* position at 0 ( probably unnecessary, since there were no writes yet ) */
     fseek( CurrFile[OBJ], 0, SEEK_SET );
 
@@ -1323,9 +1681,7 @@ static ret_code elf_write_module( struct module_info *modinfo )
         em.ehdr64.e_shentsize = sizeof( Elf64_Shdr );
         /* calculate # of sections. Add the following internal sections:
          - 1 NULL entry
-         - 1 .shstrtab
-         - 1 .symtab
-         - 1 .strtab
+         - 3 internal (.shstrtab, .symtab, .strtab )
          - n .rela<xxx> sections
          */
         em.ehdr64.e_shnum = 1 + modinfo->g.num_segs + 3 + get_num_reloc_sections();
@@ -1358,9 +1714,7 @@ static ret_code elf_write_module( struct module_info *modinfo )
         em.ehdr32.e_shentsize = sizeof( Elf32_Shdr );
         /* calculate # of sections. Add the following internal sections:
          - 1 NULL entry
-         - 1 .shstrtab
-         - 1 .symtab
-         - 1 .strtab
+         - 3 internal (.shstrtab, .symtab, .strtab )
          - n .rel<xxx> entries
          */
         em.ehdr32.e_shnum = 1 + modinfo->g.num_segs + 3 + get_num_reloc_sections();

@@ -162,6 +162,8 @@ struct asym {
     union {
         /* for SYM_INTERNAL (data labels, memtype != NEAR|FAR|EMPTY), SYM_STRUCT_FIELD */
         uint_32         first_size;   /* size of 1st initializer's dimension in bytes */
+        /* v2.20: SYM_SEG: file offset for ELF (since the field in seginfo is used by line number queue now */
+        uint_32     fileoffset_elf;
         /* for SYM_INTERNAL (memtype == NEAR|FAR|EMPTY),
          * SYM_GRP (Ofssize),
          * SYM_EXTERNAL (seg_ofssize, iscomm, weak, isfar, is_ptr, ptr_memtype),
@@ -305,7 +307,7 @@ struct seg_info {
     } FixupList;
     union {
         void            *LinnumQueue;   /* for COFF line numbers */
-        uint_32         fileoffset;     /* used by BIN + ELF */
+        uint_32         fileoffset;     /* used by BIN ( also ELF up to v2.19 ) */
         uint_32         num_linnums;    /* used by COFF (after LinnumQueue has been read) */
     };
     uint_32             num_relocs;     /* used by COFF/ELF */

@@ -694,6 +694,7 @@ struct module_vars {
     //struct qdesc        GlobalQueue;     /* GLOBAL items ( =externdefs ) */
     struct qdesc        PubQueue;        /* PUBLIC items */
     struct qdesc        LnameQueue;      /* LNAME items (segments, groups and classes) */
+    struct qdesc        LinnumQueue;     /* queue of line_num_info items (OMF) */
 #if COFF_SUPPORT
     struct qdesc        SafeSEHQueue;    /* list of safeseh handlers */
 #endif

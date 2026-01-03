@@ -49,7 +49,7 @@ enum fixup_types {
         FIX_PTR32,          /* 10, 6 byte, OMF+BIN-MZ only */
         FIX_HIBYTE,         /* 11, 1 byte, OMF+BIN-MZ only */
         FIX_OFF32_IMGREL,   /* 12, 4 byte, COFF+ELF only */
-        FIX_OFF32_SECREL,   /* 13, 4 byte, COFF+ELF only */
+        FIX_OFF32_SECREL,   /* 13, 4 byte, COFF(+ELF?) only */
         FIX_LAST
 };
 

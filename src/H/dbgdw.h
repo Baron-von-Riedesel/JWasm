@@ -575,6 +575,8 @@ enum dwarf_call_frame {
 
 /* header for compilation unit */
 
+#pragma pack(push,1)
+
 struct dwarf_compilation_unit_header32 {
     uint_32 unit_length;
     uint_16 version;
@@ -593,19 +595,21 @@ struct dwarf_type_unit_header32 {
     uint_32 type_offset;
 };
 
-#if 0
-
-struct dwarf_stmt_prologue {
-    uint_32 total_length;
+struct dwarf_stmt_header32 {
+    uint_32 unit_length;
     uint_16 version;
-    uint_32 prologue_length;
+    uint_32 header_length;
     uint_8  minimum_instruction_length;
     uint_8  default_is_stmt;
     int_8   line_base;
     uint_8  line_range;
-    uint_8  opcode_base;
-    uint_8  standard_opcode_lengths[DWLINE_OPCODE_BASE - 1];
+    uint_8  opcode_base; /* index of first special opcode */
+    uint_8  stdopcode_lengths[]; /* size is opcode_base - 1 */
+    //uint_8 include_directories[]; /* sequence of path names, ending with 00 */
+    //uint_8 file_names[]; /* sequence of file entries */
 };
+
+#if 0
 
 struct dwarf_segmented_arange_tuple {
     uint_32 offset;
@@ -638,5 +642,7 @@ struct dwarf_pubnames_prologue {
     uint_32 debug_size;
 };
 #endif
+
+#pragma pack(pop)
 
 #endif
