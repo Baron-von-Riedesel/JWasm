@@ -107,6 +107,7 @@ char *strupr(char *);
 #endif
 #ifndef ELF_SUPPORT
 #define ELF_SUPPORT  1 /* support ELF output format              */
+#define DWARF_SUPP 1 /* support DWARF */
 #endif
 
 /* instruction set switches */

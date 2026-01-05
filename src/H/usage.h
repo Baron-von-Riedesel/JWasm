@@ -53,7 +53,7 @@
 "-X\0"              "Ignore INCLUDE environment path\0"
 "-zcm\0"            "C names are decorated with '_' prefix (default)\0"
 "-zcw\0"            "No name decoration for C symbols\0"
-"-Zd\0"             "Add line number debug info (OMF & COFF only)\0"
+"-Zd\0"             "Add line number debug info (OMF, COFF, ELF)\0"
 "-Zf\0"             "Make all symbols public\0"
 #if OWFC_SUPPORT
 "-zf{0|1}\0"        "Set FASTCALL type: 0=MS VC style (default),\0"

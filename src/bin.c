@@ -1832,7 +1832,7 @@ static void pe_set_values( struct calc_param *cp )
     /* v2.19: first, handle ".drectve" info sections */
     for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
         if ( curr->e.seginfo->information && ( !strcmp( curr->sym.name, ".drectve" ) ) )
-            pe_scan_linker_directives( pe, curr->e.seginfo->CodeBuffer, curr->e.seginfo->bytes_written );
+            pe_scan_linker_directives( pe, (char *)curr->e.seginfo->CodeBuffer, curr->e.seginfo->bytes_written );
     }
 
     /* make sure all header objects are in FLAT group */
