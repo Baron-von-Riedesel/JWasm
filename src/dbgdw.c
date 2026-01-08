@@ -55,7 +55,7 @@ enum {
     //VARIABLE_ABBREV_CODE,
 };
 
-#pragma pack( 1 )
+#pragma pack( push, 1 )
 
 static const char FlatStandardAbbrevs[] = {
     COMPUNIT_ABBREV_CODE,
@@ -103,7 +103,7 @@ struct dwarf_info64 {
     char name[1];
 };
 
-#pragma pack()
+#pragma pack( pop )
 
 static void dwarf_set_info( struct dwarfobj *obj, struct dsym *seg_info )
 /***********************************************************************/

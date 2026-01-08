@@ -32,6 +32,9 @@
 "\0"                "(Tiny, Small, Compact, Medium, Large, Huge, Flat)\0"
 "-nc=<name>\0"       "Set class name of code segment\0"
 "-n{d|m|t}=<name>\0" "Set name of d)ata segment, m)odule or t)ext segment\0"
+#if ELF_SUPPORT
+"-nopic\0"           "disable generation of position-independent code (ELF64)\0"
+#endif
 #if COCTALS
 "-o\0"              "Allow C form of octal constants\0"
 #endif

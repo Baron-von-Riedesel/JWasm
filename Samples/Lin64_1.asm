@@ -7,15 +7,18 @@ stdout    equ 1
 SYS_WRITE equ 1
 SYS_EXIT  equ 60
 
+`.note.GNU-stack` segment info ; define this segment to suppress ld linker warning
+`.note.GNU-stack` ends
+
     .data
 
-string  db 10,"Hello, world!",10
+string  db "Hello, world!",10
 
     .code
 
 _start:
     mov edx, sizeof string
-    mov rsi, offset string
+    lea rsi, string
     mov edi, stdout
     mov eax, SYS_WRITE
     syscall

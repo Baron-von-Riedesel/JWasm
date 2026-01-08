@@ -18,6 +18,9 @@
 #include "mangle.h"
 #include "fixup.h"
 #include "segment.h"
+#if AMD64_SUPPORT
+#include "equate.h" /* needed for CreateVariable() */
+#endif
 #include "extern.h"
 #include "elf.h"
 #include "elfspec.h"
@@ -25,7 +28,7 @@
 
 #if ELF_SUPPORT
 
-#if DWARF_SUPP
+#if DWARF_SUPP /* v2.21 */
 extern void* dwarf_create_sections( struct module_info * );
 #endif
 
@@ -775,10 +778,9 @@ static unsigned int Get_Alignment( struct dsym *curr )
 /* write ELF32 section table.
  * fileoffset: start of section data ( behind elf header and section table )
  * there are 3 groups of sections to handle:
- * - the sections defined in the module
+ * - the sections defined in the module (+ dwarf debug sections)
  * - the internal ELF sections ( .shstrtab, .symtab, .strtab )
  * - the 'relocation' sections
- * - v2.21: the dwarf debug sections ( .debug_info, .debug_abbrev, .debug_line )
  */
 
 static int elf_write_section_table32( struct module_info *modinfo, struct elfmod *em, uint_32 fileoffset )
@@ -1184,12 +1186,20 @@ static void write_relocs64( struct dsym *curr )
                 symidx = fixup->sym->segment->ext_idx;
             }
 #endif
-            elftype = R_X86_64_PC32;
+            /* v2.21: use a PLT fixup instead of PC32 if -nopic isn't set  */
+            //elftype = R_X86_64_PC32;
+            elftype = Options.no_pic ? R_X86_64_PC32 : R_X86_64_PLT32;
             break;
         case FIX_OFF64:
-            /* v2.21: needed for DWARF support */
-            if ( curr->e.seginfo->internal )
+#if 1
+            /* v2.21: in case the 64-bit reloc refer to a segment only, the addend has to be set.
+             * it's needed for dwarf internal fixups at least. Further tests needed!
+             */
+            if ( curr->sym.state == SYM_SEG ) {
+                DebugMsg(("write_relocs64(%s, R_X86_64_64): seg based fixup, fixup offset=%X r_addend=%" I64_SPEC "X\n", curr->sym.name, fixup->offset, reloc64.r_addend ));
                 reloc64.r_addend = fixup->offset;
+            }
+#endif
                                elftype = R_X86_64_64;          break;
         //case FIX_???:        elftype = R_X86_64_GOT32;       break;
         //case FIX_???:        elftype = R_X86_64_PLT32;       break;
@@ -1323,7 +1333,7 @@ static ret_code elf_write_module( struct module_info *modinfo )
            *(em.srcname-1) != '\\') em.srcname--;
 #endif
 
-#if DWARF_SUPP
+#if DWARF_SUPP /* v2.21 */
     if ( Options.line_numbers )
         em.dwarfobj = dwarf_create_sections( modinfo );
 #endif

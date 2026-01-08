@@ -367,8 +367,8 @@
 
 <H2 ID="CMDOPTZD">    Option -Zd: Emit Line Number Debugging Info </H2>
 
-    Option -Zd generates line number debug information for OMF and COFF output
-    format. For other formats, this option is ignored. Line number
+    Option -Zd generates line number debug information for OMF, COFF and ELF output
+    formats. For other formats, this option is ignored. Line number
     information allows a debugger to trace the binary on the source code
     level. Debuggers that have been verified to work with this option:
 <P>
@@ -381,6 +381,7 @@
 <TR BGCOLOR="#E8E8E8"><TD>OW WD/WDW</TD>             <TD>OMF/COFF</TD> <TD>16- and 32-bit, Windows and DOS</TD> </TR>
 <TR BGCOLOR="#E8E8E8"><TD>PellesC IDE</TD>           <TD>COFF</TD> <TD>32-bit<sup>[1]</sup>, Windows</TD> </TR>
 <TR BGCOLOR="#E8E8E8"><TD>Borland TD/TDW/TD32</TD>   <TD>OMF</TD> <TD>16- and 32-bit, Windows and DOS</TD> </TR>
+<TR BGCOLOR="#E8E8E8"><TD>gdb (GNU debugger)</TD>    <TD>ELF</TD> <TD>32- and 64-bit, Linux</TD> </TR>
 </TABLE>
 [1]: the 64-bit version of this software should also be able to debug 64-bit debuggees.
 
@@ -1904,7 +1905,7 @@ _DATA                           C      10C        12        12
 <DD>    - commandline options -Sp, -Ss and -St (set page length, subtitle and title).
 <DD>    - commandline option -H (set max external name length).
 <DD>    - commandline option -Ta (Assemble non-.ASM file).
-<DD>    - commandline option -Zd for ELF output format.
+<DD>    - commandline option -Zd for ELF output format: currently just one source file supported.
 <DD>    - commandline option -Zi for ELF output format.
 </DL> 
 <P>

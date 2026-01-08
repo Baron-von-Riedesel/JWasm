@@ -221,8 +221,9 @@ static void SetModel( void )
     sym_Interface = AddPredefinedConstant( "@Interface", ModuleInfo.langtype );
 
 #if AMD64_SUPPORT
-    if ( ModuleInfo.defOfssize == USE64 && ModuleInfo.fctype == FCT_WIN64 ) {
-        sym_ReservedStack = AddPredefinedConstant( "@ReservedStack", 0 );
+    if ( ModuleInfo.defOfssize == USE64 ) {
+        if ( ModuleInfo.fctype == FCT_WIN64 )
+            sym_ReservedStack = AddPredefinedConstant( "@ReservedStack", 0 );
     }
 #endif
 #if PE_SUPPORT

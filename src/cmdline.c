@@ -148,7 +148,10 @@ struct global_options Options = {
     /* model                 */     MODEL_NONE,
     /* cpu                   */     P_86,
     /* fastcall type         */     FCT_MSC,
-    /* syntax check only     */     FALSE,
+    /* syntax check only -Zs */     FALSE,
+#if ELF_SUPPORT
+    /* -nopic; v2.21         */     FALSE,
+#endif
 #if MANGLERSUPP
     /* naming_convention*/          NC_DO_NOTHING,
 #endif
@@ -662,6 +665,9 @@ static struct cmdloption const cmdl_options[] = {
 #endif
     { "nm=$",   OPTN_MODULE_NAME,   Set_n },
     { "nologo", 0,                  Set_nologo },
+#if ELF_SUPPORT
+    { "nopic",  optofs(no_pic),     Set_True },
+#endif
     { "nt=$",   OPTN_TEXT_SEG,      Set_n },
     { "omf",    OFORMAT_OMF | (SFORMAT_NONE << 8), Set_ofmt },
 #if COCTALS

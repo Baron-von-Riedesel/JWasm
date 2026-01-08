@@ -16,6 +16,8 @@
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
       to one file).
+   -  format elf64: added cmdline option -nopic; position-independent code
+      generation is now the default for elf64.
 
    01.12.2025, v2.20:
 
