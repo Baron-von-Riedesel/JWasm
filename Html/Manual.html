@@ -27,6 +27,7 @@
 <DD>          <A HREF="#CMDOPTNC">Option -nc</A></DD>
 <DD>          <A HREF="#CMDOPTNDNT">Options -nd, -nt</A></DD>
 <DD>          <A HREF="#CMDOPTNM">Option -nm</A></DD>
+<DD>          <A HREF="#CMDOPTNOPIC">Option -nopic</A></DD>
 <DD>          <A HREF="#CMDOPTPE">Option -pe</A></DD>
 <DD>          <A HREF="#CMDOPTWIN64">Option -win64</A></DD>
 <DD>          <A HREF="#CMDOPTZC">Option -zc</A></DD>
@@ -329,6 +330,11 @@
 </DL> 
     The default value for &lt;module_name&gt; is the name of the source file
     without extension.
+
+<H2 ID="CMDOPTNOPIC">    Option -nopic: Disable position-independent Code Generation (ELF64) </H2>
+
+    For format ELF64, position-independent code generation is enabled as default. This option
+    disables it; relocation type R_X86_64_PLT32 is changed to R_X86_64_PC32.
 
 <H2 ID="CMDOPTPE">    Option -pe: Create a PE Binary </H2>
 

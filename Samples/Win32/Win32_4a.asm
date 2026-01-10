@@ -22,7 +22,7 @@
     includelib kernel32.lib
     includelib user32.lib
 
-;--- prototypes for functions exported by Window4d.
+;--- prototypes for functions exported by Win32_4d.
 
 Export1 proto stdcall
 Export2 proto stdcall :ptr DWORD

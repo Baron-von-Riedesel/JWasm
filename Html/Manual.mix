@@ -35,6 +35,8 @@
 .ixline 'Options -nd, -nt'
 .ixsect CMDOPTNM
 .ixline 'Option -nm'
+.ixsect CMDOPTNOPIC
+.ixline 'Option -nopic'
 .ixsect CMDOPTPE
 .ixline 'Option -pe'
 .ixsect CMDOPTWIN64
