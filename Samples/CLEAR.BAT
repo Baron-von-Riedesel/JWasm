@@ -7,6 +7,7 @@ del elf64\*.o
 del OS2\*.obj
 del Win16\*.obj
 del Win32\*.obj
-del Win32\Win32_5.exe
+del Win32\*.exe
 del Win64\*.obj
+del Win64\*.exe
 del *.obj

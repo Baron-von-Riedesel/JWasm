@@ -27,8 +27,8 @@
 <DD>          <A HREF="#CMDOPTNC">Option -nc</A></DD>
 <DD>          <A HREF="#CMDOPTNDNT">Options -nd, -nt</A></DD>
 <DD>          <A HREF="#CMDOPTNM">Option -nm</A></DD>
-<DD>          <A HREF="#CMDOPTNOPIC">Option -nopic</A></DD>
 <DD>          <A HREF="#CMDOPTPE">Option -pe</A></DD>
+<DD>          <A HREF="#CMDOPTPIC">Option -pic</A></DD>
 <DD>          <A HREF="#CMDOPTWIN64">Option -win64</A></DD>
 <DD>          <A HREF="#CMDOPTZC">Option -zc</A></DD>
 <DD>          <A HREF="#CMDOPTZD">Option -Zd</A></DD>
@@ -331,11 +331,18 @@
     The default value for &lt;module_name&gt; is the name of the source file
     without extension.
 
-<H2 ID="CMDOPTNOPIC">    Option -nopic: Disable position-independent Code Generation (ELF64) </H2>
+<H2 ID="CMDOPTPIC">    Option -pic: Set Position-independent Code Generation Mode (ELF64) </H2>
 
-    For format ELF64, position-independent code generation is enabled as default. This option
-    disables it; relocation type R_X86_64_PLT32 is changed to R_X86_64_PC32.
-
+    For format ELF64, position-independent code generation may be set. Syntax of 
+    this option is:
+<DL> 
+<DD>  -pic{0|1|2}
+</DL>
+    Option -pic0 disables position-independent code generation, -pic1 enables
+    it for executables (default) and -pic2 is supposed to be used for shared objects.
+    This option has an impact on the relocation type of symbol references
+    and also on the visibility of symbols in the symbol table.
+     
 <H2 ID="CMDOPTPE">    Option -pe: Create a PE Binary </H2>
 
     Option -pe will make JWasm create a binary in Windows PE format (32- and 64-bit).

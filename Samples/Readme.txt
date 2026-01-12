@@ -56,11 +56,12 @@
   Linux4d.asm   Linux   elf             shared library
   Linux5.asm    Linux   bin    console  no link step required
   ncurs1.asm    Linux   elf    console  ncurses sample
+  FreeBSD1.asm  FreeBSD bin    console  ELF header created manually
+
   Lin64_1.asm   Linux   elf64  console  uses syscall
   Lin64_2.asm   Linux   elf64  console  uses glibc
   Lin64_4.asm   Linux   elf64  console  calls function in Lin64_4d
   Lin64_4d.asm  Linux   elf64  console  shared library
-  FreeBSD1.asm  FreeBSD bin    console  ELF header created manually
 
   Mixed1c.c                    console  mixed-language, main
   Mixed132.asm          coff            functions for Mixed1c, 32bit

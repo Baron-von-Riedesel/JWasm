@@ -23,11 +23,11 @@ buffer db 128 dup (?)
 main proc
 	push rbp	;align rsp
 	lea rdi, string
-	xor rax, rax
+	xor eax, eax
  	call printf
  	lea rdi, buffer
 	call so_getvalue
-	xor rax, rax
+	xor eax, eax
 	call printf
 	pop rbp
 	ret

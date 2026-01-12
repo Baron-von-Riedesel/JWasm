@@ -635,7 +635,7 @@ struct global_options {
     enum fastcall_type fctype;           /* -zf0 & -zf1 option */
     bool        syntax_check_only;       /* -Zs option */
 #if ELF_SUPPORT
-    bool        no_pic;                  /* -nopic option (elf64 only); v2.21 */
+    char        pic;                     /* -pic option (elf64 only); v2.21 */
 #endif
 #if MANGLERSUPP
     enum naming_types naming_convention; /* OW naming peculiarities */

@@ -28,6 +28,8 @@
 
 #if ELF_SUPPORT
 
+#define R_X86_64_REX_GOTPCRELX 0x2a /* reloc type set by gcc for shared obj */
+
 #if DWARF_SUPP /* v2.21 */
 extern void* dwarf_create_sections( struct module_info * );
 #endif
@@ -314,9 +316,11 @@ static uint_32 set_symtab32( struct elfmod *em, uint_32 entries, struct localnam
         len = Mangle( sym, buffer );
 
         curr = (struct dsym *)sym->segment;
-        if ( curr && curr->e.seginfo->segtype != SEGTYPE_CODE )
+        if ( curr && curr->e.seginfo->segtype != SEGTYPE_CODE ) {
             stt = STT_OBJECT;
-        else
+	        /* v2.21: set size for data publics */
+            p32->st_size = SizeFromMemtype( sym->mem_type, USE_EMPTY, NULL );
+        } else
             stt = STT_FUNC;
 
         p32->st_name = strsize;
@@ -497,13 +501,20 @@ static uint_32 set_symtab64( struct elfmod *em, uint_32 entries, struct localnam
         len = Mangle( sym, buffer );
 
         curr = (struct dsym *)sym->segment;
-        if ( curr && curr->e.seginfo->segtype != SEGTYPE_CODE )
+        if ( curr && curr->e.seginfo->segtype != SEGTYPE_CODE ) {
             stt = STT_OBJECT;
-        else
+            /* v2.21: set size for data publics */
+            p64->st_size = SizeFromMemtype( sym->mem_type, USE_EMPTY, NULL );
+        } else
             stt = STT_FUNC;
 
         p64->st_name = strsize;
         p64->st_info = ELF64_ST_INFO( STB_GLOBAL, stt );
+
+		/* v2.21: set visibility */
+        if ( Options.pic == 2 )
+        	p64->st_other = ( sym->isexport ? STV_DEFAULT : STV_INTERNAL );
+
         p64->st_value = sym->offset;
 #if 1 /* v2.07: changed - to make MT_ABS obsolete */
         if ( sym->state == SYM_INTERNAL )
@@ -1186,9 +1197,20 @@ static void write_relocs64( struct dsym *curr )
                 symidx = fixup->sym->segment->ext_idx;
             }
 #endif
-            /* v2.21: use a PLT fixup instead of PC32 if -nopic isn't set  */
+            /* v2.21: use a PLT fixup instead of PC32 if -pic1 or -pic2;
+             * use a GOTPCREL fixup for exported data if -pic2
+             */
             //elftype = R_X86_64_PC32;
-            elftype = Options.no_pic ? R_X86_64_PC32 : R_X86_64_PLT32;
+            if ( Options.pic > 1 &&
+                fixup->sym->isexport &&
+                 (!(fixup->sym->mem_type & MT_SPECIAL)) &&
+                  ((struct dsym *)(fixup->sym->segment))->e.seginfo->segtype != SEGTYPE_CODE )
+                //elftype = R_X86_64_REX_GOTPCRELX;
+                elftype = R_X86_64_GOTPCREL;
+            else if ( Options.pic > 0 && fixup->sym->mem_type == MT_NEAR )
+                elftype = R_X86_64_PLT32;
+            else
+                elftype = R_X86_64_PC32;
             break;
         case FIX_OFF64:
 #if 1

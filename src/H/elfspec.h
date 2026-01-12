@@ -251,14 +251,14 @@ typedef struct {
     uint_32  st_value;       // symbol "value"
     uint_32  st_size;        // symbol size
     uint_8   st_info;        // symbol's type and binding attribs.
-    uint_8   st_other;       // no meaning yet.
+    uint_8   st_other;       // visibility (bits 0-1)
     uint_16  st_shndx;       // section index
 } Elf32_Sym;
 
 typedef struct {
     uint_32  st_name;        // symbol name index into string table
     uint_8   st_info;        // symbol's type and binding attribs.
-    uint_8   st_other;       // no meaning yet.
+    uint_8   st_other;       // visibility (bits 0-1)
     uint_16  st_shndx;       // section index
     uint_64  st_value;       // symbol "value"
     uint_64  st_size;        // symbol size
@@ -295,6 +295,13 @@ typedef struct {
 #define STT_IMPORT      11      // reference to a symbol in another module
 #define STT_LOPROC      13      // processor specific semantics
 #define STT_HIPROC      15
+
+// visibility
+
+#define STV_DEFAULT     0 /* globals & weaks are visible, locals are hidden */
+#define STV_INTERNAL    1 /* symbol will become local or removed in an executable or so */
+#define STV_HIDDEN      2 /* symbol name not visible to other components */
+#define STV_PROTECTED   3 /* for globals only */
 
 // relocation entries
 
@@ -464,6 +471,7 @@ typedef struct {
 #define DT_PLTREL       20              // type of reloc entry for PLT
 #define DT_DEBUG        21              // for debugging information
 #define DT_JMPREL       23              // reloc entries only with PLT
+#if 0 /* OW extensions? */
 #define DT_EXPORT       0x60000001      // address of export table
 #define DT_EXPORTSZ     0x60000002      // size of export table
 #define DT_EXPENT       0x60000003      // size of export table entry
@@ -476,9 +484,11 @@ typedef struct {
 #define DT_PPC_GOT      0x70000001      // address of Global Offset Table
 #define DT_PPC_GOTSZ    0x70000002      // size of Global Offset Table
 #define DT_PPC_PLTSZ    0x70000003      // size of Procedure Linkage Table
+#endif
 #define DT_LOPROC       0x70000000      // range of processor-defined tags
 #define DT_HIPROC       0x7FFFFFFF
 
+#if 0
 // Old dynamic tags.  Readers should handle these, writers must use the above
 
 #define DT_INIT_O       12      // address of initialization function
@@ -497,7 +507,7 @@ typedef struct {
 #define DT_ITPRTY_O     33      // relative priority of init and term to other functions
 #define DT_LOUSER_O     0x60000000      // range of user-definable tags. will not
 #define DT_HIUSER_O     0x6FFFFFFF      // conflict with system-defined tags
-                                        // Ha Ha Ha!
+#endif
 
 // description of DT_IT tag:
 // Describe type for initalization and termination of DLL
@@ -542,6 +552,7 @@ typedef struct {
 #define EOS_NEXT        8       // NEXT
 #define EOS_SYSTEM7     9       // Apple System 7
 
+#if 0
 // OS/2-specific information
 
 typedef struct {
@@ -582,6 +593,8 @@ typedef struct {
     uint_32  exp_name;
     uint_32  exp_reserved;
 } Elf32_Export;
+
+#endif
 
 // Resource header
 

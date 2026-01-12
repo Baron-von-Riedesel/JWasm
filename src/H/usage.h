@@ -33,7 +33,8 @@
 "-nc=<name>\0"       "Set class name of code segment\0"
 "-n{d|m|t}=<name>\0" "Set name of d)ata segment, m)odule or t)ext segment\0"
 #if ELF_SUPPORT
-"-nopic\0"           "disable generation of position-independent code (ELF64)\0"
+"-pic{0|1|2}\0"      "Set position-independent code level (ELF64)\0" /* v2.21 */
+"\0"                 "0=disabled, 1=pie (def), 2=pic (shared object)\0"
 #endif
 #if COCTALS
 "-o\0"              "Allow C form of octal constants\0"

@@ -150,7 +150,7 @@ struct global_options Options = {
     /* fastcall type         */     FCT_MSC,
     /* syntax check only -Zs */     FALSE,
 #if ELF_SUPPORT
-    /* -nopic; v2.21         */     FALSE,
+    /* -pic; v2.21           */     1,
 #endif
 #if MANGLERSUPP
     /* naming_convention*/          NC_DO_NOTHING,
@@ -436,6 +436,15 @@ static void OPTQUAL Set_Zi( void )
         EmitWarn( 1, INVALID_CMDLINE_VALUE, "Zi" );
 }
 
+/* v2.21: added -pic{0|1|2} cmdline option */
+static void OPTQUAL Set_pic( void )
+{
+    if ( OptValue <= 2)
+        Options.pic = OptValue;
+    else
+        EmitWarn( 1, INVALID_CMDLINE_VALUE, "pic" );
+}
+
 static void OPTQUAL Set_Zp( void )
 /********************************/
 {
@@ -665,9 +674,6 @@ static struct cmdloption const cmdl_options[] = {
 #endif
     { "nm=$",   OPTN_MODULE_NAME,   Set_n },
     { "nologo", 0,                  Set_nologo },
-#if ELF_SUPPORT
-    { "nopic",  optofs(no_pic),     Set_True },
-#endif
     { "nt=$",   OPTN_TEXT_SEG,      Set_n },
     { "omf",    OFORMAT_OMF | (SFORMAT_NONE << 8), Set_ofmt },
 #if COCTALS
@@ -675,6 +681,9 @@ static struct cmdloption const cmdl_options[] = {
 #endif
 #if PE_SUPPORT
     { "pe",     OFORMAT_BIN | (SFORMAT_PE << 8), Set_ofmt },
+#endif
+#if ELF_SUPPORT
+    { "pic=#",  0,                  Set_pic },
 #endif
 #ifdef DEBUG_OUT
     { "pm=#",   0,        Set_pm },
