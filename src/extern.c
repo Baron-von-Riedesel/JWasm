@@ -29,6 +29,8 @@
 #include "proc.h"
 #include "extern.h"
 
+#define EXTERNEXP 1 /* v2.21: syntax extension for EXTERNDEF - accept EXPORT attribute */
+
 /* Masm accepts EXTERN for internal absolute symbols:
  * X EQU 0
  * EXTERN X:ABS
@@ -231,6 +233,9 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
 #if MANGLERSUPP
     char                *mangle_type = NULL;
 #endif
+#if EXTERNEXP
+    bool                isexport;
+#endif
     struct asym         *sym;
     enum lang_type      langtype;
     char isnew;
@@ -254,6 +259,15 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
         if( tokenarray[i].token != T_ID ) {
             return( EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr ) );
         }
+#if EXTERNEXP
+        /* v2.21: syntax extension for ELF only: accept optional EXPORT attribute */
+        isexport = FALSE;
+        if ( ( Options.output_format == OFORMAT_ELF ) && ( Options.strict_masm_compat == FALSE ) && ( tokenarray[i+1].token == T_ID ) )
+            if (!_stricmp( tokenarray[i].string_ptr, "EXPORT" ) ) {
+                isexport = TRUE;
+                i++;
+            }
+#endif
         token = tokenarray[i++].string_ptr;
 
         /* go past the colon */
@@ -434,7 +448,9 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
 #endif
         }
         sym->isdefined = TRUE;
-
+#if EXTERNEXP
+        if ( isexport ) sym->isexport = TRUE; /* v2.21 */
+#endif
 #if 0
         /* write a global entry if none has been written yet */
         if ( sym->state == SYM_EXTERNAL && sym->weak == FALSE )

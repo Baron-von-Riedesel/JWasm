@@ -564,7 +564,7 @@ static void OPTQUAL Set_nbp( void )
 
 struct  cmdloption {
     const char  *name;
-    unsigned    value;
+    unsigned    value; /* default value */
     void OPTQUAL (*function)( void );
 };
 
@@ -683,7 +683,7 @@ static struct cmdloption const cmdl_options[] = {
     { "pe",     OFORMAT_BIN | (SFORMAT_PE << 8), Set_ofmt },
 #endif
 #if ELF_SUPPORT
-    { "pic=#",  0,                  Set_pic },
+    { "pic=#",  1,                  Set_pic },
 #endif
 #ifdef DEBUG_OUT
     { "pm=#",   0,        Set_pm },

@@ -1204,7 +1204,8 @@ static void write_relocs64( struct dsym *curr )
             if ( Options.pic > 1 &&
                 fixup->sym->isexport &&
                  (!(fixup->sym->mem_type & MT_SPECIAL)) &&
-                  ((struct dsym *)(fixup->sym->segment))->e.seginfo->segtype != SEGTYPE_CODE )
+                  (( fixup->sym->state == SYM_EXTERNAL) ||
+                  ((struct dsym *)(fixup->sym->segment))->e.seginfo->segtype != SEGTYPE_CODE ))
                 //elftype = R_X86_64_REX_GOTPCRELX;
                 elftype = R_X86_64_GOTPCREL;
             else if ( Options.pic > 0 && fixup->sym->mem_type == MT_NEAR )
