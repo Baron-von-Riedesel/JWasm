@@ -70,7 +70,7 @@
 <DD>     3.21 <A HREF="#SIMSEGARG">Optional Name Argument for Simplified Segment Directives</A></DD>
 <DD>     3.22 <A HREF="#ATTRCOMDAT">Segment Attribute COMDAT</A></DD>
 <DD>     3.23 <A HREF="#VARARGMLATTR">Attribute VARARGML for last Macro Parameter</A></DD>
-<DD>     3.24 <A HREF="#DIRPUBLIC">Optional EXPORT attribute for PUBLIC Directive</A></DD>
+<DD>     3.24 <A HREF="#EXPORTEXT">Optional EXPORT attribute for PUBLIC/EXTERNDEF Directives</A></DD>
 <DD>     3.25 <A HREF="#ALIGNVA">Segment attribute ALIGN() extended for Binary Format</A></DD>
 <DD>     3.26 <A HREF="#OTHERDIFF">Miscellaneous</A></DD>
 <DL>
@@ -91,8 +91,10 @@
 <DD>    6.1   <A HREF="#OUTPUTFORMATOMF">OMF Output Format</A></DD>
 <DD>    6.2   <A HREF="#OUTPUTFORMATCOFF">COFF Output Format</A></DD>
 <DD>    6.3   <A HREF="#OUTPUTFORMATWIN64">Win64 Output Format</A></DD>
-<DD>    6.4   <A HREF="#OUTPUTFORMATBIN">Binary Output Format</A></DD>
-<DD>    6.5   <A HREF="#OUTPUTFORMATPE">PE Output Format</A></DD>
+<DD>    6.4   <A HREF="#OUTPUTFORMATELF">ELF Output Format</A></DD>
+<DD>    6.5   <A HREF="#OUTPUTFORMATELF64">ELF64 Output Format</A></DD>
+<DD>    6.6   <A HREF="#OUTPUTFORMATBIN">Binary Output Format</A></DD>
+<DD>    6.7   <A HREF="#OUTPUTFORMATPE">PE Output Format</A></DD>
 </DL>
 <DD>    7.    <A HREF="#CHAPLISTINGDIFF">Listing Differences</A></DD>
 <DD>    8.    <A HREF="#CHAPMASMBUGS">Masm Bugs fixed in JWasm</A></DD>
@@ -341,7 +343,14 @@
     Option -pic0 disables position-independent code generation, -pic1 enables
     it for executables (default) and -pic2 is supposed to be used for shared objects.
     This option has an impact on the relocation type of symbol references
-    and also on the visibility of symbols in the symbol table.
+    and, as far as -pic2 is concerned, also on the visibility of symbols in the symbol
+    table.
+<P>
+    Option -pic02 will generate relocation type R_X86_64_GOTPCREL for public data
+    that is marked as <A HREF="#EXPORTEXT">EXPORT</A>. This type of relocation adds a level
+    of indirection to the memory access. No problem for C, but in assembly language this
+    cannot be handled transparently. This means, accessing the symbolic name will actually
+    address the GOT, where the real address of the item is stored.
      
 <H2 ID="CMDOPTPE">    Option -pe: Create a PE Binary </H2>
 
@@ -577,7 +586,7 @@
 <DD>      - forward references in arguments for INVOKEd procedures
 <DD>      - overrides inside square brackets for base/index registers
 <DD>      - <A HREF="#LABELARRAY">Optional Array Size</A> for LABEL Directive</DD>
-<DD>      - <A HREF="#DIRPUBLIC">Optional EXPORT attribute</A> for PUBLIC Directive</DD>
+<DD>      - <A HREF="#EXPORTEXT">Optional EXPORT attribute</A> for PUBLIC/EXTERNDEF Directives</DD>
 </DL> 
      Some directives aren't touched by this option, although Masm won't accept them:
 <DL>
@@ -1203,16 +1212,20 @@ size_myarray equ $ - myarray
     a comma.
 
 
-<H2 ID="DIRPUBLIC">    3.24 Optional EXPORT Attribute for PUBLIC Directive </H2>
+<H2 ID="EXPORTEXT">    3.24 Optional EXPORT Attribute for PUBLIC/EXTERNDEF Directives </H2>
 
-    The PUBLIC directive accepts an optional EXPORT attribute:
+    The PUBLIC ( and, for the ELF output format only, the EXTERNDEF ) directives accept an
+    optional EXPORT attribute:
 
 <P><pre><font color="#008040"> 
     PUBLIC EXPORT var1
+    EXTERNDEF EXPORT var2:type
 </font></pre><P>
 
     This extension may be used to declare data items as exports ( the PROC directive 
-    accepts the EXPORT attribute as well ). It's intended usage is mainly for option -pe.
+    accepts the EXPORT attribute as well ). It's useful for option -pe, where no link
+    step is possible, and for support of shared objects in the ELF output format, where
+    this attribute modifies the visibility - and the relocation type - of a symbol.
 
 
 <H2 ID="ALIGNVA">    3.25 Segment Attribute ALIGN() extended for BIN Format </H2>
@@ -1404,8 +1417,8 @@ size_myarray equ $ - myarray
       It's the default.</TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD><A HREF="#OUTPUTFORMATCOFF">-coff</A></TD><TD>(MS) COFF object module format, supports flat memory models only.<br>
       It's usually used for 32-bit Windows modules.</TD></TR>
-<TR BGCOLOR="#E8E8E8"><TD><A HREF="#CMDOPTELF">-elf</A></TD><TD>32-Bit ELF ("Executable and Linkable Format") object modules.</TD></TR>
-<TR BGCOLOR="#E8E8E8"><TD><A HREF="#CMDOPTELF64">-elf64</A></TD><TD>64-bit ELF object modules.</TD></TR>
+<TR BGCOLOR="#E8E8E8"><TD><A HREF="#OUTPUTFORMATELF">-elf</A></TD><TD>32-Bit ELF ("Executable and Linkable Format") object modules.</TD></TR>
+<TR BGCOLOR="#E8E8E8"><TD><A HREF="#OUTPUTFORMATELF64">-elf64</A></TD><TD>64-bit ELF object modules.</TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD><A HREF="#OUTPUTFORMATWIN64">-win64</A></TD><TD>64-bit format for Win64 object modules. COFF variant with 64-bit extensions.</TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD><A HREF="#CMDOPTDJGPP">-djgpp</A></TD><TD>COFF variant used by DJGPP.</TD></TR>
 <TR BGCOLOR="#D8D8D8"><TD><A HREF="#OUTPUTFORMATBIN">-bin</A></TD><TD>raw binary format.</TD></TR>
@@ -1590,7 +1603,32 @@ is written for more than one source file; this conforms to MASM behavior.
     <i>INVOKE Stack Space Reservation</i> has to be used.
 <P> 
 
-<H2 ID="OUTPUTFORMATBIN">    6.4 Binary Output Format </H2>
+<H2 ID="OUTPUTFORMATELF">    6.5 ELF Output Format </H2>
+
+    Position-independent code generation in 32-bit ELF is supported, but
+    may be a bit tricky sometimes, since one usually has to waste a register
+    to hold the GOT ( Global Offset Table ) address.
+<P>
+    If address of symbol _GLOBAL_OFFSET_TABLE_ is referenced in the source,
+    it will get a peculiar relocation type ( R_386_GOTPC ). The intention of this
+    hack is to address the GOT in code sections without having to patch those sections.
+<P>
+    To get other addresses in a position-independent way, one has to use the
+    SECTIONREL qualifier; section-relative offsets aren't supported in ELF, so this
+    qualifier is (re)used in this format to modify the standard relocation type
+    ( R_386_PC32 ) to a GOT-relative type ( R_386_GOTOFF ).
+    Sample Elf32/Linux6.asm is provided that demonstrates those things.
+
+<H2 ID="OUTPUTFORMATELF64">    6.5 ELF64 Output Format </H2>
+
+    With commandline option <A HREF="#CMDOPTPIC">-pic</A> one can enable
+    position-independent code generation for programs and shared objects.
+<P>
+    For support of shared objects, the PUBLIC/EXTERNDEF directives have
+    been extended to support the <A HREF="#EXPORTEXT">EXPORT</A> qualifier.
+<P>
+
+<H2 ID="OUTPUTFORMATBIN">    6.6 Binary Output Format </H2>
 
     If the binary output format has been selected, the contents of the file
     are just the raw data bytes emitted by the assembler, no header,
@@ -1639,7 +1677,7 @@ _DATA                           C      10C        12        12
     are skipped and won't become part of the binary.
 <P>
 
-<H2 ID="OUTPUTFORMATPE">    6.5 PE Output Format </H2>
+<H2 ID="OUTPUTFORMATPE">    6.7 PE Output Format </H2>
 
     The ( Windows ) PE output format ( both 32- and 64-bit ) is a binary format - 
     there's no link step supposed to follow the assembly step. Hence all references
@@ -1726,7 +1764,7 @@ _DATA                           C      10C        12        12
    These alternatives are compatible with Masm.
    </LI>
    <LI>
-   To export addresses of data items, the syntax of the <A HREF="#DIRPUBLIC">PUBLIC</A> directive has been extended.
+   To export addresses of data items, the syntax of the <A HREF="#EXPORTEXT">PUBLIC</A> directive has been extended.
    This is a JWasm extension and cannot be used with Masm.
     </LI></UL>
     If the exported names are to be undecorated, use the <A HREF="#CMDOPTZZE">-zze</A> cmdline option.

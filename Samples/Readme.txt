@@ -52,8 +52,8 @@
   Linux1.asm    Linux   elf    console  uses int 80h
   Linux2.asm    Linux   elf    console  uses glibc
   Linux3.asm    Linux   elf    GUI      uses Xlib
-  Linux4a.asm   Linux   elf    console  test for Linux4d
-  Linux4d.asm   Linux   elf             shared library
+  Linux4.asm    Linux   elf    console  runs Linux4dl.so
+  Linux4dl.asm  Linux   elf             shared library
   Linux5.asm    Linux   bin    console  no link step required
   ncurs1.asm    Linux   elf    console  ncurses sample
   FreeBSD1.asm  FreeBSD bin    console  ELF header created manually

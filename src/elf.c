@@ -28,7 +28,7 @@
 
 #if ELF_SUPPORT
 
-#define R_X86_64_REX_GOTPCRELX 0x2a /* reloc type set by gcc for shared obj */
+//#define R_X86_64_REX_GOTPCRELX 0x2a /* reloc type set by gcc for shared obj */
 
 #if DWARF_SUPP /* v2.21 */
 extern void* dwarf_create_sections( struct module_info * );
@@ -52,6 +52,9 @@ extern void* dwarf_create_sections( struct module_info * );
 
 /* use GNU extensions for LD ( 16bit and 8bit relocations ) */
 #define GNURELOCS 1
+
+/* support symbol _GLOBAL_OFFSET_TABLE_ with relocation R_386_GOTPC */
+#define GOTSYM 1
 
 #define MANGLE_BYTES 8 /* extra size required for name decoration */
 
@@ -125,6 +128,9 @@ struct elfmod {
     struct intseg internal_segs[NUM_INTSEGS];
 #if DWARF_SUPP
     void *dwarfobj;
+#endif
+#if GOTSYM
+	struct asym *symGOT;
 #endif
     union {
         Elf32_Ehdr ehdr32;
@@ -513,7 +519,7 @@ static uint_32 set_symtab64( struct elfmod *em, uint_32 entries, struct localnam
 
 		/* v2.21: set visibility */
         if ( Options.pic == 2 )
-        	p64->st_other = ( sym->isexport ? STV_DEFAULT : STV_INTERNAL );
+        	p64->st_other = ( sym->isexport ? STV_DEFAULT : STV_HIDDEN );
 
         p64->st_value = sym->offset;
 #if 1 /* v2.07: changed - to make MT_ABS obsolete */
@@ -1121,15 +1127,30 @@ static void write_relocs32( struct elfmod *em, struct dsym *curr )
     for ( fixup = curr->e.seginfo->FixupList.head; fixup; fixup = fixup->nextrlc ) {
         reloc32.r_offset = fixup->locofs;
         switch ( fixup->type ) {
-        case FIX_OFF32:         elftype = R_386_32;             break;
-        case FIX_RELOFF32:      elftype = R_386_PC32;           break;
+        case FIX_OFF32:
+#if GOTSYM /* v2.21 */
+            if ( em->symGOT && fixup->sym == em->symGOT ) 
+                elftype = R_386_GOTPC;
+            else
+#endif
+                elftype = R_386_32;
+            break;
+        case FIX_RELOFF32:
+            /* v2.21: support PLT */
+            if ( Options.pic > 0 && fixup->sym->mem_type == MT_NEAR )
+                elftype = R_386_PLT32;
+        	else
+                elftype = R_386_PC32;
+            break;
         //case FIX_???:         elftype = R_386_GOT32;          break;
         //case FIX_???:         elftype = R_386_PLT32;          break;
         //case FIX_???:         elftype = R_386_COPY;           break;
         //case FIX_???:         elftype = R_386_GLOB_DAT;       break;
         //case FIX_???:         elftype = R_386_JMP_SLOT;       break;
         case FIX_OFF32_IMGREL:  elftype = R_386_RELATIVE;       break;
+        /* v2.21: use SECTIONREL qualifier for GOTOFF relocation; */
         //case FIX_???:         elftype = R_386_GOTOFF;         break;
+        case FIX_OFF32_SECREL:  elftype = R_386_GOTOFF;         break;
         //case FIX_???:         elftype = R_386_GOTPC;          break;
 #if GNURELOCS
         case FIX_OFF16:    em->extused = TRUE; elftype = R_386_16;   break;
@@ -1360,7 +1381,9 @@ static ret_code elf_write_module( struct module_info *modinfo )
     if ( Options.line_numbers )
         em.dwarfobj = dwarf_create_sections( modinfo );
 #endif
-
+#if GOTSYM /* v2.21 */
+	em.symGOT = SymSearch("_GLOBAL_OFFSET_TABLE_");
+#endif
 
     /* position at 0 ( probably unnecessary, since there were no writes yet ) */
     fseek( CurrFile[OBJ], 0, SEEK_SET );

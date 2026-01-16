@@ -1,17 +1,17 @@
 
-;--- jwasm -elf64 -Zd -zcw Lin64_4d.asm
+;--- jwasm -elf64 -Zd -zcw -pic2 Lin64_4d.asm
 ;--- see mLin64_4.sh for linking
 
 `.note.GNU-stack` segment info
 `.note.GNU-stack` ends
 
-    .data
+	.data
 
-string  db ">string returned by Lin64_4d<",10,0
+string db ">string returned by Lin64_4d<",10,0
 
-    .code
+	.code
 
-so_getvalue proc uses rsi rdi
+so_getvalue proc export uses rsi rdi
 
 	lea rsi, string
 @@:
@@ -23,4 +23,4 @@ so_getvalue proc uses rsi rdi
 
 so_getvalue endp
 
-    end
+	end

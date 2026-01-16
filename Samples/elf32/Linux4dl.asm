@@ -1,11 +1,14 @@
 
-;--- this is the source for shared lib Linux4d.so
-;--- assemble: jwasm -elf -Fo=Linux4d.o Linux4d.asm
-;--- link:     ld -s -shared -o Linux4d.so Linux4d.o
-;--- link:     ld -s -shared -soname libLinux4d.so.1 -o libLinux4d.so.1.0 Linux4d.o
+;--- this is the source for shared lib Linux4dl.so
+;--- assemble: jwasm -elf -zcw Linux4dl.asm
+;--- link:     ld -s -shared -o Linux4dl.so Linux4dl.o
+;--- link:     ld -s -shared -soname libLinux4dl.so.1 -o libLinux4dl.so.1.0 Linux4dl.o
 
     .386
     .model flat
+
+`.note.GNU-stack` segment info
+`.note.GNU-stack` ends
 
     .data
 
@@ -25,9 +28,9 @@ getpos:
     sub ebx,5
     ret
 
-;--- return address of strings, position-independant
+;--- return address of strings, position-independent?
 
-getstring proc syscall public uses ebx a1:dword
+getstring proc c uses ebx a1:dword
 
     call getpos
     .if (a1 == 0)
@@ -46,3 +49,4 @@ start proc c public
 start endp
 
     end start
+

@@ -10,22 +10,22 @@ printf proto c :ptr byte, :vararg
 ;--- function defined in Lin64_4d.asm
 so_getvalue proto c :ptr byte
 
-    .data
+	.data
 
-string  db "start Lin64_4",10,0
+string db "start Lin64_4",10,0
 
-    .data?
+	.data?
 
 buffer db 128 dup (?)
 
-    .code
+	.code
 
 main proc
 	push rbp	;align rsp
 	lea rdi, string
 	xor eax, eax
- 	call printf
- 	lea rdi, buffer
+	call printf
+	lea rdi, buffer
 	call so_getvalue
 	xor eax, eax
 	call printf
@@ -33,4 +33,4 @@ main proc
 	ret
 main endp
 
-    end
+	end
