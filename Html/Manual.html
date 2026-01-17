@@ -333,18 +333,18 @@
     The default value for &lt;module_name&gt; is the name of the source file
     without extension.
 
-<H2 ID="CMDOPTPIC">    Option -pic: Set Position-independent Code Generation Mode (ELF64) </H2>
+<H2 ID="CMDOPTPIC">    Option -pic: Set Position-independent Code Generation Mode (ELF) </H2>
 
-    For format ELF64, position-independent code generation may be set. Syntax of 
+    For format ELF, position-independent code generation may be set. Syntax of 
     this option is:
 <DL> 
 <DD>  -pic{0|1|2}
 </DL>
-    Option -pic0 disables position-independent code generation, -pic1 enables
-    it for executables (default) and -pic2 is supposed to be used for shared objects.
-    This option has an impact on the relocation type of symbol references
-    and, as far as -pic2 is concerned, also on the visibility of symbols in the symbol
-    table.
+    Option -pic0 disables position-independent code generation support; this makes JWasm
+    behave like versions < v2.21. Option -pic1 enables it for executables (default) and
+    -pic2 is supposed to be used for shared objects. This option has an impact on the
+    relocation type of symbol references  and, as far as -pic2 is concerned, also on the
+    visibility of symbols in the symbol table.
 <P>
     Option -pic02 will generate relocation type R_X86_64_GOTPCREL for public data
     that is marked as <A HREF="#EXPORTEXT">EXPORT</A>. This type of relocation adds a level
@@ -1605,19 +1605,27 @@ is written for more than one source file; this conforms to MASM behavior.
 
 <H2 ID="OUTPUTFORMATELF">    6.5 ELF Output Format </H2>
 
-    Position-independent code generation in 32-bit ELF is supported, but
-    may be a bit tricky sometimes, since one usually has to waste a register
-    to hold the GOT ( Global Offset Table ) address.
+    With commandline option <A HREF="#CMDOPTPIC">-pic</A> one can enable
+    position-independent code generation for programs and shared objects.
+<P>
+    Position-independent code generation in 32-bit ELF may be a bit tricky
+    sometimes, since one usually has to waste a register to hold the GOT
+    ( Global Offset Table ) address.
 <P>
     If address of symbol _GLOBAL_OFFSET_TABLE_ is referenced in the source,
     it will get a peculiar relocation type ( R_386_GOTPC ). The intention of this
-    hack is to address the GOT in code sections without having to patch those sections.
+    hack is to address the GOT in code sections without using an absolute
+    address ( which would require to modify the section content depending on
+    where the image has been loaded ).
 <P>
     To get other addresses in a position-independent way, one has to use the
     SECTIONREL qualifier; section-relative offsets aren't supported in ELF, so this
-    qualifier is (re)used in this format to modify the standard relocation type
+    qualifier is (re)used in 32-bit ELF to modify the standard relocation type
     ( R_386_PC32 ) to a GOT-relative type ( R_386_GOTOFF ).
     Sample Elf32/Linux6.asm is provided that demonstrates those things.
+<P>
+    For support of shared objects, the PUBLIC/EXTERNDEF directives have
+    been extended to support the <A HREF="#EXPORTEXT">EXPORT</A> qualifier.
 
 <H2 ID="OUTPUTFORMATELF64">    6.5 ELF64 Output Format </H2>
 

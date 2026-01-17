@@ -52,16 +52,19 @@
   Linux1.asm    Linux   elf    console  uses int 80h
   Linux2.asm    Linux   elf    console  uses glibc
   Linux3.asm    Linux   elf    GUI      uses Xlib
-  Linux4.asm    Linux   elf    console  runs Linux4dl.so
-  Linux4dl.asm  Linux   elf             shared library
+  Linux4.asm    Linux   elf    console  uses Linux4dl.so
+  Linux4dl.asm  Linux   elf             shared object (non-pic)
   Linux5.asm    Linux   bin    console  no link step required
+  Linux6.asm    Linux   elf    console  pie sample
+  Linux7.asm    Linux   elf    console  uses Linux7dl.so
+  Linux7dl.asm  Linux   elf             shared object (pic)
   ncurs1.asm    Linux   elf    console  ncurses sample
   FreeBSD1.asm  FreeBSD bin    console  ELF header created manually
 
   Lin64_1.asm   Linux   elf64  console  uses syscall
   Lin64_2.asm   Linux   elf64  console  uses glibc
   Lin64_4.asm   Linux   elf64  console  calls function in Lin64_4d
-  Lin64_4d.asm  Linux   elf64  console  shared library
+  Lin64_4d.asm  Linux   elf64  console  shared object (pic)
 
   Mixed1c.c                    console  mixed-language, main
   Mixed132.asm          coff            functions for Mixed1c, 32bit

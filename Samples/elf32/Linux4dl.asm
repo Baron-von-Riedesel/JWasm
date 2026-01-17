@@ -1,8 +1,8 @@
 
 ;--- this is the source for shared lib Linux4dl.so
-;--- assemble: jwasm -elf -zcw Linux4dl.asm
-;--- link:     ld -s -shared -o Linux4dl.so Linux4dl.o
-;--- link:     ld -s -shared -soname libLinux4dl.so.1 -o libLinux4dl.so.1.0 Linux4dl.o
+;--- assemble: jwasm -elf -zcw -pic0 Linux4dl.asm
+;--- link(gcc): gcc -m32 -shared Linux4dl.o -o Linux4dl.so
+;--- link(ld): ld -s -m elf_i386 -shared -o Linux4dl.so Linux4dl.o
 
     .386
     .model flat
@@ -28,7 +28,7 @@ getpos:
     sub ebx,5
     ret
 
-;--- return address of strings, position-independent?
+;--- return address of strings, position-dependent
 
 getstring proc c uses ebx a1:dword
 

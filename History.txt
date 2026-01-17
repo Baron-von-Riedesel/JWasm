@@ -17,8 +17,13 @@
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
       to one file).
-   -  format elf64: added cmdline option -pic{0|1|2}; position-independent code
-      generation is now the default for elf64.
+   -  format elf: added cmdline option -pic{0|1|2}; position-independent code
+      generation (-pic1) is now the default for elf.
+   -  format elf: EXTERNDEF accepts optional EXPORT qualifier; this qualifier
+      modifies visibility for -pic2.
+   -  format elf32: qualifier SECTIONREL redefined for this format; will 
+      return offset relative to GOT.
+   -  format elf32: special handling of symbol _GLOBAL_OFFSET_TABLE_.
 
    01.12.2025, v2.20:
 

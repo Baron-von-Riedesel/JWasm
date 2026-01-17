@@ -331,6 +331,11 @@ static uint_32 set_symtab32( struct elfmod *em, uint_32 entries, struct localnam
 
         p32->st_name = strsize;
         p32->st_info = ELF32_ST_INFO( STB_GLOBAL, stt );
+
+		/* v2.21: set visibility */
+        if ( Options.pic == 2 )
+        	p32->st_other = ( sym->isexport ? STV_DEFAULT : STV_HIDDEN );
+
         p32->st_value = sym->offset;
 #if 1 /* v2.07: changed - to make MT_ABS obsolete */
         if ( sym->state == SYM_INTERNAL )
@@ -1131,6 +1136,12 @@ static void write_relocs32( struct elfmod *em, struct dsym *curr )
 #if GOTSYM /* v2.21 */
             if ( em->symGOT && fixup->sym == em->symGOT ) 
                 elftype = R_386_GOTPC;
+            else if ( Options.pic > 1 &&
+                fixup->sym->isexport &&
+                 (!(fixup->sym->mem_type & MT_SPECIAL)) &&
+                  (( fixup->sym->state == SYM_EXTERNAL) ||
+                  ((struct dsym *)(fixup->sym->segment))->e.seginfo->segtype != SEGTYPE_CODE ))
+                elftype = R_386_GOT32;
             else
 #endif
                 elftype = R_386_32;
@@ -1382,7 +1393,7 @@ static ret_code elf_write_module( struct module_info *modinfo )
         em.dwarfobj = dwarf_create_sections( modinfo );
 #endif
 #if GOTSYM /* v2.21 */
-	em.symGOT = SymSearch("_GLOBAL_OFFSET_TABLE_");
+	em.symGOT = Options.pic ? SymSearch("_GLOBAL_OFFSET_TABLE_") : NULL;
 #endif
 
     /* position at 0 ( probably unnecessary, since there were no writes yet ) */
