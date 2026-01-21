@@ -19,7 +19,7 @@ extra_c_flags = -DDEBUG_OUT -g
 OUTD=build/GccUnixD
 endif
 
-c_flags =-D__UNIX__ -std=gnu99 $(extra_c_flags)
+c_flags =-D__UNIX__ $(extra_c_flags)
 
 CC = gcc
 
