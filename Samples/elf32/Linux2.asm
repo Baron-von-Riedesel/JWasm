@@ -1,5 +1,5 @@
 
-;--- "hello world" for Linux which uses Libc.
+;--- "hello world" for Linux; uses glibc.
 ;--- assemble: jwasm -elf -zcw -Fo=Linux2.o Linux2.asm
 ;--- link:     gcc -s -nostartfiles -o Linux2 Linux2.o
 

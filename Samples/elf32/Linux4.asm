@@ -1,6 +1,6 @@
 
-;--- this is a test app which calls function getstring in Linux4dl.so
-;--- assemble: jwasm -elf -zcw -Fo=Linux4.o Linux4.asm
+;--- this program calls function getstring in Linux4dl.so;
+;--- assemble: jwasm -elf -zcw Linux4.asm
 ;--- link:     gcc -s -nostartfiles Linux4.o Linux4dl.so -o Linux4
 
     .386

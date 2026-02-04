@@ -806,6 +806,7 @@ next_item:  /* <--- continue scan if a comma has been detected */
                     } else if ( no_of_bytes == 10 ) {
                         //if ( opndx.hlvalue > 0xffff ) {
                         if ( opndx.hlvalue > 0xffff && opndx.hlvalue < -0xffff ) {
+                            DebugMsg(("data_item.CONST: error, no_of_bytes = 10, opndx.hlvalue=%" I32_SPEC "X\n", opndx.hlvalue));
                             return( EmitErr( INITIALIZER_MAGNITUDE_TOO_LARGE, opndx.sym ? opndx.sym->name : "" ) );
                         }
                     }

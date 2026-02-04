@@ -1,7 +1,8 @@
 
-;--- "hello world" for Linux which uses int 80h.
+;--- "hello world" for Linux; uses int 80h.
 ;--- assemble: jwasm -Fo=Linux1.o Linux1.asm
-;--- link:     wlink format ELF runtime linux file Linux1.o name Linux1.
+;--- link(wlink): wlink format ELF runtime linux file Linux1.o name Linux1.
+;--- link(gcc):   gcc Linux1.o -o Linux1
 
     .386
     .model flat

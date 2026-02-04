@@ -1,5 +1,6 @@
 
-;--- this is the source for shared lib Linux7dl.so
+;--- source for (position-independent) shared lib Linux7dl.so;
+;--- requires jwasm v2.21+;
 ;--- assemble: jwasm -elf -zcw -pic2 Linux7dl.asm
 
     .386

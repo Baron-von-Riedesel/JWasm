@@ -671,7 +671,9 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
             DebugMsg1(("get_operand(%s): structure field, ofs=%Xh\n", sym->name, sym->offset ));
 
             /* opnd->value might have been set by SearchNameInStruct() already! */
-            opnd->value += sym->offset;
+            /* v2.21: offset may be negative! value64 must be updated - see struct44.asm */
+            //opnd->value += sym->offset;
+            opnd->value64 += sym->offset;
             opnd->kind = EXPR_CONST;
             opnd->mbr = sym;
             /* skip "alias" types (probably obsolete by now!) */

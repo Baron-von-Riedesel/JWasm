@@ -29,7 +29,11 @@
 #include "proc.h"
 #include "extern.h"
 
+#if ELF_SUPPORT
 #define EXTERNEXP 1 /* v2.21: syntax extension for EXTERNDEF - accept EXPORT attribute */
+#else
+#define EXTERNEXP 0
+#endif
 
 /* Masm accepts EXTERN for internal absolute symbols:
  * X EQU 0

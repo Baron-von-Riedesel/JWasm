@@ -1,7 +1,7 @@
 
 ;--- create pie and shared object in 32-bit assembly.
-;--- calls 2 exports in Linux7dl.so;
-;--- and accesses exported data (so_data1).
+;--- calls 2 exports in Linux7dl.so; accesses exported data (so_data1).
+;--- requires jwasm v2.21+
 
     .386
     .model flat
@@ -25,8 +25,8 @@ endm
 	.const
 
 fmtstr1 db "so_func1()=>%s<",10,0
-fmtstr2 db "so_data1()=>%d<",10,0
-fmtstr3 db "so_func2() called<",10,0
+fmtstr2 db "so_data1()=%d",10,0
+fmtstr3 db "so_func2() called",10,0
 
 	.code
 

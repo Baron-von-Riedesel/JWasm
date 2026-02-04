@@ -1,5 +1,5 @@
 
-;--- this is the source for shared lib Linux4dl.so
+;--- source for (non-pic) shared object Linux4dl.so;
 ;--- assemble: jwasm -elf -zcw -pic0 Linux4dl.asm
 ;--- link(gcc): gcc -m32 -shared Linux4dl.o -o Linux4dl.so
 ;--- link(ld): ld -s -m elf_i386 -shared -o Linux4dl.so Linux4dl.o

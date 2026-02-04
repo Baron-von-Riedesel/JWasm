@@ -436,6 +436,7 @@ static void OPTQUAL Set_Zi( void )
         EmitWarn( 1, INVALID_CMDLINE_VALUE, "Zi" );
 }
 
+#if ELF_SUPPORT
 /* v2.21: added -pic{0|1|2} cmdline option */
 static void OPTQUAL Set_pic( void )
 {
@@ -444,6 +445,7 @@ static void OPTQUAL Set_pic( void )
     else
         EmitWarn( 1, INVALID_CMDLINE_VALUE, "pic" );
 }
+#endif
 
 static void OPTQUAL Set_Zp( void )
 /********************************/
@@ -614,9 +616,9 @@ static struct cmdloption const cmdl_options[] = {
 #endif
     { "D^$",    0,        Set_D },
 #if ELF_SUPPORT
-#if AMD64_SUPPORT
+# if AMD64_SUPPORT
     { "elf64",  OFORMAT_ELF | (SFORMAT_64BIT << 8), Set_ofmt },
-#endif
+# endif
     { "elf",    OFORMAT_ELF | (SFORMAT_NONE << 8), Set_ofmt },
 #endif
     { "EP",     0,        Set_EP },

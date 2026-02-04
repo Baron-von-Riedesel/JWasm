@@ -1,5 +1,5 @@
 
-;--- create pie in 32-bit assembly.
+;--- sample how to create a pie in 32-bit assembly; requires jwasm v2.21+
 ;--- assemble: jwasm -elf -zcw Linux6.asm
 
     .386

@@ -13,6 +13,8 @@
    -  operator '/': 64-bit division generally assumed signed operands, hence
       results were wrong if dividend was unsigned with bit 63 set.
    -  elf format: in symbol table, size wasn't set for data publics.
+   -  error "initializer magnitude too large" occured if the negative offset
+      of a struct member was referenced as 8-bit value; see struct44.asm.
 
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
