@@ -96,7 +96,7 @@ struct print_item {
     short type;
     short flags;
     const short *capitems;
-    void (*function)();
+    void (*function)(const struct asym *, const void *, int_32);
 };
 
 
@@ -108,13 +108,13 @@ static const short tdcap[]  = { LS_TXT_TYPEDEFS,LS_TXT_TYPEDEFCAP, 0 };
 static const short segcap[] = { LS_TXT_SEGS,    LS_TXT_SEGCAP, 0 };
 static const short prccap[] = { LS_TXT_PROCS,   LS_TXT_PROCCAP, 0 };
 
-static void log_macro(   const struct asym * );
-static void log_struct(  const struct asym *, const char *name, int_32 );
-static void log_record(  const struct asym * );
-static void log_typedef( const struct asym * );
-static void log_segment( const struct asym *, const struct asym *group );
-static void log_group(   const struct asym *, const struct dsym * );
-static void log_proc(    const struct asym * );
+static void log_macro(   const struct asym *, const void *, int_32 );
+static void log_struct(  const struct asym *, const void *, int_32 );
+static void log_record(  const struct asym *, const void *, int_32 );
+static void log_typedef( const struct asym *, const void *, int_32 );
+static void log_segment( const struct asym *, const void *, int_32 );
+static void log_group(   const struct asym *, const void *, int_32 );
+static void log_proc(    const struct asym *, const void *, int_32 );
 
 #ifdef DEBUG_OUT
 static uint_32 cntLstWrite;
@@ -573,7 +573,7 @@ static const char *get_seg_combine( const struct seg_info *seg )
     return( "?" );
 }
 
-static void log_macro( const struct asym *sym )
+static void log_macro( const struct asym *sym, const void *parm2, int_32 parm3 )
 /*********************************************/
 {
     int i = sym->name_size;
@@ -690,9 +690,11 @@ static const char *GetLanguage( const struct asym *sym )
 
 /* display STRUCTs and UNIONs */
 
-static void log_struct( const struct asym *sym, const char *name, int_32 ofs )
+static void log_struct( const struct asym *sym, const void *parm2, int_32 ofs )
 /****************************************************************************/
 {
+    const char *name = (const char *) parm2;
+
     unsigned      i;
     struct dsym   *dir;
     const char    *pdots;
@@ -749,7 +751,7 @@ static void log_struct( const struct asym *sym, const char *name, int_32 ofs )
     prefix -= 2;
 }
 
-static void log_record( const struct asym *sym )
+static void log_record( const struct asym *sym, const void *parm2, int_32 parm3 )
 /**********************************************/
 {
 #if AMD64_SUPPORT
@@ -790,7 +792,7 @@ static void log_record( const struct asym *sym )
 
 /* a typedef is a simple struct with no fields. Size might be 0. */
 
-static void log_typedef( const struct asym *sym )
+static void log_typedef( const struct asym *sym, const void *parm2, int_32 parm3 )
 /***********************************************/
 {
     //struct dsym         *dir = (struct dsym *)sym;
@@ -828,9 +830,11 @@ static void log_typedef( const struct asym *sym )
  * 2. list the groups with their segments.
  */
 
-static void log_segment( const struct asym *sym, const struct asym *group )
+static void log_segment( const struct asym *sym, const void *parm2, int_32 parm3 )
 /*************************************************************************/
 {
+    const struct asym *group = (const struct asym *) parm2;
+
     char buffer[32];
     struct seg_info *seg = ((struct dsym *)sym)->e.seginfo;
 
@@ -861,9 +865,11 @@ static void log_segment( const struct asym *sym, const struct asym *group )
     }
 }
 
-static void log_group( const struct asym *grp, const struct dsym *segs )
+static void log_group( const struct asym *grp, const void *parm2, int_32 parm3 )
 /**********************************************************************/
 {
+    const struct dsym *segs = (const struct dsym *)parm2;
+
     unsigned i;
     const char *pdots;
     struct seg_item *curr;
@@ -878,12 +884,12 @@ static void log_group( const struct asym *grp, const struct dsym *segs )
     if ( grp == (struct asym *)ModuleInfo.g.flat_grp ) {
         DebugMsg(("log_group: def. flat group (%p), scan all segments\n", ModuleInfo.g.flat_grp ));
         for( ; segs; segs = segs->next ) {
-            log_segment( (struct asym *)segs, grp );
+            log_segment( (struct asym *)segs, grp, 0 );
         }
     } else {
         DebugMsg(("log_group: group %s (%p)\n", grp->name, grp ));
         for( curr = ((struct dsym *)grp)->e.grpinfo->seglist; curr; curr = curr->next ) {
-            log_segment( (struct asym *)curr->seg, grp );
+            log_segment( (struct asym *)curr->seg, grp, 0 );
         }
     }
 }
@@ -933,7 +939,7 @@ static char *GetDllName( const struct asym *sym )
 
 /* list Procedures and Prototypes */
 
-static void log_proc( const struct asym *sym )
+static void log_proc( const struct asym *sym, const void *parm2, int_32 parm3 )
 /********************************************/
 {
     struct dsym *f;
@@ -1088,7 +1094,7 @@ static void log_proc( const struct asym *sym )
 
 /* list symbols */
 
-static void log_symbol( const struct asym *sym )
+static void log_symbol( const struct asym *sym, const void *parm2, int_32 parm3 )
 /**********************************************/
 {
     int i = sym->name_size;
@@ -1284,7 +1290,7 @@ void LstWriteCRef( void )
     for( i = 0; i < SymCount; ++i ) {
         if ( syms[i]->list == TRUE && syms[i]->isproc == FALSE ) {
             DebugMsg(("LstWriteCRef: log_symbol( %s )\n", syms[i]->name ));
-            log_symbol( syms[i] );
+            log_symbol( syms[i], NULL, 0 );
         }
 #ifdef DEBUG_OUT
         else
