@@ -155,6 +155,8 @@ static const char mzcode[] = {
 };
 
 #define PE_UNDEF_BASE 0xffffffff
+#define PE_DEF_STACK_RSVD 0x100000
+
 #define PE32_DEF_BASE_EXE 0x400000
 #define PE32_DEF_BASE_DLL 0x10000000
 
@@ -171,7 +173,7 @@ static const struct IMAGE_PE_HEADER32 pe32def = {
     4,0,0,0,4,0,     /* OSversion maj/min, Imagevers maj/min, Subsystemvers maj/min */
     0,0,0,0,         /* Win32vers, sizeofimage, sizeofheaders, checksum */
     IMAGE_SUBSYSTEM_WINDOWS_CUI,0,  /* subsystem, dllcharacteristics */
-    0x100000,0x1000, /* sizeofstack reserve/commit */
+    PE_DEF_STACK_RSVD,0x1000, /* sizeofstack reserve/commit */
     0x100000,0x1000, /* sizeofheap reserve/commit */
     0, IMAGE_NUMBEROF_DIRECTORY_ENTRIES, /* loaderflags, numberofRVAandSizes */
     }
@@ -194,7 +196,7 @@ static const struct IMAGE_PE_HEADER64 pe64def = {
     4,0,0,0,4,0,     /* OSversion maj/min, Imagevers maj/min, Subsystemvers maj/min */
     0,0,0,0,         /* Win32vers, sizeofimage, sizeofheaders, checksum */
     IMAGE_SUBSYSTEM_WINDOWS_CUI,0,  /* subsystem, dllcharacteristics */
-    0x100000,0x1000, /* sizeofstack reserve/commit */
+    PE_DEF_STACK_RSVD,0x1000, /* sizeofstack reserve/commit */
     0x100000,0x1000, /* sizeofheap reserve/commit */
     0, IMAGE_NUMBEROF_DIRECTORY_ENTRIES, /* loaderflags, numberofRVAandSizes */
     }
@@ -1665,33 +1667,58 @@ static int pe_lnkcmd_subsystem( union pexx pe, char *buffer )
     return( -1 );
 }
 
-static int pe_lnkcmd_base( union pexx pe, char *buffer )
-/******************************************************/
+static int StoreNum6432( char *buffer, void *pi)
+/**********************************************/
 {
     uint_64 num[2];
+
     int i = strlen(buffer);
     if ( !_memicmp( buffer, "0x", 2 ) ) {
         myatoi128( buffer+2, num, 16, i - 2 );
     } else
         myatoi128( buffer, num, 10, i );
 
-    /* base != 0, fits in 64-bits, page aligned? */
+    /* num != 0, fits in 64-bits, page aligned? */
     if ( num[0] == 0 || num[1] || ( num[0] & 0xfff ) )
         return( 1 );
 
 #if AMD64_SUPPORT
     if ( ModuleInfo.defOfssize == USE64 )
-        pe.pe64->OptionalHeader.ImageBase = num[0];
+        *(uint_64 *)pi = num[0];
     else
 #endif
     {
         if ( num[0] > 0xfffff000 )
             return( 1 );
-        pe.pe32->OptionalHeader.ImageBase = (uint_32)num[0];
+        *(uint_32 *)pi = (uint_32)num[0];
     }
 
     return( 0 );
 }
+
+static int pe_lnkcmd_base( union pexx pe, char *buffer )
+/******************************************************/
+{
+#if AMD64_SUPPORT
+    if ( ModuleInfo.defOfssize == USE64 )
+        return( StoreNum6432( buffer,  &pe.pe64->OptionalHeader.ImageBase ));
+    else
+#endif
+        return( StoreNum6432( buffer, &pe.pe32->OptionalHeader.ImageBase ));
+}
+
+#if 0 /* v2.21: -stack:xxx option; not active since .stack directive now also sets rsvd stack space */
+static int pe_lnkcmd_stack( union pexx pe, char *buffer )
+/*******************************************************/
+{
+#if AMD64_SUPPORT
+    if ( ModuleInfo.defOfssize == USE64 )
+        return( StoreNum6432( buffer, &pe.pe64->OptionalHeader.SizeOfStackReserve ));
+    else
+#endif
+        return( StoreNum6432( buffer, &pe.pe32->OptionalHeader.SizeOfStackReserve ));
+}
+#endif
 
 static int pe_lnkcmd_fixed( union pexx pe, char *buffer )
 /*******************************************************/
@@ -1751,6 +1778,7 @@ static struct linkcmd_s const linkcmds[] = {
     { "largeaddressaware:no", pe_lnkcmd_largeaddressawareno },
     //{ "stub:", pe_lnkcmd_stub },
     { "subsystem:", pe_lnkcmd_subsystem },
+    //{ "stack:", pe_lnkcmd_stack }, /* v2.21: not active */
 };
 
 /* pe_scan_linker_directives() - called by pe_set_values() */
@@ -1830,9 +1858,24 @@ static void pe_set_values( struct calc_param *cp )
     pe.pe32 = ( struct IMAGE_PE_HEADER32 *)pehdr->e.seginfo->CodeBuffer;
 
     /* v2.19: first, handle ".drectve" info sections */
-    for ( curr = SymTables[TAB_SEG].head, i = -1; curr; curr = curr->next ) {
+    for ( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
         if ( curr->e.seginfo->information && ( !strcmp( curr->sym.name, ".drectve" ) ) )
             pe_scan_linker_directives( pe, (char *)curr->e.seginfo->CodeBuffer, curr->e.seginfo->bytes_written );
+
+        /* v2.21: if uninitialized stack segment exists, use its size as "reserved" stack space */
+        if ( curr->e.seginfo->segtype == SEGTYPE_STACK && curr->e.seginfo->bytes_written == 0 ) {
+#if AMD64_SUPPORT
+            if ( ModuleInfo.defOfssize == USE64 ) {
+                if ( pe.pe64->OptionalHeader.SizeOfStackReserve == PE_DEF_STACK_RSVD )
+                    pe.pe64->OptionalHeader.SizeOfStackReserve = curr->sym.max_offset;
+            } else
+#endif
+                if ( pe.pe32->OptionalHeader.SizeOfStackReserve == PE_DEF_STACK_RSVD )
+                    pe.pe32->OptionalHeader.SizeOfStackReserve = curr->sym.max_offset;
+            curr->sym.max_offset = 0;
+            curr->e.seginfo->information = 1;
+        }
+
     }
 
     /* make sure all header objects are in FLAT group */
@@ -1972,6 +2015,7 @@ static void pe_set_values( struct calc_param *cp )
             }
             continue;
         }
+
         if ( curr->e.seginfo->lname_idx != i ) {
             /* v2.13: section finish & increment now done here */
             if ( unfinishedSection ) {
@@ -1997,11 +2041,9 @@ static void pe_set_values( struct calc_param *cp )
         else
             section->Characteristics |= pe_get_characteristics( curr );
 
-		/* v2.19: also handle uninitialized stack segments */
-		//if ( curr->e.seginfo->segtype != SEGTYPE_BSS ) {
-		if ( curr->e.seginfo->segtype == SEGTYPE_BSS || ( curr->e.seginfo->segtype == SEGTYPE_STACK && curr->e.seginfo->bytes_written == 0 ))
-			;
-		else
+        if ( curr->e.seginfo->segtype == SEGTYPE_BSS )
+            ;
+        else
             section->SizeOfRawData += curr->sym.max_offset;
 
         /* v2.10: this calculation is not correct */

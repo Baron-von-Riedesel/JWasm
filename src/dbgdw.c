@@ -192,8 +192,8 @@ static void dwarf_set_abbrev( struct dwarfobj *obj, struct dsym *curr )
 typedef int dw_addr_delta;
 typedef int dw_sconst;
 
-unsigned char *LEB128( unsigned char *buf, dw_sconst value )
-/**********************************************************/
+static unsigned char *LEB128( unsigned char *buf, dw_sconst value )
+/*****************************************************************/
 {
     unsigned char byte;
 

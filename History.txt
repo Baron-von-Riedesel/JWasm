@@ -14,7 +14,8 @@
       results were wrong if dividend was unsigned with bit 63 set.
    -  elf format: in symbol table, size wasn't set for data publics.
    -  error "initializer magnitude too large" occured if the negative offset
-      of a struct member was referenced as 8-bit value; see struct44.asm.
+      of a struct member was referenced as 8-bit value; see struct44.asm &
+      struct45.asm.
 
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
@@ -26,6 +27,8 @@
    -  format elf32: qualifier SECTIONREL redefined for this format; will 
       return offset relative to GOT.
    -  format elf32: special handling of symbol _GLOBAL_OFFSET_TABLE_.
+   -  option -pe: .stack directive will set reserved stack space in PE header.
+   -  option -?: exit with errorcode 0 instead of 1.
 
    01.12.2025, v2.20:
 
