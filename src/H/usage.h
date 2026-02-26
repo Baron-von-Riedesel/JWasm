@@ -52,7 +52,7 @@
 "-Sz\0"             "Suppress assembly result in listing\0" /* v2.13 */
 #endif
 "-w\0"              "Same as /W0 /WX\0"
-"-W<number>\0"      "Set warning level number (default=2, max=4)\0"
+"-W{0|..|4}\0"      "Set warning level (default 2)\0"
 "-WX\0"             "Treat all warnings as errors\0"
 "-X\0"              "Ignore INCLUDE environment path\0"
 "-zcm\0"            "C names are decorated with '_' prefix (default)\0"

@@ -530,7 +530,9 @@ static void OPTQUAL Set_zf( void )  { Options.fctype = OptValue; }
 
 static void OPTQUAL Set_zt( void ) { Options.stdcall_decoration = OptValue; }
 #ifndef __SW_BD
-static void OPTQUAL Set_h( void ) {  PrintUsage();  exit(1); }
+/* v2.24: return 0 for -? option */
+//static void OPTQUAL Set_h( void ) {  PrintUsage();  exit(1); }
+static void OPTQUAL Set_h( void ) {  PrintUsage();  exit(0); }
 #endif
 
 #ifdef DEBUG_OUT
