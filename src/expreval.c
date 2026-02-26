@@ -490,6 +490,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                          */
                         //if ( opnd->type != nullstruct )
                         sym = NULL;
+                        DebugMsg1(("get_operand(%s): sym cleared\n" ));
                     }
                 }
 #if 1 /* v2.18: avoid an undefined symbol is created inside the next "if()" */
@@ -674,6 +675,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
             /* v2.21: offset may be negative! value64 must be updated - see struct44.asm */
             //opnd->value += sym->offset;
             opnd->value64 += sym->offset;
+            opnd->is_signed = (sym->offset < 0);  /* v2.21: added */
             opnd->kind = EXPR_CONST;
             opnd->mbr = sym;
             /* skip "alias" types (probably obsolete by now!) */
@@ -817,7 +819,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
         return( ERROR );
     }
     (*idx)++;
-    DebugMsg1(("%u get_operand exit, ok, kind=%d value=%" I64_SPEC "X hvalue=%" I64_SPEC "X mem_type=%Xh abs=%u string=%s is_type=%u type=>%s< sym=%s mbr=%s\n",
+    DebugMsg1(("%u get_operand exit, ok, kind=%d value=%" I64_SPEC "Xh hvalue=%" I64_SPEC "Xh mem_type=%Xh abs=%u string=%s is_type=%u type=>%s< sym=%s mbr=%s\n",
                evallvl, opnd->kind, opnd->llvalue, opnd->hlvalue, opnd->mem_type, opnd->is_abs,
                opnd->quoted_string ? opnd->quoted_string->string_ptr : "NULL",
                opnd->is_type, opnd->type ? opnd->type->name : "NULL",
@@ -2035,7 +2037,7 @@ static ret_code dot_op( struct expr *opnd1, struct expr *opnd2 )
 {
     /* this code needs cleanup! some stuff is obsolete. */
 
-    DebugMsg1(("dot_op: op1-op2 kind=%d/%d value=%u/%u sym=%s-%s type=%s-%s mbr=%s-%s\n",
+    DebugMsg1(("dot_op: op1-op2 kind=%d/%d value=%d/%d sym=%s-%s type=%s-%s mbr=%s-%s\n",
                opnd1->kind, opnd2->kind,
                opnd1->value, opnd2->value,
                opnd1->sym  ? opnd1->sym->name  : "NULL",
@@ -2195,7 +2197,7 @@ static ret_code dot_op( struct expr *opnd1, struct expr *opnd2 )
 
     } else if ( opnd1->kind == EXPR_CONST && opnd2->kind == EXPR_CONST ) {
 
-        DebugMsg1(("dot_op, CONST - CONST, t1-t2 value=%u-%u, memtype=%Xh-%Xh istype=%u-%u\n",
+        DebugMsg1(("dot_op, CONST - CONST, t1-t2 value=%d/%d, memtype=%Xh-%Xh istype=%u-%u\n",
                    opnd1->value, opnd2->value, opnd1->mem_type, opnd2->mem_type, opnd1->is_type, opnd2->is_type));
         if ( opnd2->mbr == NULL && !ModuleInfo.oldstructs ) {
             DebugMsg(("dot_op: error, opnd2.mbr=NULL\n" ));
@@ -2213,6 +2215,7 @@ static ret_code dot_op( struct expr *opnd1, struct expr *opnd2 )
                 opnd1->llvalue = opnd2->llvalue;
             }
             opnd1->mbr = opnd2->mbr;
+            opnd1->is_signed = opnd2->is_signed; /* v2.21: added */
             /* v2.0: copy mem_type (test case: mov ds:[<struct>.<mbr>], 123) */
             opnd1->mem_type = opnd2->mem_type;
             /* v2.05: removed, it's still a type constant */
@@ -2231,6 +2234,8 @@ static ret_code dot_op( struct expr *opnd1, struct expr *opnd2 )
             opnd1->mbr = opnd2->mbr;
             opnd1->mem_type = opnd2->mem_type;
         }
+        DebugMsg1(("dot_op: value=%d, memtype=%Xh, istype=%u, type=%s, mbr=%s\n",
+                   opnd1->value, opnd1->mem_type, opnd1->is_type, opnd1->type ? opnd1->type->name : "NULL", opnd1->mbr ? opnd1->mbr->name : "NULL" ));
     } else {
         DebugMsg(("dot_op: error, unknown kind combination, opnd1->kind=%d, opnd2->kind=%d\n", opnd1->kind, opnd2->kind ));
         return( struct_field_error( opnd1 ) );
@@ -2372,7 +2377,7 @@ static ret_code colon_op( struct expr *opnd1, struct expr *opnd2 )
 static ret_code positive_op( struct expr *opnd1, struct expr *opnd2 )
 /*******************************************************************/
 {
-    DebugMsg1(("positive_op: value=%" I64_SPEC "X high=%" I64_SPEC "X\n", opnd2->llvalue, opnd2->hlvalue ));
+    DebugMsg1(("positive_op: value=%" I64_SPEC "Xh high=%" I64_SPEC "Xh\n", opnd2->llvalue, opnd2->hlvalue ));
     /*
      * The formats allowed are:
      *        + constant
@@ -2400,7 +2405,7 @@ static ret_code positive_op( struct expr *opnd1, struct expr *opnd2 )
 static ret_code negative_op( struct expr *opnd1, struct expr *opnd2 )
 /*******************************************************************/
 {
-    DebugMsg1(("negative_op: value=%" I64_SPEC "X high=%" I64_SPEC "X\n", opnd2->llvalue, opnd2->hlvalue ));
+    DebugMsg1(("negative_op: value=%" I64_SPEC "Xh high=%" I64_SPEC "Xh\n", opnd2->llvalue, opnd2->hlvalue ));
     /*
      * The formats allowed are:
      *        - constant

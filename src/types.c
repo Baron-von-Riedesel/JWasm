@@ -113,7 +113,7 @@ struct asym *SearchNameInStruct( const struct asym *tstruct, const char *name, u
                 }
             }
         } else if ( len == fl->sym.name_size && SymCmpFunc( name, fl->sym.name, len ) == 0 ) {
-            DebugMsg(("SearchNameInStruct: '%s' found in struct %s\n", name, tstruct->name ));
+            DebugMsg1(("SearchNameInStruct: '%s' found in struct %s\n", name, tstruct->name ));
             sym = &fl->sym;
             break;
         }

@@ -773,7 +773,7 @@ next_item:  /* <--- continue scan if a comma has been detected */
             }
         } else {
             /* it's NOT a string */
-            DebugMsg1(("data_item.CONST: const found, value=%" I32_SPEC "Xh, no_of_bytes=%u, curr_ofs=%" I32_SPEC "X\n", opndx.value, no_of_bytes, GetCurrOffset()));
+            DebugMsg1(("data_item.CONST: const found, value=%" I64_SPEC "Xh, no_of_bytes=%u, curr_ofs=%" I32_SPEC "X\n", opndx.value64, no_of_bytes, GetCurrOffset()));
             if( !inside_struct ) {
                 /* the evaluator cannot handle types with size > 16.
                  * so if a (simple) type is larger ( YMMWORD? ),
@@ -797,11 +797,18 @@ next_item:  /* <--- continue scan if a comma has been detected */
                      * 1-8 and 10 bytes instead of just 1-4.
                      */
                     if ( no_of_bytes <= sizeof( int_64 ) ) {
+                        /* v2.21: if it's a signed value, check sign bit; see struct44.asm & struct45.asm;
+                         *        check restricted to memtype != MT_EMPTY (struct fields, ...); data12.asm;
+                         */
+                        if ( opndx.is_signed && opndx.mem_type != MT_EMPTY && no_of_bytes < 8 && ((opndx.chararray[no_of_bytes - 1] & 0x80) != (opndx.chararray[no_of_bytes] & 0x80))) {
+                            DebugMsg(("data_item.CONST, signed=1: error, offset won't fit in %u bytes\n", no_of_bytes ));
+                            return( opndx.sym ? EmitErr( INITIALIZER_MAGNITUDE_TOO_LARGE, opndx.sym->name) : EmitErr( MAGNITUDE_TOO_LARGE_FOR_SPECIFIED_SIZE ) );
+                        }
                         tmp = ( opndx.chararray[7] < 0x80 ? 0 : 0xFF );
                         memset( opndx.chararray, tmp, no_of_bytes );
                         if ( opndx.llvalue != 0 && opndx.llvalue != -1 ) {
                             DebugMsg(("data_item.CONST: error, unhandled data is %" I64_SPEC "X_%016" I64_SPEC "X\n", opndx.hlvalue, opndx.llvalue));
-                            return( EmitErr( INITIALIZER_MAGNITUDE_TOO_LARGE, opndx.sym ? opndx.sym->name : "" ) );
+                            return( opndx.sym ? EmitErr( INITIALIZER_MAGNITUDE_TOO_LARGE, opndx.sym->name) : EmitErr( MAGNITUDE_TOO_LARGE_FOR_SPECIFIED_SIZE ) );
                         }
                     } else if ( no_of_bytes == 10 ) {
                         //if ( opndx.hlvalue > 0xffff ) {
