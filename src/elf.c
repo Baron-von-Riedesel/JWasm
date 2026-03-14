@@ -11,6 +11,9 @@
 #include <ctype.h>
 #include <time.h>
 #include <stddef.h>
+#ifdef DEBUG_OUT
+#include <stdio.h>
+#endif
 
 #include "globals.h"
 #include "memalloc.h"
@@ -331,6 +334,12 @@ static uint_32 set_symtab32( struct elfmod *em, uint_32 entries, struct localnam
 
         p32->st_name = strsize;
         p32->st_info = ELF32_ST_INFO( STB_GLOBAL, stt );
+#if 0 /* STB_ENTRY is OW specific, not defined in ELF */
+        if ( sym == ModuleInfo.g.start_label ) {
+            DebugMsg(("set_symtab32: start label %s\n", sym->name ));
+            p32->st_info = ELF32_ST_INFO( STB_ENTRY, stt );
+        }
+#endif
 
 		/* v2.21: set visibility */
         if ( Options.pic == 2 )
@@ -1242,8 +1251,10 @@ static void write_relocs64( struct dsym *curr )
                 elftype = R_X86_64_GOTPCREL;
             else if ( Options.pic > 0 && fixup->sym->mem_type == MT_NEAR )
                 elftype = R_X86_64_PLT32;
-            else
+            else {
                 elftype = R_X86_64_PC32;
+                reloc64.r_addend += (int_32)fixup->offset;  /* v2.21: symbol may be accessed with an addend; see elf2.asm */  
+            }
             break;
         case FIX_OFF64:
 #if 1

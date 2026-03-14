@@ -280,7 +280,7 @@ typedef struct {
 #define STB_LOCAL       0       // symbol has local binding
 #define STB_GLOBAL      1       // symbol has global binding
 #define STB_WEAK        2       // symbol has weak binding
-#define STB_ENTRY       12      // symbol is entry-point for the load module
+#define STB_ENTRY       12      // symbol is entry-point for the load module (OW specific!)
 #define STB_LOPROC      13      // processor specific semantics
 #define STB_HIPROC      15
 

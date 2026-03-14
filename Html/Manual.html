@@ -346,8 +346,8 @@
     relocation type of symbol references  and, as far as -pic2 is concerned, also on the
     visibility of symbols in the symbol table.
 <P>
-    Option -pic02 will generate relocation type R_X86_64_GOTPCREL for public data
-    that is marked as <A HREF="#EXPORTEXT">EXPORT</A>. This type of relocation adds a level
+    Option -pic2 will generate relocation type R_386_GOT32 (ELF32) / R_X86_64_GOTPCREL (ELF64)
+    for public data that is marked as <A HREF="#EXPORTEXT">EXPORT</A>. This type of relocation adds a level
     of indirection to the memory access. No problem for C, but in assembly language this
     cannot be handled transparently. This means, accessing the symbolic name will actually
     address the GOT, where the real address of the item is stored.
@@ -2240,29 +2240,11 @@ instruction mnemonics are also Reserved Words.
 <TABLE CELLSPACING="1">
 <TR><TD>
 <TABLE CELLPADDING="4" CELLSPACING="1">
-<TR BGCOLOR="#D8D8DC"><TD>BYTE   </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>SBYTE  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>WORD   </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>SWORD  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>DWORD  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>SDWORD </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>REAL4  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>FWORD  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>QWORD  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>SQWORD </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>REAL8  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>TBYTE  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>REAL10 </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>OWORD  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>YMMWORD</TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>NEAR   </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>FAR    </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>NEAR16 </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>NEAR32 </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>FAR16  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>FAR32  </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>MMWORD </TD></TR>
-<TR BGCOLOR="#D8D8DC"><TD>XMMWORD</TD></TR>
+<TR BGCOLOR="#D8D8DC"><TD>BYTE   </TD><TD>SBYTE  </TD><TD>WORD   </TD><TD>SWORD  </TD><TD>DWORD  </TD><TD>SDWORD </TD></TR>
+<TR BGCOLOR="#D8D8DC"><TD>FWORD  </TD><TD>QWORD  </TD><TD>SQWORD </TD><TD>TBYTE  </TD><TD>OWORD  </TD></TR>
+<TR BGCOLOR="#D8D8DC"><TD>REAL4  </TD><TD>REAL8  </TD><TD>REAL10 </TD></TR>
+<TR BGCOLOR="#D8D8DC"><TD>MMWORD </TD><TD>XMMWORD</TD><TD>YMMWORD</TD></TR>
+<TR BGCOLOR="#D8D8DC"><TD>NEAR   </TD><TD>FAR    </TD><TD>NEAR16 </TD><TD>NEAR32 </TD><TD>FAR16  </TD><TD>FAR32  </TD></TR>
 </TABLE>
 </TD></TR>
 </TABLE>

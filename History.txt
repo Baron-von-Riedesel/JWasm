@@ -16,6 +16,8 @@
    -  error "initializer magnitude too large" occured if the negative offset
       of a struct member was referenced as 8-bit value; see struct44.asm &
       struct45.asm.
+   -  option -elf64: addends calculation wrong if explicitely defined; see
+      elf2.asm.
 
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
