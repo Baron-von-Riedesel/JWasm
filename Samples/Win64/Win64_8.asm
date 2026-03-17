@@ -338,7 +338,11 @@ size_m1_l1 equ $ - m1_l1_data
 ;--- data for bitmap IDR_BITMAP1
 bm1_l1 IMAGE_RESOURCE_DATA_ENTRY <IMAGEREL bm1_l1_data, size_bm1_l1, 0, 0>
 bm1_l1_data label word
+ifnb <INCBIN>
+%   incbin <INCBIN/Win32_8.bmp>,14	;skip bitmap file header
+else
     incbin <Win32_8.bmp>,14	;skip bitmap file header
+endif
 size_bm1_l1 equ $ - ( bm1_l1_data )
 
 .rsrc ends
