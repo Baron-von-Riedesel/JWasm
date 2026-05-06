@@ -538,8 +538,8 @@ static uint_32 coff_write_symbols( struct module_info *modinfo, struct coffmod *
 
     for( curr = SymTables[TAB_EXT].head ; curr != NULL ;curr = curr->next ) {
         /* skip "weak" (=unused) externdefs */
-        if ( curr->sym.iscomm == FALSE && curr->sym.weak == TRUE ) {
-            DebugMsg(("coff_write_symbols(EXT+COMM): %s skipped, referenced=%u, comm=%u, weak=%u\n", curr->sym.name, curr->sym.referenced, curr->sym.iscomm, curr->sym.weak ));
+        if ( curr->sym.iscomm == FALSE && curr->sym.isweak == TRUE ) {
+            DebugMsg(("coff_write_symbols(EXT+COMM): %s skipped, referenced=%u, comm=%u, weak=%u\n", curr->sym.name, curr->sym.referenced, curr->sym.iscomm, curr->sym.isweak ));
             continue;
         }
         len = Mangle( &curr->sym, buffer );
@@ -854,7 +854,7 @@ static uint_32 SetSymbolIndices( struct module_info *ModuleInfo, struct coffmod 
 
     /* count externals and protos */
     for( curr = SymTables[TAB_EXT].head ; curr != NULL ; curr = curr->next ) {
-        if ( curr->sym.iscomm == FALSE && curr->sym.weak == TRUE )
+        if ( curr->sym.iscomm == FALSE && curr->sym.isweak == TRUE )
             continue;
         curr->sym.ext_idx = index++;
         /* weak externals need an additional aux entry */

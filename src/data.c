@@ -1331,7 +1331,7 @@ ret_code data_dir( int i, struct asm_tok tokenarray[], struct asym *type_sym )
 
             if( Parse_Pass == PASS_1 ) {
 
-                if ( sym->state == SYM_EXTERNAL && sym->weak == TRUE && sym->isproc == FALSE ) { /* EXTERNDEF? */
+                if ( sym->state == SYM_EXTERNAL && sym->isweak == TRUE && sym->isproc == FALSE ) { /* EXTERNDEF? */
 
                     //if ( checktypes( sym, mem_type, type_sym ) == ERROR )
                     //    return( ERROR );

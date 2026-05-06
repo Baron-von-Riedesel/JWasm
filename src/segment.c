@@ -175,6 +175,8 @@ char *GetLname( int idx )
 }
 #endif
 
+/* AddLnameItem(): called for groups, segments, class names */
+
 static void AddLnameItem( struct asym *sym )
 /******************************************/
 {
@@ -445,7 +447,7 @@ ret_code GrpDir( int i, struct asm_tok tokenarray[] )
         if ( Parse_Pass == PASS_1 ) {
             if( seg == NULL || seg->sym.state == SYM_UNDEFINED ) {
                 seg = CreateSegment( seg, name, TRUE );
-                DebugMsg1(("GrpDir: segment >%s< created\n", name ));
+                DebugMsg1(("GrpDir(%s): segment >%s< created\n", grp->sym.name, name ));
                 /* inherit the offset magnitude from the group */
                 if ( grp->e.grpinfo->seglist ) {
                     seg->e.seginfo->Ofssize = grp->sym.Ofssize;
@@ -457,15 +459,26 @@ ret_code GrpDir( int i, struct asm_tok tokenarray[] )
                     seg->e.seginfo->Ofssize = USE_EMPTY;
                 }
             } else if( seg->sym.state != SYM_SEG ) {
+                DebugMsg1(("GrpDir(%s): symbol >%s< not a segment\n", grp->sym.name, name ));
                 return( EmitErr( SEGMENT_EXPECTED, name ) );
             } else if( seg->e.seginfo->group != NULL &&
                       /* v2.09: allow segments in FLAT magic group be moved to a "real" group */
                       seg->e.seginfo->group != &ModuleInfo.g.flat_grp->sym &&
                       seg->e.seginfo->group != &grp->sym ) {
                 /* segment is in another group */
-                DebugMsg(("GrpDir: segment >%s< is in group >%s< already\n", name, seg->e.seginfo->group->name));
+                DebugMsg(("GrpDir(%s): segment >%s< is in group >%s< already\n", grp->sym.name, name, seg->e.seginfo->group->name));
                 return( EmitErr( SEGMENT_IN_ANOTHER_GROUP, name ) );
             }
+#if COMDATOMFSUPP
+            else if ( seg->e.seginfo->comdat_selection ) { /* no COMDAT segments accepted */
+                DebugMsg1(("GrpDir(%s): segment %s is COMDAT\n", grp->sym.name, name ));
+                return( EmitErr( SEGMENT_EXPECTED, name ) );
+            }
+#endif
+#ifdef DEBUG_OUT
+            else
+                DebugMsg1(("GrpDir(%s): segment %s added\n", grp->sym.name, name ));
+#endif
             /* the first segment will define the group's word size */
             /* v2.14: set the group's word size until it's != USE_EMPTY */
             //if( grp->e.grpinfo->seglist == NULL ) {
@@ -1176,9 +1189,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 #if COMDATSUPP
         case INIT_COMBINE_COMDAT:
             DebugMsg1(("SegmentDir(%s): COMDAT found\n", name ));
-            /* v2.12: COMDAT supported by OMF */
-            //if ( Options.output_format != OFORMAT_COFF ) {
-            if ( Options.output_format != OFORMAT_COFF && Options.output_format != OFORMAT_OMF ) {
+            if ( Options.output_format != OFORMAT_COFF ) {
                 rc = EmitErr( NOT_SUPPORTED_WITH_CURR_FORMAT, tokenarray[i].string_ptr );
                 break;
             }
@@ -1194,40 +1205,44 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
                 rc = EmitError( CONSTANT_EXPECTED );
                 break;
             }
+
             if ( opndx.value < 1 || opndx.value > 6 ) {
                 EmitErr( VALUE_NOT_WITHIN_ALLOWED_RANGE, "1-6" );
-            } else {
-                /* if value is IMAGE_COMDAT_SELECT_ASSOCIATIVE,
-                 * get the associated segment name argument.
-                 */
-                if ( opndx.value == 5 ) {
-                    struct asym *sym2;
-                    if ( tokenarray[i].token != T_COMMA ) {
-                        rc = EmitErr( EXPECTING_COMMA, tokenarray[i].tokpos );
-                        break;
-                    }
-                    i++;
-                    if ( tokenarray[i].token != T_ID ) {
-                        rc = EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr );
-                        break;
-                    }
-                    /* associated segment must be COMDAT, but not associative */
-                    sym2 = SymSearch( tokenarray[i].string_ptr );
-                    if ( sym2 == NULL ||
-                        sym2->state != SYM_SEG ||
-                        ((struct dsym *)sym2)->e.seginfo->comdat_selection == 0 ||
-                        ((struct dsym *)sym2)->e.seginfo->comdat_selection == 5 )
-                        EmitErr( INVALID_ASSOCIATED_SEGMENT, tokenarray[i].string_ptr );
-                    else
-                        dir->e.seginfo->comdat_number = ((struct dsym *)sym2)->e.seginfo->seg_idx;
-                    i++;
-                }
+                break;
             }
+
+            dir->e.seginfo->comdat_selection = opndx.value;
+
+            /* if value is IMAGE_COMDAT_SELECT_ASSOCIATIVE,
+             * get the associated segment name argument.
+             */
+            if ( opndx.value == 5 ) {
+                struct asym *sym2;
+                if ( tokenarray[i].token != T_COMMA ) {
+                    rc = EmitErr( EXPECTING_COMMA, tokenarray[i].tokpos );
+                    break;
+                }
+                i++;
+                if ( tokenarray[i].token != T_ID ) {
+                    rc = EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr );
+                    break;
+                }
+                /* associated segment must be COMDAT, but not associative */
+                sym2 = SymSearch( tokenarray[i].string_ptr );
+                if ( sym2 == NULL || sym2->state != SYM_SEG ) {
+                    EmitErr( SEGMENT_NOT_DEFINED, tokenarray[i].string_ptr );
+                } else if (((struct dsym *)sym2)->e.seginfo->comdat_selection == 0 ||
+                           ((struct dsym *)sym2)->e.seginfo->comdat_selection == 5 ) {
+                    EmitErr( INVALID_ASSOCIATED_SEGMENT, tokenarray[i].string_ptr );
+                } else
+                    dir->e.seginfo->comdat_number = ((struct dsym *)sym2)->e.seginfo->seg_idx;
+                i++;
+            }
+
             if ( tokenarray[i].token != T_CL_BRACKET ) {
                 rc = EmitErr( EXPECTED, ")" );
                 break;
             }
-            dir->e.seginfo->comdat_selection = opndx.value;
             dir->e.seginfo->combine = type->value;
             break;
 #endif
@@ -1401,7 +1416,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 #endif
                     EmitErr( SEGDEF_CHANGED, sym->name, MsgGetEx( TXT_SEG_WORD_SIZE ) );
         }
-#if COMDATSUPP
+#if COMDATOMFSUPP
         /* no segment index for COMDAT segments in OMF! */
         if ( dir->e.seginfo->comdat_selection && Options.output_format == OFORMAT_OMF )
             ;
@@ -1409,7 +1424,7 @@ ret_code SegmentDir( int i, struct asm_tok tokenarray[] )
 #endif
             dir->e.seginfo->seg_idx = ++ModuleInfo.g.num_segs;
             /* dir->e.seginfo->lname_idx = */ AddLnameItem( sym );
-#if COMDATSUPP
+#if COMDATOMFSUPP
         }
 #endif
 

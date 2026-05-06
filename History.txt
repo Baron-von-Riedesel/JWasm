@@ -18,6 +18,9 @@
       struct45.asm.
    -  option -elf64: addends calculation wrong if explicitely defined; see
       elf2.asm.
+   -  model TINY, predefined symbol @code: changed from _TEXT to DGROUP; see
+      tinycode.asm.
+   -  TYPE operator: returned value != 0 for constants defined with EQU.
 
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
@@ -31,6 +34,7 @@
    -  format elf32: special handling of symbol _GLOBAL_OFFSET_TABLE_.
    -  option -pe: .stack directive will set reserved stack space in PE header.
    -  option -?: exit with errorcode 0 instead of 1.
+   -  format coff: in listing, COMDAT attr. (segments and symbols) is rendered.
 
    01.12.2025, v2.20:
 

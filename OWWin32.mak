@@ -54,7 +54,7 @@ OUTD=$(BOUT)\Release
 !endif
 
 inc_dirs  = -Isrc\H -I$(WATCOM)\H
-c_flags = -q -bc -bt=nt -3r -fpi87
+c_flags = -q -bc -bt=nt -3r -fpi87 -DCOMDATOMFSUPP=1
 
 # -zc flag makes wcc386 place constant data in code segment.
 # used with wlink because it won't accept readonly attribute for segments

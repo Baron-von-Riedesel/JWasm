@@ -401,7 +401,7 @@ static int FFQUAL writeLinnum( struct outbuff *out, const struct omf_rec *objr )
     return( 0 );
 }
 
-#if COMDATSUPP
+#if COMDATOMFSUPP
 
 /* COMDATs are initialized communal data records.
  * This isn't used yet for OMF.
@@ -473,7 +473,7 @@ static const pobj_filter myFuncs[] = {
     writeModend,
     writePubdef,
     writeLinnum,
-#if COMDATSUPP
+#if COMDATOMFSUPP
     writeComdat,
     writeLinsym
 #endif
@@ -490,7 +490,7 @@ enum omffiltfuncs {
     OFF_MODEND,
     OFF_PUBDEF,
     OFF_LINNUM,
-#if COMDATSUPP
+#if COMDATOMFSUPP
     OFF_COMDAT,
     OFF_LINSYM
 #endif
@@ -505,7 +505,7 @@ static const uint_8 func_index[] = {
     0,          0,          0,          0,         /* A8 LIBLOC, LIBDIC, ???,    ???    */
     OFF_MISC,   OFF_MISC32, OFF_MISC,   OFF_PUBDEF,/* B0 COMDEF, BAKPAT, LEXTDEF,LPUBDEF*/
     OFF_MISC,   0,          OFF_MISC,   0,         /* B8 LCOMDEF,???,    CEXTDEF,???    */
-#if COMDATSUPP
+#if COMDATOMFSUPP
     0,          OFF_COMDAT, OFF_LINSYM, OFF_MISC,  /* C0 ???,    COMDAT, LINSYM, ALIAS  */
 #else
     0,          0,          0,          OFF_MISC,  /* C0 ???,    COMDAT, LINSYM, ALIAS  */

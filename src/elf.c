@@ -271,7 +271,7 @@ static uint_32 set_symtab32( struct elfmod *em, uint_32 entries, struct localnam
 
     for( curr = SymTables[TAB_EXT].head ; curr != NULL ;curr = curr->next ) {
         /* skip "weak" (=unused) externdefs */
-        if ( curr->sym.iscomm == FALSE && curr->sym.weak == TRUE )
+        if ( curr->sym.iscomm == FALSE && curr->sym.isweak == TRUE )
             continue;
         len = Mangle( &curr->sym, buffer );
 
@@ -466,7 +466,7 @@ static uint_32 set_symtab64( struct elfmod *em, uint_32 entries, struct localnam
 
     for( curr = SymTables[TAB_EXT].head ; curr != NULL ;curr = curr->next ) {
         /* skip "weak" (=unused) externdefs */
-        if ( curr->sym.iscomm == FALSE && curr->sym.weak == TRUE )
+        if ( curr->sym.iscomm == FALSE && curr->sym.isweak == TRUE )
             continue;
         len = Mangle( &curr->sym, buffer );
 
@@ -640,7 +640,7 @@ static void set_symtab_values( struct elfmod *em )
 
     /* count EXTERNs and used EXTERNDEFs (and PROTOs [since v2.01]) */
     for( curr = SymTables[TAB_EXT].head ; curr != NULL ;curr = curr->next ) {
-        if ( curr->sym.iscomm == FALSE && curr->sym.weak == TRUE )
+        if ( curr->sym.iscomm == FALSE && curr->sym.isweak == TRUE )
             continue;
         curr->sym.ext_idx = em->symindex++;
     }
@@ -692,7 +692,7 @@ static void set_symtab_values( struct elfmod *em )
     }
 
     for( curr = SymTables[TAB_EXT].head ; curr != NULL ;curr = curr->next ) {
-        if ( curr->sym.iscomm == FALSE && curr->sym.weak == TRUE )
+        if ( curr->sym.iscomm == FALSE && curr->sym.isweak == TRUE )
             continue;
         p2 += Mangle( &curr->sym, p2 ) + 1;
     }

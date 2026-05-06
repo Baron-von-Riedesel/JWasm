@@ -186,7 +186,9 @@ static void SetModel( void )
         value = 0;
     }
     sym_CodeSize = AddPredefinedConstant( "@CodeSize", value );
-    AddPredefinedText( "@code", SimGetSegName( SIM_CODE ) );
+    /* v2.21: set @code to DGROUP if model = tiny */
+    //AddPredefinedText( "@code", SimGetSegName( SIM_CODE ) );
+    AddPredefinedText( "@code", ModuleInfo.model == MODEL_TINY ? szDgroup : SimGetSegName( SIM_CODE ) );
 
     /* Set @DataSize */
     switch( ModuleInfo.model ) {

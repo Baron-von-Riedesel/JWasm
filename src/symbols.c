@@ -798,7 +798,16 @@ static void DumpSymbol( struct asym *sym )
         break;
     }
     printf( "%-12s  %16" I64_SPEC "X %02X %8p %c %8p %s\n", type, value, sym->mem_type, dir->e, sym->ispublic ? 'X' : ' ', sym->name, sym->name );
+#if 1 /* activate to display type-specific values */
+    switch ( sym->state ) {
+    case SYM_EXTERNAL:
+        printf( "seg=%p, first size/length=%X/%X, total size/length=%X/%X\n", sym->segment, sym->first_size, sym->first_length, sym->total_size, sym->total_length );
+        break;
+    }
+#endif
 }
+
+/* called if debug cmdline option -ds is set */
 
 static void DumpSymbols( void )
 /*****************************/

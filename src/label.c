@@ -109,7 +109,7 @@ struct asym *CreateLabel( const char *name, enum memtype mem_type, struct qualif
     //    return( NULL );
 
     if( Parse_Pass == PASS_1 ) {
-        if( sym->state == SYM_EXTERNAL && sym->weak == TRUE ) {
+        if( sym->state == SYM_EXTERNAL && sym->isweak == TRUE ) {
             /* don't accept EXTERNDEF for a local label! */
             /* v2.04: also never accept PROTOs for extern to intern conversion */
             //if ( bLocal && CurrProc ) {

@@ -166,7 +166,7 @@ struct asym {
         uint_32     fileoffset_elf;
         /* for SYM_INTERNAL (memtype == NEAR|FAR|EMPTY),
          * SYM_GRP (Ofssize),
-         * SYM_EXTERNAL (seg_ofssize, iscomm, weak, isfar, is_ptr, ptr_memtype),
+         * SYM_EXTERNAL (seg_ofssize, iscomm, isweak, isfar, is_ptr, ptr_memtype),
          * SYM_STACK (Ofssize, isfar, is_vararg, is_ptr, ptr_memtype ),
          * SYM_TYPE, TYPE_TYPEDEF (Ofssize, isfar, is_ptr, ptr_memtype )
          */
@@ -179,10 +179,11 @@ struct asym {
             };
             unsigned char   seg_ofssize:2;    /* SYM_EXTERNAL only */
             unsigned char   iscomm:1;  /* is communal */
-            unsigned char   weak:1;    /* 1 if an unused "externdef" */
+            unsigned char   isweak:1;  /* 1 if an unused "externdef" */
             unsigned char   isfar:1;   /* SYM_EXTERNAL, SYM_TYPE, SYM_STACK */
             unsigned char   is_vararg:1;/* SYM_STACK, VARARG param */
             unsigned char   is_signed:1;/* v2.21: SYM_INTERNAL (mem_type EMPTY) */
+            //unsigned char   is_type:1;  /* v2.21: added SYM_INTERNAL (mem_type EMPTY) - Masm bug? */
         };
         /* for SYM_MACRO */
         struct {
@@ -210,7 +211,7 @@ struct asym {
     union {
         /* for SYM_INTERNAL, SYM_STRUCT_FIELD,
          * SYM_TYPE, SYM_STACK,
-         * SYM_EXTERNAL (comm=1)
+         * SYM_EXTERNAL (if comm==1)
          * SYM_TMACRO: size of buffer allocated for the text in string_ptr
          */
         uint_32         total_size;   /* total number of bytes (sizeof) */
@@ -221,11 +222,11 @@ struct asym {
     };
     union {
         /* SYM_INTERNAL, SYM_STRUCT_FIELD,
-         * SYM_STACK, SYM_EXTERNAL (comm==1):
+         * SYM_STACK, SYM_EXTERNAL (if comm==1):
          * total number of elements (LENGTHOF)
          */
         uint_32        total_length;
-        struct asym    *altname;     /* SYM_EXTERNAL (comm==0): alternative name */
+        struct asym    *altname;     /* SYM_EXTERNAL (EXTERN only [comm==0]): alternative name [enclosed in ()] */
         struct debug_info *debuginfo;/* SYM_INTERNAL (isproc==1): debug info (COFF) */
         internal_func  sfunc_ptr;    /* SYM_INTERNAL+predefined */
         struct { /* SYM_TYPE */
@@ -488,7 +489,7 @@ struct dsym {
         /* for SYM_UNDEFINED, SYM_EXTERNAL, SYM_ALIAS and SYM_GRP:
          * predecessor of current symbol with the same state, to allow fast removes.
          * Actually, the only symbols which may change the state and thus
-         * have a chance to be removed are SYM_UNDEFINED and SYM_EXTERNAL ( weak=TRUE )
+         * have a chance to be removed are SYM_UNDEFINED and SYM_EXTERNAL ( isweak=TRUE )
          * during pass one.
          */
         struct dsym *prev;
@@ -498,7 +499,7 @@ struct dsym {
         struct dsym *nextlocal;
         /* used by PROC params (SYM_STACK) for linked list */
         struct dsym *nextparam;
-        /* used by SYM_EXTERNAL (weak=FALSE) if altname is set */
+        /* used by SYM_EXTERNAL (isweak=FALSE) if altname is set */
         /* v2.11: removed; member is in use for SYM_EXTERNAL */
         //struct dsym *nextext;
     };

@@ -39,6 +39,13 @@ static const char * const SegmCombine[ SIM_LAST ] = {
     "PUBLIC", "STACK", "PUBLIC", "PUBLIC", "PRIVATE", "PRIVATE", "PUBLIC"
 };
 
+/* called by
+ * - .model directive to define @code (not correct for model .tiny!)
+ * (- ASSUME directive) removed in v2.13
+ * - pe_emit_local_imports()
+ * - WriteSEHData()
+ */
+
 char *SimGetSegName( enum sim_seg segno )
 /***************************************/
 {
@@ -225,7 +232,7 @@ ret_code SimplifiedSegDir( int i, struct asm_tok tokenarray[] )
         /* Masm accepts a name argument for .CODE and .FARDATA[?] only.
          * JWasm also accepts this for .DATA[?] and .CONST unless
          * option -Zne is set.
-         * v2.19: Masm don't accept name argument for .CODE if model is TINY!
+         * v2.19: Masm doesn't accept name argument for .CODE if model is TINY!
          */
         if( tokenarray[i].token == T_ID &&
            ( (type == SIM_CODE && ModuleInfo.model != MODEL_TINY) || type == SIM_FARDATA || type == SIM_FARDATA_UN

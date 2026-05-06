@@ -784,13 +784,13 @@ static void PassOneChecks( void )
 
         if ( q->sym->state == SYM_INTERNAL )
             qn = q;
-        else if ( q->sym->state == SYM_EXTERNAL && q->sym->weak == TRUE ) {
+        else if ( q->sym->state == SYM_EXTERNAL && q->sym->isweak == TRUE ) {
             DebugMsg(("PassOneChecks: public for weak external skipped: %s\n", q->sym->name ));
             qn->next = q->next;
             LclFree( q );
             q = qn;
         } else {
-            DebugMsg(("PassOneChecks: invalid public attribute for %s [state=%u weak=%u]\n", q->sym->name, q->sym->state, q->sym->weak ));
+            DebugMsg(("PassOneChecks: invalid public attribute for %s [state=%u weak=%u]\n", q->sym->name, q->sym->state, q->sym->isweak ));
 #if FASTPASS
             SkipSavedState();
 #endif
@@ -877,9 +877,9 @@ static void PassOneChecks( void )
         next = curr->next;
         /* v2.01: externdefs which have been referenced become "strong" */
         if ( curr->sym.referenced )
-            curr->sym.weak = FALSE;
+            curr->sym.isweak = FALSE;
         /* remove unused EXTERNDEF/PROTO items from queue. */
-        if ( curr->sym.weak == TRUE
+        if ( curr->sym.isweak == TRUE
 #if 0//DLLIMPORT /* v2.20: obsolete, since SymTables[TAB_EXT] isn't scanned anymore for import table generation */
             && curr->sym.isimported == FALSE
 #endif

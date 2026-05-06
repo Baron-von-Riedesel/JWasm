@@ -1156,12 +1156,12 @@ size_myarray equ $ - myarray
 
 <H2 ID="ATTRCOMDAT">    3.22 Segment Attribute COMDAT </H2>
 
-    With segment attribute COMDAT one may define COMDAT sections. A COMDAT section is a section
-    that can be defined by more than one object file. A COMDAT section must contain at least
-    one symbol, the <b>COMDAT symbol</b>. The syntax to define the section is:
+    For output format COFF, COMDAT items are implemented as a special kind of section. So for this output format
+    there's a segment attribute COMDAT to define COMDAT items. A COMDAT section must contain at least one public symbol,
+    the <b>COMDAT symbol</b>. The syntax is:
 
 <P><pre><font color="#008040"> 
-    segname SEGMENT <b>COMDAT( selection [, assoc_segment ] )</b> ...
+    segname SEGMENT <b>COMDAT( selection [, assoc_section ] )</b> ...
 </font></pre><P> 
     The <b>selection</b> argument tells the linker what to do if multiple definitions of a COMDAT symbol are
     found; the accepted values are:
@@ -1172,11 +1172,9 @@ size_myarray equ $ - myarray
 <TR BGCOLOR="#E8E8E8"><TD>2</TD><TD>any</TD>          <TD>Any section that defines the same COMDAT symbol can be linked; the rest are removed.</TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>3</TD><TD>same size</TD>    <TD>The linker chooses an arbitrary section among the definitions for this symbol. If all definitions are not the same size, a "multiply defined symbol" error is issued.</TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>4</TD><TD>exact match</TD>  <TD>The linker chooses an arbitrary section among the definitions for this symbol. If all definitions do not match exactly, a "multiply defined symbol" error is issued.</TD></TR>
-<TR BGCOLOR="#E8E8E8"><TD>5</TD><TD>associative</TD>  <TD>The section is linked if a certain other COMDAT section ( see the <b>assoc_segment</b> in the syntax description ) is linked.</TD></TR>
+<TR BGCOLOR="#E8E8E8"><TD>5</TD><TD>associative</TD>  <TD>The section is linked if a certain other COMDAT section ( see the <b>assoc_section</b> in the syntax description ) is linked.</TD></TR>
 <TR BGCOLOR="#E8E8E8"><TD>6</TD><TD>largest</TD>      <TD>The linker chooses the largest definition from among all of the definitions for this symbol. If multiple definitions have this size, the choice between them is arbitrary.</TD></TR>
 </TABLE>
-<P>
-    Currently support for COMDAT is restricted to COFF.
 <P>
     JWasm won't do anything special with COMDAT sections; in future releases this may change: cmdline options 
     similar to the Microsoft VC compiler options -Gf or -Gy may be added.
@@ -1471,6 +1469,7 @@ LEDATA, FIXUPP and LINNUM records usually are intermixed; a FIXUPP and/or a LINN
 the LEDATA record to which it refers.<br>
 Since v2.11, multiple THEADR records are written if cmdline options -Zd or -Zi are set and line number information
 is written for more than one source file; this conforms to MASM behavior.
+Since v2.12, COMDAT sections are supported. This may trigger creation of record types CEXTDEF (0xBC) and COMDAT (0xC0).
 <P> 
 
 <H2 ID="OUTPUTFORMATCOFF">    6.2 COFF Output Format </H2>
@@ -1923,8 +1922,11 @@ _DATA                           C      10C        12        12
       number is used in an expression, the lower 32 bits of that number may "get lost" - that is, the number
       is shifted 32 bits to the right.
 </TD><TD>-</TD></TR>
+<TR BGCOLOR="#E0E0E0"><TD>25</TD><TD>the .TINY model directive will make Masm reject using the SEG operator;
+      emits Error "Cannot have segment address references with TINY model". Error also occurs if predefined
+      symbol @code is used.
+</TD><TD>-</TD></TR>
 </TABLE>
-
     It's slightly dangerous to fix old Masm bugs, since some code might
     work only if the bugs exists. So no, JWasm won't achieve 100% Masm
     compatibility.
@@ -4220,6 +4222,12 @@ size_bm1_l1 <b>equ</b> $ - ( bm1_l1_data )
     
 
 <TABLE CELLSPACING=4 CELLPADDING=4 > 
+
+<TR BGCOLOR="#F0F0F0">
+<TD><b>x025</b></TD>
+<TD>Invalid associated segment: %s</TD>
+<TD>Format COFF only; a COMDAT segment cannot reference another COMDAT segment of type 0 or 5.</TD>
+</TR>
 
 <TR BGCOLOR="#F0F0F0">
 <TD><b>x029</b></TD>

@@ -63,12 +63,17 @@ static void SetValue( struct asym *sym, struct expr *opndx )
     if ( opndx->kind == EXPR_CONST ) {
         /* v2.07: use expression's memtype */
         //sym->mem_type = MT_ABS;
-        sym->mem_type = opndx->mem_type;
+        /* v2.21: set mem_type to EMPTY unless set explicitely */
+        sym->mem_type = MT_EMPTY;
+        if ( opndx->explicit )
+            sym->mem_type = opndx->mem_type;
+
         sym->uvalue = opndx->uvalue;
         sym->value3264 = opndx->hvalue;
         sym->segment = NULL;
         sym->isproc = FALSE;
         sym->is_signed = opndx->is_signed; /* v2.21: added */
+        //sym->is_type = opndx->is_type; /* v2.21: added - but very likely a Masm bug */
     } else {
         sym->isproc = opndx->sym->isproc;
         /* for a PROC alias, copy the procinfo extension! */
@@ -210,8 +215,8 @@ static struct asym *CreateAssemblyTimeVariable( struct asm_tok tokenarray[] )
 #if FASTPASS
         sym->issaved = StoreState; /* v2.10: added */
 #endif
-    //} else if ( sym->state == SYM_EXTERNAL && sym->weak == TRUE && sym->mem_type == MT_ABS ) {
-    } else if ( sym->state == SYM_EXTERNAL && sym->weak == TRUE && sym->mem_type == MT_EMPTY ) {
+    //} else if ( sym->state == SYM_EXTERNAL && sym->isweak == TRUE && sym->mem_type == MT_ABS ) {
+    } else if ( sym->state == SYM_EXTERNAL && sym->isweak == TRUE && sym->mem_type == MT_EMPTY ) {
         sym_ext2int( sym );
         //sym->isvariable  = TRUE;
 #if FASTPASS
@@ -365,7 +370,7 @@ struct asym *CreateConstant( struct asm_tok tokenarray[] )
 
     if( sym == NULL ||
        sym->state == SYM_UNDEFINED ||
-       ( sym->state == SYM_EXTERNAL && sym->weak == TRUE && sym->isproc == FALSE ) ) {
+       ( sym->state == SYM_EXTERNAL && sym->isweak == TRUE && sym->isproc == FALSE ) ) {
         /* It's a "new" equate.
          * wait with definition until type of equate is clear
          */

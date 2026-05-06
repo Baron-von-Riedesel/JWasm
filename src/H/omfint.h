@@ -118,7 +118,7 @@ struct pubdef_info {
     struct base_info base;
 };
 
-#if COMDATSUPP
+#if COMDATOMFSUPP
 /* the data that comprises the record is attached. */
 struct comdat_info {
     uint_8      flags;      /* see COMDAT flags in omfspec.h */
@@ -154,13 +154,13 @@ struct omf_rec {
         struct ledata_info  ledata;  /* CMD_LEDATA */
         struct linnum_info  linnum;  /* CMD_LINNUM */
         struct pubdef_info  pubdef;  /* CMD_PUBDEF */
-#if COMDATSUPP
+#if COMDATOMFSUPP
         struct comdat_info  comdat;  /* CMD_COMDAT */
         struct linsym_info  linsym;  /* CMD_LINSYM */
+        struct lnames_info  cextdf;  /* CMD_CEXTDEF */
 #endif
 #if 0 /* not used */
         struct lnames_info  llnames; /* CMD_LLNAMES */
-        struct lnames_info  cextdf;  /* CMD_CEXTDEF */
         struct ledata_info  lidata;  /* CMD_LIDATA  */
 #endif
     } d; /* data depending on record type */

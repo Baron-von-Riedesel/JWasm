@@ -104,7 +104,7 @@ static struct asym *CreateExternal( struct asym *sym, const char *name, char wea
         sym->state = SYM_EXTERNAL;
         sym->seg_ofssize = ModuleInfo.Ofssize;
         sym->iscomm = FALSE;
-        sym->weak = weak;
+        sym->isweak = weak;
         sym_add_table( &SymTables[TAB_EXT], (struct dsym *)sym ); /* add EXTERNAL */
     }
     return( sym );
@@ -125,7 +125,7 @@ static struct asym *CreateComm( struct asym *sym, const char *name )
         sym->state = SYM_EXTERNAL;
         sym->seg_ofssize = ModuleInfo.Ofssize;
         sym->iscomm = TRUE;
-        sym->weak = FALSE;
+        sym->isweak = FALSE;
         sym->isfar = FALSE;
         sym_add_table( &SymTables[TAB_EXT], (struct dsym *)sym ); /* add EXTERNAL */
     }
@@ -153,7 +153,7 @@ static struct asym *CreateProto( int i, struct asm_tok tokenarray[], const char 
      */
     if( sym == NULL ||
        sym->state == SYM_UNDEFINED ||
-       ( sym->state == SYM_EXTERNAL && sym->weak == TRUE && sym->isproc == FALSE )) {
+       ( sym->state == SYM_EXTERNAL && sym->isweak == TRUE && sym->isproc == FALSE )) {
         if ( NULL == ( sym = CreateProc( sym, name, SYM_EXTERNAL ) ) )
             return( NULL ); /* name was probably invalid */
     } else if ( sym->isproc == FALSE ) {
@@ -243,6 +243,11 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
     struct asym         *sym;
     enum lang_type      langtype;
     char isnew;
+#if COMDATOMFSUPP
+    char comdat_selection;
+    char comdat_type;
+    char comdat_alignment;
+#endif
     struct qualified_type ti;
 
     DebugMsg1(("ExterndefDirective(%u) enter\n", i));
@@ -271,6 +276,96 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
                 isexport = TRUE;
                 i++;
             }
+#endif
+#if COMDATOMFSUPP
+        /* v2.21: OMF COMDATs - they are implemented differently than in COFF;
+         * there are *no* COMDAT segments - COMDATs are implemented as a special kind of LE/LI data records in OMF;
+         * those records contain a LNAME index, that refers to the name of the COMDAT symbol ( MS specific? );
+         * additionally, there's usually a CEXTDEF record ( structure similar to EXTDEFs ) that's used when the COMDAT
+         * symbol is referenced in a fixup.
+         * There are 4 COMDAT selection types:
+         * 0 - no match
+         * 1 - pick any
+         * 2 - same size
+         * 3 - exact match
+         * The type of the data defined by the COMDAT record may be:
+         * 0   - explicit ( refers to a given group/segment )
+         * 1/2 - 16-bit far code/data
+         * 3/4 - 32-bit code/data
+         * Finally, the alignment is to be set:
+         * 0 - use alignment from SEGDEF (explicit only?)
+         * 1 - byte
+         * 2 - word
+         * 3 - para
+         * 4 - page (256/4096)
+         * 5 - dword
+         *
+         * implemented is just a syntax check - no semantics yet!
+         */
+        if ( ( Options.output_format == OFORMAT_OMF ) && ( Options.strict_masm_compat == FALSE ) ) {
+            if (!_stricmp( tokenarray[i].string_ptr, "COMDAT" ) && tokenarray[i+1].token == T_OP_BRACKET ) {
+                struct expr opndx;
+                i += 2;
+                /* get selection type */
+                if ( EvalOperand( &i, tokenarray, Token_Count, &opndx, EXPF_NOUNDEF ) == ERROR )
+                    return( ERROR );
+                if ( opndx.kind != EXPR_CONST )
+                    return( EmitError( CONSTANT_EXPECTED ));
+                /* todo: check value range 0 - 3 */
+                comdat_selection = opndx.value + 1;
+
+                /* get alignment */
+                if( tokenarray[i].token != T_COMMA )
+                    return( EmitErr( EXPECTING_COMMA, tokenarray[i].tokpos ) );
+                i++;
+                if ( EvalOperand( &i, tokenarray, Token_Count, &opndx, EXPF_NOUNDEF ) == ERROR )
+                    return( ERROR );
+                if ( opndx.kind != EXPR_CONST )
+                    return( EmitError( CONSTANT_EXPECTED ));
+                comdat_alignment = opndx.value;
+                /* todo: check value range 0 - 5 */
+# if 0 /* type shouldn't be set explicitely, but derived from the external's type */
+                /* get data type */
+                if( tokenarray[i].token != T_COMMA )
+                    return( EmitErr( EXPECTING_COMMA, tokenarray[i].tokpos ) );
+                i++;
+                if ( EvalOperand( &i, tokenarray, Token_Count, &opndx, EXPF_NOUNDEF ) == ERROR )
+                    return( ERROR );
+                if ( opndx.kind != EXPR_CONST )
+                    return( EmitError( CONSTANT_EXPECTED ));
+                comdat_type = opndx.value;
+                /* todo: check value range 0 - 4 */
+
+                if ( comdat_type == 0 ) {
+                    struct asym * sym2;
+                    if( tokenarray[i].token != T_COMMA )
+                        return( EmitErr( EXPECTING_COMMA, tokenarray[i].tokpos ) );
+# else
+                if ( tokenarray[i].token == T_COMMA ) {
+                    struct asym * sym2;
+                    comdat_type = 0;
+# endif
+                /* if type is "explicit", another argument must be supplied: a group/segment
+                 */
+                    i++;
+                    if( tokenarray[i].token != T_ID )
+                        return( EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr ) );
+                    /* searching for the group/segment here? Probably too early -
+                     * better to wait for the definition of the item and then do the check...
+                     */
+                    sym2 = SymSearch( tokenarray[i].string_ptr );
+                    if ( !sym2 )
+                        return( EmitErr( SYMBOL_NOT_DEFINED, tokenarray[i].string_ptr ) );
+                    if ( sym2->state != SYM_SEG && sym2->state != SYM_GRP )
+                        return( EmitErr( SEGMENT_EXPECTED, tokenarray[i].string_ptr ) );
+                    i++;
+                }
+                if( tokenarray[i].token != T_CL_BRACKET )
+                    return( EmitErr( EXPECTED, ")" ) );
+                i++;
+            }
+        } else
+            comdat_selection = 0;
 #endif
         token = tokenarray[i++].string_ptr;
 
@@ -337,7 +432,7 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
             //case MT_ABS:
             case MT_EMPTY:
                 /* v2.04: hack no longer necessary */
-                //if ( sym->weak == TRUE )
+                //if ( sym->isweak == TRUE )
                 //    sym->equate = TRUE; /* allow redefinition by EQU, = */
                 break;
             case MT_FAR:
@@ -457,7 +552,7 @@ ret_code ExterndefDirective( int i, struct asm_tok tokenarray[] )
 #endif
 #if 0
         /* write a global entry if none has been written yet */
-        if ( sym->state == SYM_EXTERNAL && sym->weak == FALSE )
+        if ( sym->state == SYM_EXTERNAL && sym->isweak == FALSE )
             ;/* skip EXTERNDEF if a real EXTERN/COMM was done */
         else if ( sym->isglobal == FALSE ) {
             sym->isglobal = TRUE;
@@ -691,7 +786,7 @@ ret_code ExternDirective( int i, struct asm_tok tokenarray[] )
             if ( sym == NULL )
                 return( ERROR );
             if ( sym->state == SYM_EXTERNAL ) {
-                sym->weak = FALSE;
+                sym->isweak = FALSE;
                 return( HandleAltname( altname, sym ) );
             } else {
                 /* unlike EXTERNDEF, EXTERN doesn't allow a PROC for the same name */
@@ -718,7 +813,7 @@ ret_code ExternDirective( int i, struct asm_tok tokenarray[] )
             /* v2.05: added to accept type prototypes */
             if ( ti.is_ptr == 0 && ti.symtype && ti.symtype->isproc ) {
                 CreateProc( sym, NULL, SYM_EXTERNAL );
-                sym->weak = FALSE; /* v2.09: reset the weak bit that has been set inside CreateProc() */
+                sym->isweak = FALSE; /* v2.09: reset the weak bit that has been set inside CreateProc() */
                 CopyPrototype( (struct dsym *)sym, (struct dsym *)ti.symtype );
                 ti.mem_type = ti.symtype->mem_type;
                 ti.symtype = NULL;
@@ -1100,7 +1195,7 @@ ret_code PublicDirective( int i, struct asm_tok tokenarray[] )
                     EmitErr( CANNOT_DEFINE_AS_PUBLIC_OR_EXTERNAL, sym->name );
                     skipitem = TRUE;
                     //return( ERROR );
-                } else if ( sym->weak == FALSE ) {
+                } else if ( sym->isweak == FALSE ) {
                     /* for EXTERNs, emit a different error msg */
                     EmitErr( SYMBOL_REDEFINITION, sym->name );
                     skipitem = TRUE;

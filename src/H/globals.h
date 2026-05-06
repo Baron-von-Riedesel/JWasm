@@ -134,6 +134,9 @@ char *strupr(char *);
 #ifndef COMDATSUPP
 #define COMDATSUPP   1 /* support COMDAT segment attribute       */
 #endif
+#ifndef COMDATOMFSUPP
+#define COMDATOMFSUPP 0 /* not implemented yet */
+#endif
 
 /* other extension switches */
 #define IMAGERELSUPP 1 /* support IMAGEREL operator (not for OMF) */

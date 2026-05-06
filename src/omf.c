@@ -433,7 +433,7 @@ static void omf_write_ledata( struct dsym *seg )
               seg->e.seginfo->CodeBuffer, seg->e.seginfo->start_loc, size ));
     if( size > 0 && write_to_file == TRUE ) {
         LastCodeBufSize = size;
-#if COMDATSUPP
+#if COMDATOMFSUPP
         if ( seg->e.seginfo->comdat_selection ) {
             /* if the COMDAT symbol has been referenced in a FIXUPP,
              * a CEXTDEF has to be written.
@@ -473,7 +473,7 @@ static void omf_write_ledata( struct dsym *seg )
             obj.d.ledata.offset = seg->e.seginfo->start_loc;
             if( obj.d.ledata.offset > 0xffffUL )
                 obj.is_32 = 1;
-#if COMDATSUPP
+#if COMDATOMFSUPP
         }
 #endif
         omf_write_record( &obj );
@@ -669,7 +669,7 @@ void omf_write_import( void )
     if ( (!Options.write_impdef) || Options.names[OPTN_LNKDEF_FN] )
         return;
     for ( imp = SymTables[TAB_EXT].head; imp; imp = imp->next ) {
-        if ( imp->sym.isproc && ( imp->sym.weak == FALSE || imp->sym.iat_used == TRUE ) ) {
+        if ( imp->sym.isproc && ( imp->sym.isweak == FALSE || imp->sym.iat_used == TRUE ) ) {
             if ( imp->sym.dll && *imp->sym.dll->name ) {
                 omf_InitRec( &obj, CMD_COMENT );
                 obj.d.coment.attr = 0x00;
@@ -863,7 +863,7 @@ static void omf_write_segdef( void )
 
     for( curr = SymTables[TAB_SEG].head; curr; curr = curr->next ) {
 
-#if COMDATSUPP
+#if COMDATOMFSUPP
         if ( curr->e.seginfo->comdat_selection )
             continue;
 #endif
@@ -1018,7 +1018,7 @@ static struct asym *GetExt( struct readext *r )
     for ( ; r->p; ) {
         sym = (struct asym *)r->p;
         r->p = r->p->next;
-        if ( sym->iscomm == TRUE || sym->weak == TRUE )
+        if ( sym->iscomm == TRUE || sym->isweak == TRUE )
             continue;
         /**/ myassert( r->index ); /* overflow occured? */
         sym->ext_idx1 = r->index++;
@@ -1057,7 +1057,7 @@ static uint_16 omf_write_extdef( void )
     sym = GetExt( &r );
     while ( sym ) {
         for ( rec_size = 0, obj.d.extdef.num_names = 0; sym; sym = GetExt( &r ) ) {
-            //DebugMsg(("omf_write_extdef: %s, weak=%u, used=%u\n", curr->sym.name, curr->sym.weak, curr->sym.used ));
+            //DebugMsg(("omf_write_extdef: %s, weak=%u, used=%u\n", curr->sym.name, curr->sym.isweak, curr->sym.used ));
             DebugMsg1(("omf_write_extdef: %s\n", sym->name));
             len = Mangle( sym, (char *)buffer );
 #if MAX_ID_LEN > 255
@@ -1401,7 +1401,7 @@ static ret_code omf_write_pubdef( void )
             unsigned    len;
             struct asym *sym;
             sym = q->sym;
-#if COMDATSUPP
+#if COMDATOMFSUPP
             /* COMDAT symbol? Then write an LNAME record */
             if ( sym->segment && ((struct dsym *)sym->segment)->e.seginfo->comdat_selection ) {
                 struct dsym *seg = (struct dsym *)sym->segment;

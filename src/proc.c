@@ -1375,7 +1375,7 @@ struct asym *CreateProc( struct asym *sym, const char *name, enum sym_state stat
             }
             break;
         case SYM_EXTERNAL:
-            sym->weak = TRUE;
+            sym->isweak = TRUE;
             sym_add_table( &SymTables[TAB_EXT], (struct dsym *)sym );
             break;
         }
@@ -1479,7 +1479,7 @@ ret_code ProcDir( int i, struct asm_tok tokenarray[] )
         if( sym == NULL || sym->state == SYM_UNDEFINED ) {
             sym = CreateProc( sym, name, SYM_INTERNAL );
             is_global = FALSE;
-        } else if ( sym->state == SYM_EXTERNAL && sym->weak == TRUE ) {
+        } else if ( sym->state == SYM_EXTERNAL && sym->isweak == TRUE ) {
             /* PROTO or EXTERNDEF item */
             is_global = TRUE;
             if ( sym->isproc == TRUE  ) {

@@ -203,7 +203,7 @@ ret_code process_branch( struct code_info *CodeInfo, unsigned CurrOpnd, const st
      * it's located, then assume it is a forward reference (=SYM_UNDEFINED)!
      * This applies to PROTOs and EXTERNDEFs in Pass 1.
      */
-    if ( ( state == SYM_EXTERNAL ) && sym->weak ) {
+    if ( ( state == SYM_EXTERNAL ) && sym->isweak ) {
         DebugMsg1(("process_branch(%s): EXTERNDEF assumed forward reference (=SYM_UNDEFINED)\n", sym->name ));
         state = SYM_UNDEFINED;
     }

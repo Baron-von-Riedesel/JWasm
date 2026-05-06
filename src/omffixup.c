@@ -360,7 +360,7 @@ static int omf_set_logref( const struct fixup *fixup, struct logref *lr )
             if ( sym->segment == NULL ) { /* shouldn't happen */
                 EmitErr( SEGMENT_MISSING_FOR_FIXUP, sym->name );
                 return ( 0 );
-#if COMDATSUPP
+#if COMDATOMFSUPP
             } else if ( ( (struct dsym *)sym->segment)->e.seginfo->comdat_selection ) {
                 DebugMsg1(("omf_set_logref: comdat selection\n" ));
                 lr->target_meth = TARGET_EXT;

@@ -834,6 +834,10 @@ static void log_segment( const struct asym *sym, const struct asym *group )
     char buffer[32];
     struct seg_info *seg = ((struct dsym *)sym)->e.seginfo;
 
+#if COMDATOMFSUPP
+    if ( seg->comdat_selection && Options.output_format == OFORMAT_OMF )
+        return; /* skip - virtual - COMDAT sections in OMF */
+#endif
     DebugMsg(("log_segment(%s, %s): grp=%p\n", sym->name, group ? group->name : "NULL", seg->group ));
     if( seg->group == group ) {
         int i = sym->name_size;
@@ -856,6 +860,12 @@ static void log_segment( const struct asym *sym, const struct asym *group )
 #if 0
         if ( group != NULL )
             LstPrintf( " %s", group->name );
+#endif
+#if COFF_SUPPORT /* v2.21: added */
+# if COMDATSUPP
+        if ( seg->comdat_selection )
+            LstPrintf( " %s(%u)", strings[LS_COMDAT], seg->comdat_selection );
+# endif
 #endif
         LstNL();
     }
@@ -965,11 +975,19 @@ static void log_proc( const struct asym *sym )
         LstPrintf( "(F) " );
 #endif
     if( sym->ispublic ) {
+#if COFF_SUPPORT
+# if COMDATSUPP
+        /* v2.21: check if public is associated with a COMDAT segment */
+        if ( sym->segment && ((struct dsym *)(sym->segment))->e.seginfo->comdat_selection )
+            LstPrintf( "%-9s", strings[LS_COMDAT] );
+        else
+# endif
+#endif
         LstPrintf( "%-9s", strings[LS_PUBLIC] );
     } else if ( sym->state == SYM_INTERNAL ) {
         LstPrintf( "%-9s", strings[LS_PRIVATE] );
     } else {
-        LstPrintf( sym->weak ? "*%-8s " : "%-9s ", strings[LS_EXTERNAL] );
+        LstPrintf( sym->isweak ? "*%-8s " : "%-9s ", strings[LS_EXTERNAL] );
 #if DLLIMPORT
         if ( sym->isimported )
             LstPrintf( "(%s) ", GetDllName(sym) );
@@ -1147,7 +1165,7 @@ static void log_symbol( const struct asym *sym )
             LstPrintf( "%s ", strings[LS_PUBLIC] );
 
         if ( sym->state == SYM_EXTERNAL ) {
-            LstPrintf( sym->weak ? "*%s " : "%s ", strings[LS_EXTERNAL] );
+            LstPrintf( sym->isweak ? "*%s " : "%s ", strings[LS_EXTERNAL] );
         } else if ( sym->state == SYM_UNDEFINED ) {
             LstPrintf( "%s ", strings[LS_UNDEFINED] );
         }
