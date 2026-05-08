@@ -702,7 +702,7 @@ static ret_code get_operand( struct expr *opnd, int *idx, struct asm_tok tokenar
                 DebugMsg1(("get_operand(%s): equate hval=%Xh, lval=%Xh\n", sym->name, opnd->hvalue, opnd->uvalue ));
                 opnd->mem_type = sym->mem_type;
                 opnd->is_signed = sym->is_signed; /* v2.21: added */
-                //opnd->is_type   = sym->is_type;   /* v2.21: added - but it's very likely a Masm bug! */
+                //opnd->is_type   = sym->is_type;   /* v2.21: added - not active since perhaps a Masm bug */
                 /* don't set the symbol reference, it isn't a label */
             } else if( sym->state == SYM_EXTERNAL &&
                       sym->mem_type == MT_EMPTY &&

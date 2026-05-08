@@ -301,6 +301,7 @@ static uint_32 set_symtab32( struct elfmod *em, uint_32 entries, struct localnam
 #if ELFALIAS
     /* 5. aliases */
     for( curr = SymTables[TAB_ALIAS].head ; curr != NULL ;curr = curr->next ) {
+        curr->sym.langtype = curr->sym.substitute->langtype; /* v2.21: copy language here */
         len = Mangle( &curr->sym, buffer );
 
         p32->st_name = strsize;

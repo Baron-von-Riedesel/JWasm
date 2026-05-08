@@ -1334,7 +1334,10 @@ static void omf_write_alias( void )
     for( curr = SymTables[TAB_ALIAS].head; curr; curr = curr->next ) {
 
         /* output an alias record for this alias */
-        /* v2.10: use the decorated names */
+        /* v2.10: use the decorated names;
+         * v2.21: copy language from the original symbol now;
+         */
+        curr->sym.langtype = curr->sym.substitute->langtype;
         //len1 = curr->sym.name_size;
         len1 = Mangle( &curr->sym, tmp );
 #if MAX_ID_LEN > MAX_ID_LEN_OMF

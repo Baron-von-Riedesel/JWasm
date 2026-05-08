@@ -346,8 +346,11 @@ ret_code AliasDirective( int i, struct asm_tok tokenarray[] )
 
         sym->state = SYM_ALIAS;
         sym->substitute = sym2;
-        /* v2.10: copy language type of alias */
-        sym->langtype = sym2->langtype;
+        /* v2.10: copy language type of alias;
+         * v2.21: copying now is too early - language will be copied when alias is written!
+         *        see omf.c, coff.c & elf.c
+         */
+        //sym->langtype = sym2->langtype;
         sym_add_table( &SymTables[TAB_ALIAS], (struct dsym *)sym ); /* add ALIAS */
         return( NOT_ERROR );
     }

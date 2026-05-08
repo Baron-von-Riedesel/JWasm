@@ -707,6 +707,8 @@ static uint_32 coff_write_symbols( struct module_info *modinfo, struct coffmod *
     for( curr = SymTables[TAB_ALIAS].head ; curr != NULL ;curr = curr->next ) {
         struct asym * sym;
 
+        /* v2.21: copy language from original here */
+        curr->sym.langtype = curr->sym.substitute->langtype;
         len = Mangle( &curr->sym, buffer );
 
         if ( len <= IMAGE_SIZEOF_SHORT_NAME )

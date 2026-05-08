@@ -61,19 +61,18 @@ static void SetValue( struct asym *sym, struct expr *opndx )
     sym->state = SYM_INTERNAL;
     sym->isdefined = TRUE;
     if ( opndx->kind == EXPR_CONST ) {
-        /* v2.07: use expression's memtype */
+        /* v2.07: use expression's memtype;
+         * v2.21: set mem_type to EMPTY unless set explicitely - fixes 'TYPE equate';
+         */
         //sym->mem_type = MT_ABS;
-        /* v2.21: set mem_type to EMPTY unless set explicitely */
-        sym->mem_type = MT_EMPTY;
-        if ( opndx->explicit )
-            sym->mem_type = opndx->mem_type;
-
+        //sym->mem_type = opndx->mem_type;
+        sym->mem_type = opndx->explicit ? opndx->mem_type : MT_EMPTY;
         sym->uvalue = opndx->uvalue;
         sym->value3264 = opndx->hvalue;
         sym->segment = NULL;
         sym->isproc = FALSE;
         sym->is_signed = opndx->is_signed; /* v2.21: added */
-        //sym->is_type = opndx->is_type; /* v2.21: added - but very likely a Masm bug */
+        //sym->is_type = opndx->is_type; /* v2.21: added - not active, since perhaps a Masm bug */
     } else {
         sym->isproc = opndx->sym->isproc;
         /* for a PROC alias, copy the procinfo extension! */

@@ -20,7 +20,9 @@
       elf2.asm.
    -  model TINY, predefined symbol @code: changed from _TEXT to DGROUP; see
       tinycode.asm.
-   -  TYPE operator: returned value != 0 for constants defined with EQU.
+   -  TYPE operator: returned values != 0 for certain constants defined with
+      EQU; see types18.asm.
+   -  ALIAS directive: alias name wasn't decorated reliably.
 
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited

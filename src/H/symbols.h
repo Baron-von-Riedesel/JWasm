@@ -183,7 +183,7 @@ struct asym {
             unsigned char   isfar:1;   /* SYM_EXTERNAL, SYM_TYPE, SYM_STACK */
             unsigned char   is_vararg:1;/* SYM_STACK, VARARG param */
             unsigned char   is_signed:1;/* v2.21: SYM_INTERNAL (mem_type EMPTY) */
-            //unsigned char   is_type:1;  /* v2.21: added SYM_INTERNAL (mem_type EMPTY) - Masm bug? */
+            //unsigned char   is_type:1;  /* v2.21: added SYM_INTERNAL (mem_type EMPTY) - not active */
         };
         /* for SYM_MACRO */
         struct {
