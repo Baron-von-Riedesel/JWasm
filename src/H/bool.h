@@ -29,6 +29,10 @@
 *
 ****************************************************************************/
 
+#if defined __STDC_VERSION__ && (__STDC_VERSION__ >= 199901L)
+    #include <stdbool.h>
+    #define BOOL_DEFINED
+#endif
 
 #if !defined( BOOL_DEFINED )  &&  !defined( bool ) && !(__WATCOMC__ >= 1070 && defined(__cplusplus))
     #define BOOL_DEFINED
