@@ -387,13 +387,14 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             /* v2.13: the addition & shift did not work. */
             //sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value + ( (uint_64)sym->value3264 << 32 ) );
 # if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
-            p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
+            snprintf( p2, &ll.buffer[sizeof( ll.buffer )] - p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
 # else
-            p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
+            snprintf( p2, &ll.buffer[sizeof( ll.buffer )] - p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
 # endif
         else
 #endif
-            p2 += sprintf( p2, "%-" PREFFMTSTR I32_SPEC "X", sym->value );
+            snprintf( p2, &ll.buffer[sizeof( ll.buffer )] - p2, "%-" PREFFMTSTR I32_SPEC "X", sym->value );
+        p2 += strlen( p2 );
         break;
     case LSTTYPE_TMACRO:
         ll.buffer[1] = '=';
@@ -452,8 +453,9 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
         if ( ModuleInfo.GeneratedCode )
             ll.buffer[28] = '*';
         if ( MacroLevel ) {
-            len = sprintf( &ll.buffer[29], "%u", MacroLevel );
-            ll.buffer[29+len] = ' ';
+            len = snprintf( &ll.buffer[29], sizeof( ll.buffer ) - 29, "%u", MacroLevel );
+            if ( 29 + len < sizeof( ll.buffer ) )
+                ll.buffer[29+len] = ' ';
         }
         if ( srcfile != ModuleInfo.srcfile ) {
             ll.buffer[30] = 'C';
