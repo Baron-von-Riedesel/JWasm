@@ -140,6 +140,29 @@ struct lstleft {
     char last;
 };
 
+/* Format into a temporary and copy only what fits before end; returns the
+ * count copied. An equate's value field ("%-25X") starts after the offset
+ * and " = ", so it does not fit in the 32-byte left column. */
+static int LstFit( char *p, const char *end, const char *fmt, ... )
+/*****************************************************************/
+{
+    char tmp[64];
+    int n;
+    va_list args;
+
+    va_start( args, fmt );
+    n = vsnprintf( tmp, sizeof( tmp ), fmt, args );
+    va_end( args );
+    if ( n < 0 )
+        return( 0 );
+    if ( n >= (int)sizeof( tmp ) )
+        n = sizeof( tmp ) - 1;
+    if ( n > end - p )
+        n = end - p;
+    memcpy( p, tmp, n );
+    return( n );
+}
+
 static void LstNL( void )
 /***********************/
 {
@@ -387,13 +410,13 @@ void LstWrite( enum lsttype type, uint_32 oldofs, void *value )
             /* v2.13: the addition & shift did not work. */
             //sprintf( &ll.buffer[idx+2], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value + ( (uint_64)sym->value3264 << 32 ) );
 # if defined(LLONG_MAX) || defined(__GNUC__) || defined(__TINYC__)
-            p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
+            p2 += LstFit( p2, &ll.buffer[sizeof( ll.buffer )], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000 + sym->uvalue );
 # else
-            p2 += sprintf( p2, "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
+            p2 += LstFit( p2, &ll.buffer[sizeof( ll.buffer )], "%-" PREFFMTSTR I64_SPEC "X", (uint_64)sym->value3264 * 0x100000000i64 + sym->uvalue );
 # endif
         else
 #endif
-            p2 += sprintf( p2, "%-" PREFFMTSTR I32_SPEC "X", sym->value );
+            p2 += LstFit( p2, &ll.buffer[sizeof( ll.buffer )], "%-" PREFFMTSTR I32_SPEC "X", sym->value );
         break;
     case LSTTYPE_TMACRO:
         ll.buffer[1] = '=';
