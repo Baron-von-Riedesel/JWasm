@@ -128,7 +128,7 @@ static struct mmap mymmap = { 0, 0, 3, 0x22, -1, 0 };
                               p = (uint_8 *)sys_call1( SYS_mmap, (uint_32)&mymmap )
   #define BLKFREE( p )        sys_call2( SYS_munmap, (uint_32)p, 0 )
  #else
-  #define BLKALLOC( p, size ) p = (uint_8 *)mmap( 0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0 ); \
+  #define BLKALLOC( p, size ) p = (uint_8 *)mmap( NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0 ); \
                               if ( p == MAP_FAILED ) p = NULL
   #define BLKFREE( p )        munmap( (void *)p, 0 )
  #endif
