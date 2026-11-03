@@ -237,7 +237,7 @@ ret_code AlignDirective( int i, struct asm_tok tokenarray[] )
 #if FASTPASS
     if ( StoreState == FALSE ) FStoreLine( FSL_NOCMT );
 #endif
-    seg_align = GetCurrSegAlign(); /* # of bytes */
+    seg_align = GetCurrSegAlign(); /* # of bytes; 0 if CurrSeg==NULL */
     if( seg_align <= 0 ) {
         return( EmitError( MUST_BE_IN_SEGMENT_BLOCK ) );
     }
@@ -246,9 +246,17 @@ ret_code AlignDirective( int i, struct asm_tok tokenarray[] )
             EmitWarn( 1, ALIGN_TOO_HIGH, myltoa( align_value, buffer, 10, FALSE, FALSE ) );
         //return( ERROR ); /* v2.0: don't exit */
     }
-    /* v2.04: added, Skip backpatching after ALIGN occured */
-    if ( Parse_Pass == PASS_1 && CurrSeg && CurrSeg->e.seginfo->FixupList.head )
+    /* v2.04: added, Skip backpatching after ALIGN occured
+     * v2.21: the bytes that are added by an alignment may change if
+     *        backpatching changes a short to a near jmp. This makes
+     *        the code in backptch.c that adjusts label addesses (if LABELOPT == 1)
+     *        unreliable. Currently there's no regression test that covers this
+     *        case - to be added!
+     */
+#if 1 /* v2.21: for testing may be changed to 0 */
+    if ( Parse_Pass == PASS_1 && CurrSeg->e.seginfo->FixupList.head )
         CurrSeg->e.seginfo->FixupList.head->orgoccured = TRUE;
+#endif
     /* find out how many bytes past alignment we are & add the remainder */
     /* store temp. value */
     CurrAddr = GetCurrOffset();

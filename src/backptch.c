@@ -46,7 +46,7 @@
  *        hence it's now deactivated; backpatching will need a redesign!
  *        with "LABELOPT 0", regression test bin/jmpfwd2.asm FAILS!
 */
-#define LABELOPT 0
+#define LABELOPT 1
 
 /* DoPatch:
  * v2.19: DoPatch() is now generally called in pass one only;
@@ -78,7 +78,7 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
         /* if fixup location is in another segment, backpatch is possible, but
          * not implemented since calculation of new size is non-trivial.
          */
-        DebugMsg1(("DoPatch: segs differ: %s - %s\n",
+        DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): segs differ: %s - %s\n", sym->name, sym->offset,
                   fixup->def_seg ? fixup->def_seg->sym.name : "NULL",
                   seg ? seg->sym.name : "NULL" ));
         return;
@@ -90,19 +90,19 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
         if( sym->mem_type == MT_FAR && fixup->option == OPTJ_CALL ) {
             /* convert near call to push cs + near call,
              * (only at first pass) */
-            DebugMsg(("DoPatch: Phase error! caused by far call optimization\n"));
+            DebugMsg(("DoPatch(%s, %" I32_SPEC "X): Phase error! caused by far call optimization\n", sym->name, sym->offset));
             ModuleInfo.PhaseError = TRUE;
             sym->offset++;  /* a PUSH CS will be added */
             /* todo: insert LABELOPT block here */
             OutputByte( 0 ); /* it's pass one, nothing is written */
             return;
         }
-        DebugMsg1(("DoPatch: FIX_RELOFF32/FIX_RELOFF16, skipped\n"));
+        DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): FIX_RELOFF32/FIX_RELOFF16, skipped\n", sym->name, sym->offset));
         return;
     case FIX_OFF8:  /* push <forward reference> */
         if ( fixup->option == OPTJ_PUSH ) {
             /* how to check value? */
-            DebugMsg1(("DoPatch: FIX_OFF8 for PUSH\n"));
+            DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): FIX_OFF8 for PUSH\n", sym->name, sym->offset));
             break;
         }
         return;
@@ -111,13 +111,14 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
         // disp = fixup->offset + GetCurrOffset() - fixup->location - size;
         disp = fixup->offset + fixup->sym->offset - ( fixup->locofs + 1 );
         if ( disp > 127 || disp < -128 ) {
-            DebugMsg1(("DoPatch: out of range, disp=%d, fixup=%s(%X), loc=%" I32_SPEC "X!\n", disp, fixup->sym->name, fixup->sym->offset, fixup->locofs ));
+            DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): loc=%" I32_SPEC "X - out of range, disp=%d [fixup=%s,%X]\n",
+                 sym->name, sym->offset, fixup->locofs, disp, fixup->sym->name, fixup->sym->offset ));
             break;
         }
         //DebugMsg1(("DoPatch, loc=%" I32_SPEC "X: displacement unchanged: %d\n", fixup->locofs, disp ));
         return;
     default:
-        DebugMsg1(("DoPatch: unhandled fixup type=%u\n", fixup->type ));
+        DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): unhandled fixup type=%u\n", sym->name, sym->offset, fixup->type ));
         return;
     }
 
@@ -151,7 +152,7 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
      */
     for ( fixup2 = seg->e.seginfo->FixupList.head; fixup2; fixup2 = fixup2->nextrlc ) {
         if ( fixup2->orgoccured ) {
-            DebugMsg(("DoPatch: ORG/ALIGN detected, optimization canceled\n" ));
+            DebugMsg(("DoPatch(%s %" I32_SPEC "X): ORG/ALIGN detected, optimization canceled\n", sym->name, sym->offset ));
             return;
         }
         /* do this check after the check for ORG! */
@@ -176,24 +177,26 @@ static void DoPatch( struct asym *sym, struct fixup *fixup )
         if ( sym2->offset <= fixup->locofs )
             break;
         sym2->offset += size;
-        DebugMsg1(("DoPatch(loc=%" I32_SPEC "X): sym %s, offset %" I32_SPEC "X -> %" I32_SPEC "X\n", fixup->locofs, sym2->name, sym2->offset - size, sym2->offset));
+        DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): loc=%" I32_SPEC "X, sym %s, offset %" I32_SPEC "X -> %" I32_SPEC "X\n", sym->name, sym->offset,
+                   fixup->locofs, sym2->name, sym2->offset - size, sym2->offset));
     }
     /* v2.03: also adjust fixup locations located between the
      * label reference and the label. This should reduce the
      * number of passes to 2 for not too complex sources.
      */
-    for ( fixup2 = seg->e.seginfo->FixupList.head; fixup2; fixup2 = fixup2->nextrlc ) {
+    for ( fixup2 = seg->e.seginfo->FixupList.head; fixup2 && fixup2->locofs > fixup->locofs; fixup2 = fixup2->nextrlc ) {
         if ( fixup2->sym == sym ) {
-            DebugMsg1(("DoPatch:     sym=%s fixup loc %" I32_SPEC "X\n", fixup2->sym->name, fixup2->locofs ));
-            continue;
+            DebugMsg1(("DoPatch(%s, %" I32_SPEC "X):     sym=%s fixup loc %" I32_SPEC "X\n", sym->name, sym->offset,
+                       fixup2->sym->name, fixup2->locofs ));
+            fixup2->option = OPTJ_NONE;
+        } else if ( fixup2->option != OPTJ_NONE ) {
+            fixup2->locofs += size;
+            DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): for sym=%s fixup loc %" I32_SPEC "X -> %" I32_SPEC "X\n", sym->name, sym->offset,
+                       fixup2->sym->name, fixup2->locofs - size, fixup2->locofs ));
         }
-        if ( fixup2->locofs <= fixup->locofs )
-            break;
-        fixup2->locofs += size;
-        DebugMsg1(("DoPatch: for sym=%s fixup loc %" I32_SPEC "X changed to %" I32_SPEC "X\n", fixup2->sym->name, fixup2->locofs - size, fixup2->locofs ));
     }
 #else
-    DebugMsg1(("DoPatch: sym %s, offset changed %" I32_SPEC "X -> %" I32_SPEC "X\n", sym->name, sym->offset, sym->offset + size));
+    DebugMsg1(("DoPatch(%s, %" I32_SPEC "X): offset changed to %" I32_SPEC "X\n", sym->name, sym->offset, sym->offset + size));
     sym->offset += size;
 #endif
     /* adjust $; in pass one it doesn't matter what's actually "written" */
@@ -220,10 +223,10 @@ ret_code BackPatch( struct asym *sym )
 {
 	if ( Parse_Pass == PASS_1 ) {
 		struct fixup     *fixup;
-#if 0 /* activate if symbols that aren't forward referenced shouldn't appear */
+#if 0 /* activate if symbols that aren't forward referenced shouldn't appear in log */
 		if ( sym->bp_fixup )
 #endif
-		DebugMsg1(("BackPatch(%s): location=%s:%" I32_SPEC "X, bp_fixup=%p\n", sym->name, sym->segment ? sym->segment->name : "!NULL!", sym->offset, sym->bp_fixup ));
+		DebugMsg1(("BackPatch(%s, %s:%" I32_SPEC "X): bp_fixup=%p\n", sym->name, sym->segment ? sym->segment->name : "!NULL!", sym->offset, sym->bp_fixup ));
 		for( fixup = sym->bp_fixup; fixup; fixup = fixup->nextbp )
 			/* v2.21: skip non-backpatch fixups */
 			if ( fixup->option != OPTJ_NONE ) /* a jmp/jxx/call/push instruction? */

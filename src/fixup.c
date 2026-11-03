@@ -267,7 +267,7 @@ void store_fixup( struct fixup *fixup, struct dsym *seg, int_32 *pdata )
 # if AMD64_SUPPORT
             if ( ModuleInfo.defOfssize == USE64 ) {
 #  if 0
-                /* this won't work currently because fixup.offset may have to
+                /* v2.07: this won't work currently because fixup.offset may have to
                  * save *(int_64) pdata, but it is 32-bit only!
                  */
                 if ( fixup->type == FIX_OFF64 )

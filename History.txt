@@ -27,6 +27,7 @@
       leaks.
    -  fixed GPF in jwasm: assembling MOV instruction with destination of type
       prototype, but without pointer type definition; see pproc.asm.
+   -  fixed buffer overflow in listing if EQU defined an alias in 32/64-bit.
 
    Other changes:
    -  format elf: cmdline option -Zd (dwarf line numbers) supported (limited
@@ -41,6 +42,7 @@
    -  option -pe: .stack directive will set reserved stack space in PE header.
    -  option -?: exit with errorcode 0 instead of 1.
    -  format coff: in listing, COMDAT attr. (segments and symbols) is rendered.
+   -  listing: don't print language for non-public items in symbol table.
 
    01.12.2025, v2.20:
 
