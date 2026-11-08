@@ -49,6 +49,10 @@
 #define NUM_STDREGS 8
 #endif
 
+#ifndef __I86__
+#define ASSUMEUSEXX /* syntax extension: ASSUME USE16|USE32|USE64 */
+#endif
+
 /* prototypes */
 
 /* todo: move static variables to ModuleInfo */
@@ -101,7 +105,7 @@ void GetSegAssumeTable( void *savedstate )
  * register assumes need more work to save/restore the
  * current status, because they have their own
  * type symbols, which may be reused.
- * this functions is also called by context.c, ContextDirective()!
+ * this function is also called by context.c, ContextDirective()!
  */
 
 void SetStdAssumeTable( void *savedstate, struct stdassume_typeinfo *ti )
@@ -303,13 +307,29 @@ ret_code AssumeDirective( int i, struct asm_tok tokenarray[] )
 
     for( i++; i < Token_Count; i++ ) {
 
-        if( ( tokenarray[i].token == T_ID )
-            && (0 == _stricmp( tokenarray[i].string_ptr, szNothing )) ) {
-            AssumeInit( -1 );
-            i++;
-            break;
+        /* ASSUME NOTHING? */
+        if( ( tokenarray[i].token == T_ID )) {
+            if (0 == _stricmp( tokenarray[i].string_ptr, szNothing ) )  {
+                AssumeInit( -1 );
+                i++;
+                break;
+            }
+#ifdef ASSUMEUSEXX
+            if ( Options.strict_masm_compat == FALSE ) {/* disabled if -Zne is set */
+                enum segofssize sos = IsOfsSize( tokenarray[i].string_ptr );
+                if ( sos != USE_EMPTY ) {
+                    if ( CurrSeg ) { /* directive is a noop outside segments */
+                        enum segofssize oldOfssize = CurrSeg->e.seginfo->Ofssize;
+                        CurrSeg->e.seginfo->Ofssize = sos;
+                        SetOfssize();
+                        CurrSeg->e.seginfo->Ofssize = oldOfssize;
+                    }
+                    i++;
+                    break;
+                }
+            }
+#endif
         }
-
         /*---- get the info ptr for the register ----*/
 
         info = NULL;

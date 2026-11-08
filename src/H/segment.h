@@ -36,6 +36,7 @@
 
 extern void             SetSymSegOfs( struct asym * );
 extern int              GetSymOfssize( const struct asym * );
+extern enum segofssize  IsOfsSize( char * );
 /* Get current segment's offset */
 extern uint_32          GetCurrOffset( void );
 extern ret_code         SetCurrOffset( struct dsym *, uint_32, bool, bool );

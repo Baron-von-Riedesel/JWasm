@@ -1,7 +1,7 @@
 
    Changelog
 
-   __.__.____, v2.21:
+   08.11.2026, v2.21:
 
    Bugfixes:
    -  bin format, absolute segments: if segment wasn't referenced directly,
@@ -36,13 +36,15 @@
       generation (-pic1) is now the default for elf.
    -  format elf: EXTERNDEF accepts optional EXPORT qualifier; this qualifier
       modifies visibility for -pic2.
-   -  format elf32: qualifier SECTIONREL redefined for this format; will 
+   -  format elf32: qualifier SECTIONREL redefined for this format; will
       return offset relative to GOT.
    -  format elf32: special handling of symbol _GLOBAL_OFFSET_TABLE_.
    -  option -pe: .stack directive will set reserved stack space in PE header.
    -  option -?: exit with errorcode 0 instead of 1.
    -  format coff: in listing, COMDAT attr. (segments and symbols) is rendered.
    -  listing: don't print language for non-public items in symbol table.
+   -  extension ASSUME USExx added to (temporarily) switch bitness inside a
+      segment; see assumex1.asm.
 
    01.12.2025, v2.20:
 

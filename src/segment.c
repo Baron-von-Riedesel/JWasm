@@ -124,6 +124,15 @@ static int FindToken( const char *token, const char * const *table, int size )
     return( -1 );  /* Not found */
 }
 
+enum segofssize IsOfsSize( char *token )
+/**************************************/
+{
+    int i = FindToken( token, SegAttrToken, sizeof( SegAttrToken )/sizeof( SegAttrToken[0] ) );
+    if (i < 0 || (SegAttrValue[i].init != INIT_OFSSIZE ) )
+        return USE_EMPTY;
+    return SegAttrValue[i].value;
+}
+
 /* set value of $ symbol */
 
 void UpdateCurPC( struct asym *sym, void *p )
@@ -548,7 +557,13 @@ void UpdateWordSize( struct asym *sym, void *p )
 }
 
 
-/* called by SEGMENT and ENDS directives */
+/* called by
+ * - SEGMENT and ENDS directives;
+ * - .MODEL directive
+ * - RestoreState() if fastpass is active
+ * - by AssumeDirective() [optional & experimental]
+ * modifies ModuleInfo.Ofssize.
+ */
 
 ret_code SetOfssize( void )
 /*************************/

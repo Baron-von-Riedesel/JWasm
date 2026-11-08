@@ -19,6 +19,7 @@
 #include "equate.h"
 #endif
 #include "fastpass.h"
+#include "segment.h"
 
 /* prototypes */
 extern struct asym          *sym_Interface;
@@ -465,25 +466,22 @@ OPTFUNC( SetSegment )
 /*******************/
 {
     int i = *pi;
+    enum segofssize j = USE_EMPTY;
 
     if ( tokenarray[i].token == T_RES_ID && tokenarray[i].tokval == T_FLAT ) {
 #if AMD64_SUPPORT
         if ( ( ModuleInfo.curr_cpu & P_CPU_MASK ) >= P_64 )
-            ModuleInfo.defOfssize = USE64;
+            j = USE64;
         else
 #endif
-            ModuleInfo.defOfssize = USE32;
-    } else if ( tokenarray[i].token == T_ID && _stricmp( tokenarray[i].string_ptr, "USE16" ) == 0) {
-        ModuleInfo.defOfssize = USE16;
-    } else if ( tokenarray[i].token == T_ID && _stricmp( tokenarray[i].string_ptr, "USE32" ) == 0) {
-        ModuleInfo.defOfssize = USE32;
-#if AMD64_SUPPORT
-    } else if ( tokenarray[i].token == T_ID && _stricmp( tokenarray[i].string_ptr, "USE64" ) == 0) {
-        ModuleInfo.defOfssize = USE64;
-#endif
-    } else {
+            j = USE32;
+    } else if ( tokenarray[i].token == T_ID )
+        j = IsOfsSize( tokenarray[i].string_ptr );
+
+    if ( j == USE_EMPTY )
         return( EmitErr( SYNTAX_ERROR_EX, tokenarray[i].string_ptr ) );
-    }
+
+    ModuleInfo.defOfssize = j;
     i++;
     *pi = i;
     return( NOT_ERROR );

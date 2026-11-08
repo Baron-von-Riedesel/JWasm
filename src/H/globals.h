@@ -424,9 +424,9 @@ enum naming_types {
 enum segofssize {
     USE_EMPTY = 0xFE,
     USE16 = 0, /* don't change values of USE16,USE32,USE64! */
-    USE32 = 1,
+    USE32,
 #if AMD64_SUPPORT
-    USE64 = 2
+    USE64,
 #endif
 };
 
