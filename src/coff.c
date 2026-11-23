@@ -27,6 +27,14 @@
 
 #if COFF_SUPPORT
 
+#define DBGSECSIZE 0 /* set to 1 to print out section data sizes */
+#if DBGSECSIZE
+#define printfss(x) printf x
+#else
+#define printfss(x)
+#endif
+
+
 #define HELPSYMS     0 /* use helper symbols for assembly time symbol refs */
 #define MANGLE_BYTES 8 /* extra size required for name decoration */
 /* v2.04: to make JWasm always add static (=private) procs to the symbol table
@@ -149,6 +157,9 @@ static ret_code coff_write_section_table( struct module_info *modinfo, struct co
     struct dsym  *curr;
     struct fixup *fix;
     uint_32      fileoffset; /* calculated file offset for section data, relocs and linenumber info */
+#ifdef DEBUG_OUT
+    uint_32      oldofs;
+#endif
     unsigned     len;
     char         *secname;
     //struct omf_rec  *objr;
@@ -238,9 +249,11 @@ static ret_code coff_write_section_table( struct module_info *modinfo, struct co
             //    ish.Characteristics |= IMAGE_SCN_LNK_INFO;
         }
 
-        if ( ish.PointerToRawData )
+        if ( ish.PointerToRawData ) {
+            printfss(("coff_write_section_table(%s): ofs=%X, size=%X\n", curr->sym.name, fileoffset, ish.SizeOfRawData));
+            DebugMsg(("coff_write_section_table(%s): ofs=%X, size=%X\n", curr->sym.name, fileoffset, ish.SizeOfRawData));
             fileoffset += ish.SizeOfRawData;
-
+        }
         /* set fields PointerToRelocations/NumberOfRelocations; update 'fileoffset'.
          * v2.10: don't use the 16-bit NumberOfRelocations member to count relocs!
          * if the true number of relocs doesn't fit in 16-bits, set the appropriate
@@ -268,6 +281,9 @@ static ret_code coff_write_section_table( struct module_info *modinfo, struct co
                 curr->e.seginfo->num_relocs++;
             }
             fileoffset = (fileoffset + 1) & ~1;
+#ifdef DEBUG_OUT
+            oldofs = fileoffset;
+#endif
             ish.PointerToRelocations = fileoffset;
             /* v2.10: handle the "relocs overflow"-case */
             fileoffset += curr->e.seginfo->num_relocs * sizeof( IMAGE_RELOCATION );
@@ -280,21 +296,37 @@ static ret_code coff_write_section_table( struct module_info *modinfo, struct co
                 /* add 1 relocation - the true number of relocations is stored in the first relocation item */
                 fileoffset += sizeof( IMAGE_RELOCATION );
             }
+            printfss(("coff_write_section_table(%s): fixups at ofs=%X, size=%X\n", curr->sym.name, oldofs, fileoffset - oldofs));
+            DebugMsg(("coff_write_section_table(%s): fixups at ofs=%X, size=%X\n", curr->sym.name, oldofs, fileoffset - oldofs));
             //printf( "segment %s has %u relocs\n", curr->sym.name, curr->e.seginfo->num_relocs );
         }
 
-        /* set fields PointerToLinenumbers/NumberOfLinenumbers; update 'fileoffset' */
+        /* set fields PointerToLinenumbers/NumberOfLinenumbers; update 'fileoffset'
+         * v2.22: IMAGE_SECTION_HEADER.NumberOfLineNumbers is of type short, but line numbers
+         *        may exceed 65535 items.
+         */
 
         if ( curr->e.seginfo->LinnumQueue ) {
+            uint_32 line_numbers;
             ish.PointerToLinenumbers = fileoffset;
-            ish.NumberOfLinenumbers = GetLinnumItems( curr->e.seginfo->LinnumQueue );
-            fileoffset += ish.NumberOfLinenumbers * sizeof( IMAGE_LINENUMBER );
+#ifdef DEBUG_OUT
+            oldofs = fileoffset;
+#endif
+            /* v2.22: avoid truncation of line numbers; emit warning */
+            line_numbers = GetLinnumItems( curr->e.seginfo->LinnumQueue );
+            ish.NumberOfLinenumbers = line_numbers;
+            //fileoffset += ish.NumberOfLinenumbers * sizeof( IMAGE_LINENUMBER );
+            fileoffset += line_numbers * sizeof( IMAGE_LINENUMBER );
+            printfss(("coff_write_section_table(%s): %u line numbers at ofs=%X, size=%X\n", curr->sym.name, line_numbers, oldofs, fileoffset - oldofs));
+            DebugMsg(("coff_write_section_table(%s): %u line numbers at ofs=%X, size=%X\n", curr->sym.name, line_numbers, oldofs, fileoffset - oldofs));
+            if ( line_numbers > 0xffff )
+                EmitWarn(2, CV4_LINENUMBER_LIMIT_EXCEEDED, curr->sym.name );
         }
 
         DebugMsg(( "coff_write_section_table(%s): name=%.8s Fixups=%u, Linnums=%u\n", curr->sym.name, ish.Name, ish.NumberOfRelocations, ish.NumberOfLinenumbers ));
         if ( fwrite( &ish, 1, sizeof( ish ), CurrFile[OBJ] ) != sizeof( ish ) )
             WriteError();
-    }
+    } /* end for(curr) */
 #ifdef DEBUG_OUT
     cm->start_symtab = fileoffset;
 #endif
@@ -1103,6 +1135,9 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
 
     for( section = SymTables[TAB_SEG].head; section ; section = section->next ) {
         uint_32 size;
+#ifdef DEBUG_OUT
+        uint_32 oldofs = offset;
+#endif
         size = section->sym.max_offset;
 #ifdef DEBUG_OUT
         if ( section->e.seginfo->CodeBuffer )
@@ -1120,6 +1155,7 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
             continue;
 
         if ( size ) {
+            printfss(("coff_write_data(%s): offset=%X, size=%X\n", section->sym.name, offset, size ));
             offset += size;
             if ((offset & 1) && section->e.seginfo->FixupList.head ) {
                 offset++;
@@ -1147,8 +1183,13 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
                 if ( fwrite( section->e.seginfo->CodeBuffer, 1, size, CurrFile[OBJ] ) != size )
                     WriteError();
             }
-
             coff_write_fixups( section, &offset, &index );
+#ifdef DEBUG_OUT
+            if ( offset != oldofs ) {
+                printfss(("coff_write_data(%s): fixups added at ofs=%X, size=%X\n", section->sym.name, oldofs, offset - oldofs));
+                DebugMsg(("coff_write_data(%s): fixups added at ofs=%X, size=%X\n", section->sym.name, oldofs, offset - oldofs));
+            }
+#endif
         } /* end if (size) */
 
         /* v2.07: the following block has been moved outside of "if(size)" block,
@@ -1218,13 +1259,14 @@ static ret_code coff_write_data( struct module_info *modinfo, struct coffmod *cm
                 line_numbers++;
             } /* end for */
             section->e.seginfo->num_linnums = line_numbers;
+            printfss(("coff_write_data(%s): %u line numbers added at ofs=%X, size=%X\n", section->sym.name, line_numbers, oldofs, offset - oldofs ));
+            DebugMsg(("coff_write_data(%s): %u line numbers added at ofs=%X, size=%X\n", section->sym.name, line_numbers, oldofs, offset - oldofs ));
         } /* end if (Options.line_numbers...) */
-    } /* end for */
+    } /* end for (section) */
 
     cm->size_data = offset;
-
-    DebugMsg(("coff_write_data: exit, size of sections=%Xh\n", cm->size_data ));
-
+    printfss(("coff_write_data: exit, size of sections=%X\n", cm->size_data ));
+    DebugMsg(("coff_write_data: exit, size of sections=%X\n", cm->size_data ));
     return( NOT_ERROR );
 }
 
@@ -1485,8 +1527,14 @@ static ret_code coff_write_module( struct module_info *modinfo )
 
     coff_write_section_table( modinfo, &cm );
     coff_write_data( modinfo, &cm );
-    /* v2.12: check that calculated sizes are identical to those that have been written */
+    /* v2.12: check that calculated sizes are identical to those that have been written
+     * [debug only]: cm.start_symtab has been set in coff_write_section_table(), after
+     * the header has been written.
+     */
 #ifdef DEBUG_OUT
+    if ( cm.start_symtab != ( cm.start_data + cm.size_data ) )
+        printfss(("coff_write_module: ERROR, start_symtab (%X) != start_data+size_data(%X+%X=%X)\n",
+            cm.start_symtab, cm.start_data, cm.size_data, cm.start_data + cm.size_data));
     /**/myassert( cm.start_symtab == ( cm.start_data + cm.size_data ) );
 #endif
     ifh.NumberOfSymbols = coff_write_symbols( modinfo, &cm );

@@ -384,3 +384,8 @@ pick( OPCODE_SIZE_SUFFIX_IGNORED_FOR_SR, "Opcode size suffix ignored for segment
 pick( PROLOGUE_NOT_AT_PROC_START,        "Prologue not at PROC start" )
 pick( EXTRA_CHARACTERS_AFTER_STATEMENT,  "Extra characters after statement: %s" )
 pick( CANNOT_USE_16BIT_REG_WITH_32BIT_ADDR,  "Cannot use 16-bit register with a 32-bit address" )
+#if COFF_SUPPORT
+pick( CV4_LINENUMBER_LIMIT_EXCEEDED,     "CodeView v4 linenumber limit for COFF exceeded in %s" )
+#else
+pick( msg_filler32, "" )
+#endif
